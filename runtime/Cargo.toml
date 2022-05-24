@@ -1,9 +1,9 @@
 [package]
-name = "parachain-template-runtime"
+name = "bittensor-parachain"
 version = "0.1.0"
-authors = ["Anonymous"]
-description = "A new Cumulus FRAME-based Substrate Runtime, ready for hacking together a parachain."
-license = "Unlicense"
+authors = ["Shibshib", "Const", "Saiedeh"]
+description = "A new Cumulus FRAME-based Subtensor Runtime."
+license = "MIT"
 homepage = "https://substrate.io"
 repository = "https://github.com/paritytech/cumulus/"
 edition = "2021"

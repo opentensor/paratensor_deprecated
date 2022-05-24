@@ -23,7 +23,7 @@ hex-literal = "0.3.4"
 jsonrpc-core = "18.0.0"
 
 # Local
-parachain-template-runtime = { path = "../runtime" }
+bittensor-parachain = { path = "../runtime" }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
@@ -87,7 +87,7 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 [features]
 default = []
 runtime-benchmarks = [
-	"parachain-template-runtime/runtime-benchmarks",
+	"bittensor-parachain/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 ]
-try-runtime = ["parachain-template-runtime/try-runtime"]
+try-runtime = ["bittensor-parachain/try-runtime"]
