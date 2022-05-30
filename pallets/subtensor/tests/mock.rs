@@ -1,4 +1,3 @@
-use crate as pallet_subtensor;
 use frame_support::{parameter_types, traits::Everything};
 use frame_system as system;
 use sp_core::H256;
@@ -18,7 +17,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		TemplateModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
+		SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
