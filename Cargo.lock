@@ -5951,6 +5951,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-tracing",
  "sp-version",
  "substrate-fixed",
 ]

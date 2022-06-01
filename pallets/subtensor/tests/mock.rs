@@ -1,4 +1,4 @@
-use frame_support::{parameter_types, traits::{StorageMapShim}};
+use frame_support::{parameter_types, traits::{StorageMapShim, Contains}};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -21,6 +21,12 @@ frame_support::construct_runtime!(
 		Subtensor: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
 	}
 );
+
+#[allow(dead_code)]
+pub type SubtensorCall = pallet_subtensor::Call<Test>;
+
+#[allow(dead_code)]
+pub type BalanceCall = pallet_balances::Call<Test>;
 
 thread_local!{
 	pub static RUNTIME_VERSION: std::cell::RefCell<sp_version::RuntimeVersion> =
@@ -75,7 +81,7 @@ pub type AccountId = u64;
 
 impl pallet_balances::Config for Test {
 	type Balance = Balance;
-	type Event = ();
+	type Event = Event;
 	type DustRemoval = ();
 	type ExistentialDeposit = ();
 	type AccountStore = StorageMapShim<
@@ -126,7 +132,9 @@ impl pallet_subtensor::Config for Test {
 }
 
 // Build genesis storage according to the mock runtime.
+#[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	sp_tracing::try_init_simple();
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
 
