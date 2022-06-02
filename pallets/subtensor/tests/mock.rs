@@ -1,4 +1,4 @@
-use frame_support::{parameter_types, traits::Everything};
+use frame_support::{parameter_types, traits::{StorageMapShim, Contains}};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -17,17 +17,40 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Subtensor: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-	pub const SS58Prefix: u8 = 42;
+#[allow(dead_code)]
+pub type SubtensorCall = pallet_subtensor::Call<Test>;
+
+#[allow(dead_code)]
+pub type BalanceCall = pallet_balances::Call<Test>;
+
+thread_local!{
+	pub static RUNTIME_VERSION: std::cell::RefCell<sp_version::RuntimeVersion> =
+		Default::default();
 }
 
-impl system::Config for Test {
-	type BaseCallFilter = Everything;
+/// Balance of an account.
+#[allow(dead_code)]
+pub type Balance = u128;
+
+pub struct TestBaseCallFilter;
+impl Contains<Call> for TestBaseCallFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			// Transfer works. Use `transfer_keep_alive` for a call that doesn't pass the filter.
+			Call::Balances(pallet_balances::Call::transfer { .. }) => true,
+			// For benchmarking, this acts as a noop call
+			Call::System(frame_system::Call::remark { .. }) => true,
+			_ => false,
+		}
+	}
+}
+impl frame_system::Config for Test {
+	type BaseCallFilter = TestBaseCallFilter;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
@@ -53,11 +76,65 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+#[allow(dead_code)]
+pub type AccountId = u64;
+
+impl pallet_balances::Config for Test {
+	type Balance = Balance;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ();
+	type AccountStore = StorageMapShim<
+		pallet_balances::Account<Test>,
+		frame_system::Provider<Test>,
+		AccountId,
+		pallet_balances::AccountData<Balance>,
+	>;
+	type MaxLocks = ();
+	type WeightInfo = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = ();
+}
+
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub const SS58Prefix: u8 = 42;
+	pub const SDebug:u64 = 1;
+	pub const InitialRho: u64 = 10;
+	pub const InitialKappa: u64 = 2;
+	pub const SelfOwnership: u64 = 2;
+	pub const InitialDifficulty: u64 = 10000;
+	pub const MinimumDifficulty: u64 = 10000;
+	pub const MaximumDifficulty: u64 = u64::MAX/4;
+	pub const InitialAdjustmentInterval: u64 = 100;
+	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const InitialBondsMovingAverage: u64 = 900_000;
+	pub const InitialActivityCutoff: u64 = 5000;
+	pub const InitialIssuance: u64 = 548833985028256;
+
+}
+
 impl pallet_subtensor::Config for Test {
 	type Event = Event;
+	type SDebug = SDebug;
+	type Currency = Balances;
+	type InitialRho = InitialRho;
+	type InitialKappa = InitialKappa;
+	type SelfOwnership = SelfOwnership;
+	type MinimumDifficulty = MinimumDifficulty;
+	type MaximumDifficulty = MaximumDifficulty;
+	type InitialDifficulty = InitialDifficulty;
+	type InitialAdjustmentInterval = InitialAdjustmentInterval;
+	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+	type InitialBondsMovingAverage = InitialBondsMovingAverage;
+	type InitialActivityCutoff = InitialActivityCutoff;
+	type InitialIssuance = InitialIssuance;
 }
 
 // Build genesis storage according to the mock runtime.
+#[allow(dead_code)]
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	sp_tracing::try_init_simple();
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
+

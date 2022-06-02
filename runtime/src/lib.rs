@@ -41,6 +41,8 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
+pub use pallet_balances::Call as BalancesCall;
+
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -451,9 +453,37 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const SDebug:u64 = 1;
+	pub const InitialRho: u64 = 10;
+	pub const InitialKappa: u64 = 2;
+	pub const SelfOwnership: u64 = 2;
+	pub const InitialDifficulty: u64 = 10000000;
+	pub const MinimumDifficulty: u64 = 10000000;
+	pub const MaximumDifficulty: u64 = u64::MAX/4;
+	pub const InitialAdjustmentInterval: u64 = 100;
+	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const InitialBondsMovingAverage: u64 = 900_000;
+	pub const InitialActivityCutoff: u64 = 5000;
+	pub const InitialIssuance: u64 = 548833985028256;
+}
+
 /// Configure the pallet template in pallets/template.
 impl pallet_subtensor::Config for Runtime {
+	type Currency = Balances;
 	type Event = Event;
+	type SDebug = SDebug;
+	type InitialRho = InitialRho;
+	type InitialKappa = InitialKappa;
+	type SelfOwnership = SelfOwnership;
+	type MinimumDifficulty = MinimumDifficulty;
+	type MaximumDifficulty = MaximumDifficulty;
+	type InitialDifficulty = InitialDifficulty;
+	type InitialAdjustmentInterval = InitialAdjustmentInterval;
+	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+	type InitialBondsMovingAverage = InitialBondsMovingAverage;
+	type InitialActivityCutoff = InitialActivityCutoff;
+	type InitialIssuance = InitialIssuance;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
