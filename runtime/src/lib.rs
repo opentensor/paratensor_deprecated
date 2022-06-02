@@ -454,6 +454,67 @@ impl pallet_collator_selection::Config for Runtime {
 /// Configure the pallet template in pallets/template.
 impl pallet_subtensor::Config for Runtime {
 	type Event = Event;
+	type Currency = Balances;
+	//
+	type InitialMaxAllowedUids = InitialMaxAllowedUids;
+	type InitialStakePruningDenominator = InitialStakePruningDenominator;
+	type InitialIncentivePruningDenominator = InitialIncentivePruningDenominator;
+	type InitialImmunityPeriod = InitialImmunityPeriod;
+	type TransactionByteFee = ();
+	type SDebug = SDebug;
+	type InitialRho = InitialRho;
+	type InitialKappa = InitialKappa;
+	type SelfOwnership = SelfOwnership;
+	type InitialValidatorBatchSize = InitialValidatorBatchSize;
+	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
+	type InitialValidatorEpochLen = InitialValidatorEpochLen;
+	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
+	type InitialMinAllowedWeights = InitialMinAllowedWeights;
+	type InitialBondsMovingAverage = InitialBondsMovingAverage;
+	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
+	type InitialFoundationDistribution = InitialFoundationDistribution;
+	type InitialBlocksPerStep = InitialBlocksPerStep;
+	type InitialIssuance = InitialIssuance;
+	type InitialDifficulty = InitialDifficulty;
+	type MinimumDifficulty = MinimumDifficulty;
+	type MaximumDifficulty = MaximumDifficulty;
+	type InitialActivityCutoff = InitialActivityCutoff;
+	type InitialAdjustmentInterval = InitialAdjustmentInterval;
+	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
+	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+}
+
+impl pallet_sudo::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+}
+
+parameter_types! {
+	pub const SDebug:u64 = 1;
+	pub const InitialRho: u64 = 10;
+	pub const InitialKappa: u64 = 2;
+	pub const SelfOwnership: u64 = 2;
+	pub const InitialValidatorBatchSize: u64 = 10;
+	pub const InitialValidatorSequenceLen: u64 = 10;
+	pub const InitialValidatorEpochLen: u64 = 1000;
+	pub const InitialValidatorEpochsPerReset: u64 = 10;
+	pub const InitialImmunityPeriod: u64 = 200;
+	pub const InitialBlocksPerStep: u64 = 100;
+	pub const InitialMaxAllowedUids: u64 = 2000;
+	pub const InitialMinAllowedWeights: u64 = 1;
+	pub const InitialMaxAllowedMaxMinRatio: u64 = 10;
+	pub const InitialIssuance: u64 = 548833985028256;
+	pub const InitialBondsMovingAverage: u64 = 900_000;
+	pub const InitialIncentivePruningDenominator: u64 = 1;
+	pub const InitialStakePruningDenominator: u64 = 1;
+	pub const InitialFoundationDistribution: u64 = 0;
+	pub const InitialDifficulty: u64 = 10000000;
+	pub const MinimumDifficulty: u64 = 10000000;
+	pub const InitialActivityCutoff: u64 = 5000;
+	pub const MaximumDifficulty: u64 = u64::MAX/4;
+	pub const InitialAdjustmentInterval: u64 = 100;
+	pub const InitialMaxRegistrationsPerBlock: u64 = 2;
+	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -490,6 +551,8 @@ construct_runtime!(
 
 		// Template
 		TemplatePallet: pallet_subtensor::{Pallet, Call, Storage, Event<T>}  = 40,
+		//
+		Sudo: pallet_sudo,
 	}
 );
 

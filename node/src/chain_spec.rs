@@ -1,5 +1,5 @@
 use cumulus_primitives_core::ParaId;
-use bittensor_parachain::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use bittensor_parachain::{AccountId, AuraId, Signature, SudoConfig, EXISTENTIAL_DEPOSIT};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -101,6 +101,9 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
+				// Sudo account
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				//
 				1000.into(),
 			)
 		},
@@ -156,6 +159,9 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
+				// Sudo account
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				//
 				1000.into(),
 			)
 		},
@@ -180,6 +186,7 @@ pub fn local_testnet_config() -> ChainSpec {
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
+	root_key: AccountId,
 	id: ParaId,
 ) -> bittensor_parachain::GenesisConfig {
 	bittensor_parachain::GenesisConfig {
@@ -208,6 +215,10 @@ fn testnet_genesis(
 					)
 				})
 				.collect(),
+		},
+		sudo: SudoConfig {
+			// Assign network admin rights.
+			key: Some(root_key),
 		},
 		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
 		// of this.
