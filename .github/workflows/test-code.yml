@@ -38,7 +38,7 @@ jobs:
 
     # Enable this for clippy linting.
     # - name: Check and Lint Code
-    #   run: cargo +nightly-2021-12-01 clippy -- -D warnings
+    #   run: cargo +nightly clippy -- -D warnings
 
     - name: Check Code
       run: cargo check
