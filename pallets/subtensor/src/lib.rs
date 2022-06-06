@@ -5,9 +5,21 @@
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
 use frame_system::{
-	self as system
+	self as system,
+	ensure_signed
 };
-use frame_support::{traits::{Currency}};
+use frame_support::{
+	dispatch, 
+	ensure, 
+	traits::{
+		ExistenceRequirement,
+		Currency, 
+		tokens::{
+			WithdrawReasons
+		}
+	}
+};
+use substrate_fixed::types::U64F64;
 use sp_std::vec::Vec;
 use sp_std::vec;
 
@@ -19,6 +31,7 @@ mod benchmarking;
 ///	-Subtensor-Imports
 /// ************************************************************
 mod step;
+mod staking;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -338,6 +351,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// ---- Maps from hotkey to uid.
+	#[pallet::storage]
+	#[pallet::getter(fn hotkey)]
+	pub(super) type Hotkeys<T:Config> = StorageMap<
+		_, 
+		Blake2_128Concat, 
+		T::AccountId, 
+		u32, 
+		ValueQuery
+	>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
@@ -346,6 +370,14 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
+
+		/// --- Event created during when stake has been transfered from 
+		/// the coldkey onto the hotkey staking account.
+		StakeAdded(T::AccountId, u64),
+
+		/// --- Event created when stake has been removed from 
+		/// the staking account into the coldkey account.
+		StakeRemoved(T::AccountId, u64),
 	}
 
 	// Errors inform users that something went wrong.
@@ -355,6 +387,35 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+
+		/// ---- Thrown when the caller requests setting or removing data from
+		/// a neuron which does not exist in the active set.
+		NotRegistered,
+
+		/// ---- Thrown when the caller requests registering a neuron which 
+		/// already exists in the active set.
+		AlreadyRegistered,
+
+		/// ---- Thrown when a stake, unstake or subscribe request is made by a coldkey
+		/// which is not associated with the hotkey account. 
+		/// See: fn add_stake and fn remove_stake.
+		NonAssociatedColdKey,
+
+		/// ---- Thrown when the caller requests removing more stake then there exists 
+		/// in the staking account. See: fn remove_stake.
+		NotEnoughStaketoWithdraw,
+
+		///  ---- Thrown when the caller requests adding more stake than there exists
+		/// in the cold key account. See: fn add_stake
+		NotEnoughBalanceToStake,
+
+		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
+		/// amount could not be withdrawn from the coldkey account
+		BalanceWithdrawalError,
+
+		/// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
+		/// but the call fails.
+		CouldNotConvertToBalance,
 	}
 
 	#[pallet::hooks]
@@ -451,6 +512,31 @@ pub mod pallet {
 			ActivityCutoff::<T>::set( cuttoff );
 		}
 
+		// Helpers.
+		// --- Returns Option if the u64 converts to a balance
+		// use .unwarp if the result returns .some().
+		pub fn u64_to_balance(input: u64) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance>
+		{
+			input.try_into().ok()
+		}
+
+		// --- Returns hotkey associated with the hotkey account.
+		// This should be called in conjunction with is_hotkey_active
+		// to ensure this function does not throw an error.
+		pub fn get_uid_for_hotkey(hotkey_id: &T::AccountId) -> u32{
+			return Hotkeys::<T>::get(&hotkey_id);
+		}
+		pub fn get_neuron_for_uid ( uid: u32 ) -> NeuronMetadataOf<T> {
+			return Neurons::<T>::get( uid ).unwrap();
+		}
+
+		// --- Returns the neuron associated with the passed hotkey.
+		// The function makes a double mapping from hotkey -> uid -> neuron.
+		pub fn get_neuron_for_hotkey(hotkey_id: &T::AccountId) -> NeuronMetadataOf<T> {
+			let uid = Self::get_uid_for_hotkey(hotkey_id);
+			return Self::get_neuron_for_uid(uid);
+		}
+
 		// --- Returns the next available network uid.
 		// uids increment up to u64:MAX, this allows the chain to
 		// have 18,446,744,073,709,551,615 peers before an overflow.
@@ -459,6 +545,24 @@ pub mod pallet {
 			uid
 		}
 
+		// --- Returns true if the account-id has an active
+		// account on chain.
+		pub fn is_hotkey_active(hotkey_id: &T::AccountId) -> bool {
+			return Hotkeys::<T>::contains_key(&hotkey_id);
+		}
+
+		// --- Returns false if the account-id has an active
+		// account on chain.
+		pub fn is_not_active(hotkey_id: &T::AccountId) -> bool {
+			return !Self::is_hotkey_active(hotkey_id);
+		}
+
+		// --- Returns true if the uid is active, i.e. there
+		// is a staking, last_update, and neuron account associated
+		// with this uid.
+		pub fn is_uid_active(uid: u32) -> bool {
+			return Neurons::<T>::contains_key(uid);
+		}
 		
 	}
 	

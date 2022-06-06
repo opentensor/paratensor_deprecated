@@ -1,10 +1,27 @@
-use frame_support::{parameter_types, traits::{StorageMapShim, Contains}};
+use frame_support::{parameter_types, traits::{StorageMapShim, Contains}, weights::{GetDispatchInfo,DispatchInfo}};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{
+		self,
+		BlakeTwo256, 
+		IdentityLookup,
+		Checkable,
+		Applyable,
+		Dispatchable,
+		SignedExtension,
+		ValidateUnsigned,
+		PostDispatchInfoOf,
+		DispatchInfoOf
+	},
+	ApplyExtrinsicResultWithInfo,
+	transaction_validity::{TransactionValidity, TransactionSource, TransactionValidityError},
+	codec::{Codec, Encode, Decode}
 };
+
+use std::{fmt::{self, Debug}};
+use serde::{Serialize, Serializer};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -137,4 +154,119 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	sp_tracing::try_init_simple();
 	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
+
+
+/// Test transaction, tuple of (sender, call, signed_extra)
+/// with index only used if sender is some.
+///
+/// If sender is some then the transaction is signed otherwise it is unsigned.
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+pub struct TestXt<Call, Extra> {
+	/// Signature of the extrinsic.
+	pub signature: Option<(u64, Extra)>,
+	/// Call of the extrinsic.
+	pub call: Call,
+}
+
+#[allow(dead_code)]
+impl<Call, Extra> TestXt<Call, Extra> {
+	/// Create a new `TextXt`.
+	pub fn new(call: Call, signature: Option<(u64, Extra)>) -> Self {
+		Self { call, signature }
+	}
+}
+
+// Non-opaque extrinsics always 0.
+parity_util_mem::malloc_size_of_is_0!(any: TestXt<Call, Extra>);
+
+impl<Call, Extra> Serialize for TestXt<Call, Extra> where TestXt<Call, Extra>: Encode {
+	fn serialize<S>(&self, seq: S) -> Result<S::Ok, S::Error> where S: Serializer {
+		self.using_encoded(|bytes| seq.serialize_bytes(bytes))
+	}
+}
+
+impl<Call, Extra> Debug for TestXt<Call, Extra> {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "TestXt({:?}, ...)", self.signature.as_ref().map(|x| &x.0))
+	}
+}
+
+impl<Call: Codec + Sync + Send, Context, Extra> Checkable<Context> for TestXt<Call, Extra> {
+	type Checked = Self;
+	fn check(self, _: &Context) -> Result<Self::Checked, TransactionValidityError> { Ok(self) }
+}
+
+impl<Call: Codec + Sync + Send, Extra> traits::Extrinsic for TestXt<Call, Extra> {
+	type Call = Call;
+	type SignaturePayload = (u64, Extra);
+
+	fn is_signed(&self) -> Option<bool> {
+		Some(self.signature.is_some())
+	}
+
+	fn new(c: Call, sig: Option<Self::SignaturePayload>) -> Option<Self> {
+		Some(TestXt { signature: sig, call: c })
+	}
+
+}
+
+impl<Origin, Call, Extra> Applyable for TestXt<Call, Extra> where
+	Call: 'static + Sized + Send + Sync + Clone + Eq + Codec + Debug + Dispatchable<Origin=Origin>,
+	Extra: SignedExtension<AccountId=u64, Call=Call>,
+	Origin: From<Option<u64>>,
+{
+	type Call = Call;
+
+	/// Checks to see if this is a valid *transaction*. It returns information on it if so.
+	fn validate<U: ValidateUnsigned<Call=Self::Call>>(
+		&self,
+		_source: TransactionSource,
+		_info: &DispatchInfoOf<Self::Call>,
+		_len: usize,
+	) -> TransactionValidity {
+		Ok(Default::default())
+	}
+
+	/// Executes all necessary logic needed prior to dispatch and deconstructs into function call,
+	/// index and sender.
+	fn apply<U: ValidateUnsigned<Call=Self::Call>>(
+		self,
+		info: &DispatchInfoOf<Self::Call>,
+		len: usize,
+	) -> ApplyExtrinsicResultWithInfo<PostDispatchInfoOf<Self::Call>> {
+        let maybe_who = if let Some((who, extra)) = self.signature {
+			Extra::pre_dispatch(extra, &who, &self.call, info, len)?;
+			Some(who)
+		} else {
+			Extra::pre_dispatch_unsigned(&self.call, info, len)?;
+			U::pre_dispatch(&self.call)?;
+			None
+		};
+        
+		let res = self.call.dispatch(Origin::from(maybe_who));
+		let post_info = match res {
+			Ok(info) => info,
+			Err(err) => err.post_info,
+		};
+		// Extra::post_dispatch(info, &post_info, len, &res.map(|_| ()).map_err(|e| e.error))?;
+		Ok(res)
+	}
+}
+
+/// Implementation for unchecked extrinsic.
+impl<Call, Extra> GetDispatchInfo
+	for TestXt<Call, Extra>
+where
+	Call: GetDispatchInfo,
+	Extra: SignedExtension,
+{
+	fn get_dispatch_info(&self) -> DispatchInfo {
+		self.call.get_dispatch_info()
+	}
+}
+
+
+
+
+
 
