@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/v3/runtime/frame>
+// Edit this file to define custom logic or remove it if it is not needed.
+// Learn more about FRAME and the core library of Substrate FRAME pallets:
+// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
 use frame_system::{
 	self as system,
@@ -27,13 +27,14 @@ use sp_std::vec;
 mod benchmarking;
 
 
-/// ************************************************************
-///	-Subtensor-Imports
-/// ************************************************************
+// ************************************************************
+//	-Subtensor-Imports
+// ************************************************************
 mod step;
 mod staking;
 mod serving;
 mod registration;
+mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -44,115 +45,115 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use sp_std::vec;
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
+	// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
+		// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// --- Currency type that will be used to place deposits on neurons
+		// --- Currency type that will be used to place deposits on neurons
 		type Currency: Currency<Self::AccountId> + Send + Sync;
 		
-		/// --- The transaction fee in RAO per byte
+		// --- The transaction fee in RAO per byte
 		type TransactionByteFee: Get<BalanceOf<Self>>;
 		
-		/// Debug is on
+		// Debug is on
 		#[pallet::constant]
 		type SDebug: Get<u64>;
 
-		/// Rho constant
+		// Rho constant
 		#[pallet::constant]
 		type InitialRho: Get<u64>;
 
-		/// Kappa constant
+		// Kappa constant
 		#[pallet::constant]
 		type InitialKappa: Get<u64>;
 
-		/// Default Batch size.
+		// Default Batch size.
 		#[pallet::constant]
 		type InitialValidatorBatchSize: Get<u64>;
 
-		/// Default Batch size.
+		// Default Batch size.
 		#[pallet::constant]
 		type InitialValidatorSequenceLen: Get<u64>;
 
-		/// Default Epoch length.
+		// Default Epoch length.
 		#[pallet::constant]
 		type InitialValidatorEpochLen: Get<u64>;
 
-		/// Default Reset length.
+		// Default Reset length.
 		#[pallet::constant]
 		type InitialValidatorEpochsPerReset: Get<u64>;
 
-		/// Max UID constant.
+		// Max UID constant.
 		#[pallet::constant]
 		type InitialMaxAllowedUids: Get<u64>;
 
-		/// Initial min allowed weights.
+		// Initial min allowed weights.
 		#[pallet::constant]
 		type InitialMinAllowedWeights: Get<u64>;
 
-		/// Initial allowed max min weight ratio
+		// Initial allowed max min weight ratio
 		#[pallet::constant]
 		type InitialMaxAllowedMaxMinRatio: Get<u64>;
 
-		/// Initial stake pruning denominator
+		// Initial stake pruning denominator
 		#[pallet::constant]
 		type InitialStakePruningDenominator: Get<u64>;
 
-		/// Initial incentive pruning denominator
+		// Initial incentive pruning denominator
 		#[pallet::constant]
 		type InitialIncentivePruningDenominator: Get<u64>;
 
-		/// Initial foundation distribution
+		// Initial foundation distribution
 		#[pallet::constant]
 		type InitialFoundationDistribution: Get<u64>;
 
-		/// Immunity Period Constant.
+		// Immunity Period Constant.
 		#[pallet::constant]
 		type InitialImmunityPeriod: Get<u64>;
 
-		/// Blocks per step.
+		// Blocks per step.
 		#[pallet::constant]
 		type InitialBlocksPerStep: Get<u64>;
 
-		/// Blocks per era.
+		// Blocks per era.
 		#[pallet::constant]
 		type InitialBondsMovingAverage: Get<u64>;
 		
-		/// SelfOwnership constant
+		// SelfOwnership constant
 		#[pallet::constant]
 		type SelfOwnership: Get<u64>;
 
-		/// Activity constant
+		// Activity constant
 		#[pallet::constant]
 		type InitialActivityCutoff: Get<u64>;
 
-		/// Initial registration difficulty.
+		// Initial registration difficulty.
 		#[pallet::constant]
 		type InitialIssuance: Get<u64>;
 
-		/// Initial registration difficulty.
+		// Initial registration difficulty.
 		#[pallet::constant]
 		type InitialDifficulty: Get<u64>;
 
-		/// Minimum registration difficulty
+		// Minimum registration difficulty
 		#[pallet::constant]
 		type MinimumDifficulty: Get<u64>;
 
-		/// Maximum registration difficulty
+		// Maximum registration difficulty
 		#[pallet::constant]
 		type MaximumDifficulty: Get<u64>;
 
-		/// Initial adjustment interval.
+		// Initial adjustment interval.
 		#[pallet::constant]
 		type InitialAdjustmentInterval: Get<u64>;
 
-		/// Initial max registrations per block.
+		// Initial max registrations per block.
 		#[pallet::constant]
 		type InitialMaxRegistrationsPerBlock: Get<u64>;
 
-		/// Initial target registrations per interval.
+		// Initial target registrations per interval.
 		#[pallet::constant]
 		type InitialTargetRegistrationsPerInterval: Get<u64>;
 
@@ -165,76 +166,76 @@ pub mod pallet {
 	#[derive(Encode, Decode, TypeInfo)]
     pub struct NeuronMetadata<AccountId> {
 
-		/// ---- The endpoint's code version.
+		// ---- The endpoint's code version.
         pub version: u32,
 
-        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
+        // ---- The endpoint's u128 encoded ip address of type v6 or v4.
         pub ip: u128,
 
-        /// ---- The endpoint's u16 encoded port.
+        // ---- The endpoint's u16 encoded port.
         pub port: u16,
 
-        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
+        // ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
         pub ip_type: u8,
 
-        /// ---- The endpoint's unique identifier.
+        // ---- The endpoint's unique identifier.
         pub uid: u32,
 
-        /// ---- The neuron modality. Modalities specify which datatype
-        /// the neuron endpoint can process. This information is non
-        /// verifiable. However, neurons should set this correctly
-        /// in order to be detected by others with this datatype.
-        /// The initial modality codes are:
-        /// TEXT: 0
-        /// IMAGE: 1
-        /// TENSOR: 2
+        // ---- The neuron modality. Modalities specify which datatype
+        // the neuron endpoint can process. This information is non
+        // verifiable. However, neurons should set this correctly
+        // in order to be detected by others with this datatype.
+        // The initial modality codes are:
+        // TEXT: 0
+        // IMAGE: 1
+        // TENSOR: 2
         pub modality: u8,
 
-        /// ---- The associated hotkey account.
-        /// Registration and changing weights can be made by this
-        /// account.
+        // ---- The associated hotkey account.
+        // Registration and changing weights can be made by this
+        // account.
         pub hotkey: AccountId,
 
-        /// ---- The associated coldkey account.
-        /// Staking and unstaking transactions must be made by this account.
-        /// The hotkey account (in the Neurons map) has permission to call
-        /// subscribe and unsubscribe.
+        // ---- The associated coldkey account.
+        // Staking and unstaking transactions must be made by this account.
+        // The hotkey account (in the Neurons map) has permission to call
+        // subscribe and unsubscribe.
         pub coldkey: AccountId,
 
-		/// ---- Is this neuron active in the incentive mechanism.
+		// ---- Is this neuron active in the incentive mechanism.
 		pub active: u32,
 
-		/// ---- Block number of last chain update.
+		// ---- Block number of last chain update.
 		pub last_update: u64,
 
-		/// ---- Transaction priority.
+		// ---- Transaction priority.
 		pub priority: u64,
 
-		/// ---- The associated stake in this account.
+		// ---- The associated stake in this account.
 		pub stake: u64,
 
-		/// ---- The associated rank in this account.
+		// ---- The associated rank in this account.
 		pub rank: u64,
 
-		/// ---- The associated trust in this account.
+		// ---- The associated trust in this account.
 		pub trust: u64,
 
-		/// ---- The associated consensus in this account.
+		// ---- The associated consensus in this account.
 		pub consensus: u64,
 
-		/// ---- The associated incentive in this account.
+		// ---- The associated incentive in this account.
 		pub incentive: u64,
 
-		/// ---- The associated dividends in this account.
+		// ---- The associated dividends in this account.
 		pub dividends: u64,
 
-		/// ---- The associated emission last block for this account.
+		// ---- The associated emission last block for this account.
 		pub emission: u64,
 
-		/// ---- The associated bond ownership.
+		// ---- The associated bond ownership.
 		pub bonds: Vec<(u32,u64)>,
 
-		/// ---- The associated weights ownership.
+		// ---- The associated weights ownership.
 		pub weights: Vec<(u32,u32)>,
     }
 
@@ -247,9 +248,9 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/v3/runtime/storage
 
-	/// ************************************************************
-	///	*---- Storage Objects
-	/// ************************************************************
+	// ************************************************************
+	//	*---- Storage Objects
+	// ************************************************************
 	
 	// --- Number of peers.
 	#[pallet::storage]
@@ -501,8 +502,8 @@ pub mod pallet {
 		DefaultFoundationDistribution<T>
 	>;
 
-	/// #[pallet::type_value] 
-	/// pub fn DefaultFoundationAccount<T: Config>() -> u64 { T::InitialFoundationAccount::get() }
+	// #[pallet::type_value] 
+	// pub fn DefaultFoundationAccount<T: Config>() -> u64 { T::InitialFoundationAccount::get() }
 	#[pallet::storage]
 	pub(super) type FoundationAccount<T:Config> = StorageValue<
 		_, 
@@ -539,7 +540,7 @@ pub mod pallet {
 	>;
 
 
-	/// ---- Maps from hotkey to uid.
+	// ---- Maps from hotkey to uid.
 	#[pallet::storage]
 	#[pallet::getter(fn hotkey)]
     pub(super) type Hotkeys<T:Config> = StorageMap<
@@ -560,7 +561,7 @@ pub mod pallet {
 		ValueQuery
 	>;
 
-	/// ---- Maps from uid to neuron.
+	// ---- Maps from uid to neuron.
 	#[pallet::storage]
     #[pallet::getter(fn uid)]
     pub(super) type Neurons<T:Config> = StorageMap<
@@ -571,7 +572,7 @@ pub mod pallet {
 		OptionQuery
 	>;
 
-	/// ---- Maps from uid to uid as a set which we use to record uids to prune at next epoch.
+	// ---- Maps from uid to uid as a set which we use to record uids to prune at next epoch.
 	#[pallet::storage]
 	#[pallet::getter(fn uid_to_prune)]
     pub(super) type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<
@@ -595,10 +596,10 @@ pub mod pallet {
 		DefaultBlockAtRegistration<T>
 	>;
 
-	/// ************************************************************
-	///	-Genesis-Configuration
-	/// ************************************************************
-	/// ---- Genesis Configuration (Mostly used for testing.)
+	// ************************************************************
+	//	-Genesis-Configuration
+	// ************************************************************
+	// ---- Genesis Configuration (Mostly used for testing.)
     #[pallet::genesis_config]
     pub struct GenesisConfig {
         pub stake: Vec<(u64, u64)>,
@@ -622,16 +623,16 @@ pub mod pallet {
 
 	#[cfg(feature = "std")]
 	impl GenesisConfig {
-		/// Direct implementation of `GenesisBuild::build_storage`.
-		///
-		/// Kept in order not to break dependency.
+		// Direct implementation of `GenesisBuild::build_storage`.
+		//
+		// Kept in order not to break dependency.
 		pub fn build_storage<T: Config>(&self) -> Result<sp_runtime::Storage, String> {
 			<Self as GenesisBuild<T>>::build_storage(self)
 		}
 
-		/// Direct implementation of `GenesisBuild::assimilate_storage`.
-		///
-		/// Kept in order not to break dependency.
+		// Direct implementation of `GenesisBuild::assimilate_storage`.
+		//
+		// Kept in order not to break dependency.
 		pub fn assimilate_storage<T: Config>(
 			&self,
 			storage: &mut sp_runtime::Storage
@@ -645,90 +646,90 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
+		// Event documentation should end with an array that provides descriptive names for event
+		// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 
-		/// ---- Event created when a caller successfully set's their weights
-		/// on the chain.
+		// ---- Event created when a caller successfully set's their weights
+		// on the chain.
 		WeightsSet(T::AccountId),
 
-		/// --- Event created when a new neuron account has been registered to 
-		/// the chain.
+		// --- Event created when a new neuron account has been registered to 
+		// the chain.
 		NeuronRegistered(u32),
 
-		/// --- Event created when the axon server information is added to the network.
+		// --- Event created when the axon server information is added to the network.
 		AxonServed(u32),
 
-		/// --- Event created during when stake has been transfered from 
-		/// the coldkey onto the hotkey staking account.
+		// --- Event created during when stake has been transfered from 
+		// the coldkey onto the hotkey staking account.
 		StakeAdded(T::AccountId, u64),
 
-		/// --- Event created when stake has been removed from 
-		/// the staking account into the coldkey account.
+		// --- Event created when stake has been removed from 
+		// the staking account into the coldkey account.
 		StakeRemoved(T::AccountId, u64),
 
-		/// --- Event created when the difficulty has been set.
+		// --- Event created when the difficulty has been set.
 		DifficultySet(u64),
 
-		/// --- Event created when default blocks per step has been set.
+		// --- Event created when default blocks per step has been set.
 		BlocksPerStepSet(u64),
 
-		/// --- Event created when bonds moving average set.
+		// --- Event created when bonds moving average set.
 		BondsMovingAverageSet(u64),
 
-		/// --- Event created when the difficulty adjustment interval has been set.
+		// --- Event created when the difficulty adjustment interval has been set.
 		AdjustmentIntervalSet(u64),
 
-		/// --- Event created when the activity cuttoff has been set.
+		// --- Event created when the activity cuttoff has been set.
 		ActivityCuttoffSet(u64),
 
-		/// --- Event created when the target registrations per interval has been set.
+		// --- Event created when the target registrations per interval has been set.
 		TargetRegistrationsPerIntervalSet(u64),
 
-		/// --- Event created when mechanism rho has been set.
+		// --- Event created when mechanism rho has been set.
 		RhoSet(u64),
 
-		/// --- Event created when mechanism kappa has been set.
+		// --- Event created when mechanism kappa has been set.
 		KappaSet(u64),
 
-		/// --- Event created when max allowed uids has been set.
+		// --- Event created when max allowed uids has been set.
 		MaxAllowedUidsSet(u64),
 
-		/// --- Event created when min allowed weights has been set.
+		// --- Event created when min allowed weights has been set.
 		MinAllowedWeightsSet(u64),
 
-		/// --- Event created when the max allowed max min ration has been set.
+		// --- Event created when the max allowed max min ration has been set.
 		MaxAllowedMaxMinRatioSet( u64 ),
 
-		/// --- Event created when the incentive pruning denominator has been set.
+		// --- Event created when the incentive pruning denominator has been set.
 		IncentivePruningDenominatorSet( u64 ),
 
-		/// --- Event created when the stake pruning denominator has been set.
+		// --- Event created when the stake pruning denominator has been set.
 		StakePruningDenominatorSet( u64 ),
 
-		/// --- Event created when the foundation account has been set.
+		// --- Event created when the foundation account has been set.
 		FoundationAccountSet( T::AccountId ),
 
-		/// --- Event created when the foundation distribution has been set.
+		// --- Event created when the foundation distribution has been set.
 		FoundationDistributionSet( u64 ),
 
-		/// --- Event created when the validator default epoch length has been set.
+		// --- Event created when the validator default epoch length has been set.
 		ValidatorEpochLenSet(u64),
 
-		/// --- Event created when the validator default epoch per reset has been set.
+		// --- Event created when the validator default epoch per reset has been set.
 		ValidatorEpochsPerResetSet(u64),
 
-		/// --- Event created when the batch size has been set.
+		// --- Event created when the batch size has been set.
 		ValidatorBatchSizeSet(u64),
 
-		/// --- Event created when the sequence length has been set.
+		// --- Event created when the sequence length has been set.
 		ValidatorSequenceLengthSet(u64),
 
-		/// --- Event created when the immunity period has been set.
+		// --- Event created when the immunity period has been set.
 		ImmunityPeriodSet(u64),
 
-		/// --- Event thrown when bonds have been reset.
+		// --- Event thrown when bonds have been reset.
 		ResetBonds()
 
 
@@ -737,83 +738,83 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
+		// Error names should be descriptive.
 		NoneValue,
-		/// Errors should have helpful documentation associated with them.
+		// Errors should have helpful documentation associated with them.
 		StorageOverflow,
-		 /// ---- Thrown when the user tries to serve an axon which is not of type
-	    /// 4 (IPv4) or 6 (IPv6).
+		 // ---- Thrown when the user tries to serve an axon which is not of type
+	    // 4 (IPv4) or 6 (IPv6).
 		InvalidIpType,
 
-		/// --- Thrown when an invalid IP address is passed to the serve function.
+		// --- Thrown when an invalid IP address is passed to the serve function.
 		InvalidIpAddress,
 
-		/// --- Thrown when an invalid modality attempted on serve.
-		/// Currently the chain only accepts modality TEXT = 0.
+		// --- Thrown when an invalid modality attempted on serve.
+		// Currently the chain only accepts modality TEXT = 0.
 		InvalidModality,
 
-		/// ---- Thrown when the caller attempts to set the weight keys
-		/// and values but these vectors have different size.
+		// ---- Thrown when the caller attempts to set the weight keys
+		// and values but these vectors have different size.
 		WeightVecNotEqualSize,
 
-		/// ---- Thrown when the caller attempts to set weights with duplicate uids
-		/// in the weight matrix.
+		// ---- Thrown when the caller attempts to set weights with duplicate uids
+		// in the weight matrix.
 		DuplicateUids,
 
-		/// ---- Thrown when a caller attempts to set weight to at least one uid that
-		/// does not exist in the metagraph.
+		// ---- Thrown when a caller attempts to set weight to at least one uid that
+		// does not exist in the metagraph.
 		InvalidUid,
 
-		/// ---- Thrown if the supplied pow hash block is in the future or negative
+		// ---- Thrown if the supplied pow hash block is in the future or negative
 		InvalidWorkBlock,
 
-		/// ---- Thrown if the supplied pow hash block does not meet the network difficulty.
+		// ---- Thrown if the supplied pow hash block does not meet the network difficulty.
 		InvalidDifficulty,
 
-		/// ---- Thrown if the supplied pow hash seal does not match the supplied work.
+		// ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		InvalidSeal,
 
-		/// ---- Thrown when registrations this block exceeds allowed number.
+		// ---- Thrown when registrations this block exceeds allowed number.
 		ToManyRegistrationsThisBlock,
 
-		/// ---- Thrown when the caller requests setting or removing data from
-		/// a neuron which does not exist in the active set.
+		// ---- Thrown when the caller requests setting or removing data from
+		// a neuron which does not exist in the active set.
 		NotRegistered,
 
-		/// ---- Thrown when the caller requests registering a neuron which 
-		/// already exists in the active set.
+		// ---- Thrown when the caller requests registering a neuron which 
+		// already exists in the active set.
 		AlreadyRegistered,
 
-		/// ---- Thrown when a stake, unstake or subscribe request is made by a coldkey
-		/// which is not associated with the hotkey account. 
-		/// See: fn add_stake and fn remove_stake.
+		// ---- Thrown when a stake, unstake or subscribe request is made by a coldkey
+		// which is not associated with the hotkey account. 
+		// See: fn add_stake and fn remove_stake.
 		NonAssociatedColdKey,
 
-		/// ---- Thrown when the caller requests removing more stake then there exists 
-		/// in the staking account. See: fn remove_stake.
+		// ---- Thrown when the caller requests removing more stake then there exists 
+		// in the staking account. See: fn remove_stake.
 		NotEnoughStaketoWithdraw,
 
-		///  ---- Thrown when the caller requests adding more stake than there exists
-		/// in the cold key account. See: fn add_stake
+		//  ---- Thrown when the caller requests adding more stake than there exists
+		// in the cold key account. See: fn add_stake
 		NotEnoughBalanceToStake,
 
-		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
-		/// amount could not be withdrawn from the coldkey account
+		// ---- Thrown when the caller tries to add stake, but for some reason the requested
+		// amount could not be withdrawn from the coldkey account
 		BalanceWithdrawalError,
 
-		/// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
-		/// but the call fails.
+		// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
+		// but the call fails.
 		CouldNotConvertToBalance,
 
-		/// ---- Thrown when the dispatch attempts to set weights on chain with fewer elements 
-		/// than are allowed.
+		// ---- Thrown when the dispatch attempts to set weights on chain with fewer elements 
+		// than are allowed.
 		NotSettingEnoughWeights,
 
-		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
-		/// max value is more than MaxAllowedMaxMinRatio.
+		// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
+		// max value is more than MaxAllowedMaxMinRatio.
 		MaxAllowedMaxMinRatioExceeded,
 
-		/// ---- Thrown when the caller attempts to use a repeated work.
+		// ---- Thrown when the caller attempts to use a repeated work.
 		WorkRepeated,
 	}
 
@@ -861,41 +862,129 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// ---- Registers a new neuron to the graph. 
-		//
+		// --- Sets the caller weights for the incentive mechanism. The call can be
+		// made from the hotkey account so is potentially insecure, however, the damage
+		// of changing weights is minimal if caught early. This function includes all the
+		// checks that the passed weights meet the requirements. Stored as u32s they represent
+		// rational values in the range [0,1] which sum to 1 and can be interpreted as
+		// probabilities. The specific weights determine how inflation propagates outward
+		// from this peer. 
+		// 
+		// Note: The 32 bit integers weights should represent 1.0 as the max u32.
+		// However, the function normalizes all integers to u32_max anyway. This means that if the sum of all
+		// elements is larger or smaller than the amount of elements * u32_max, all elements
+		// will be corrected for this deviation. 
+		// 
 		// # Args:
-		// 	* "origin": (<T as frame_system::Config>Origin):
-		// 		- The caller, registration key as found in RegistrationKey::get(0);
-		//
-		// 	* "block_number" (u64):
-		// 		- Block number of hash to attempt.
-		//
-		// 	* "nonce" (u64):
-		// 		- Hashing nonce as a u64.
-		//
-		// 	* "work" (Vec<u8>):
-		// 		- Work hash as list of bytes.
+		// 	* `origin`: (<T as frame_system::Config>Origin):
+		// 		- The caller, a hotkey who wishes to set their weights.
 		// 
-		// 	* "hotkey" (T::AccountId,):
-		// 		- Hotkey to register.
-		// 
-		// 	* "coldkey" (T::AccountId,):
-		// 		- Coldkey to register.
+		// 	* `uids` (Vec<u32>):
+		// 		- The edge endpoint for the weight, i.e. j for w_ij.
+		//
+		// 	* 'weights' (Vec<u32>):
+		// 		- The u32 integer encoded weights. Interpreted as rational
+		// 		values in the range [0,1]. They must sum to in32::MAX.
 		//
 		// # Event:
-		// 	* "NeuronRegistered":
-		// 		- On subscription of a new neuron to the active set.
+		// 	* WeightsSet;
+		// 		- On successfully setting the weights on chain.
+		//
+		// # Raises:
+		// 	* 'WeightVecNotEqualSize':
+		// 		- If the passed weights and uids have unequal size.
+		//
+		// 	* 'WeightSumToLarge':
+		// 		- When the calling coldkey is not associated with the hotkey account.
+		//
+		// 	* 'InsufficientBalance':
+		// 		- When the amount to stake exceeds the amount of balance in the
+		// 		associated colkey account.
+		//
+        #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn set_weights(
+			origin:OriginFor<T>, 
+			dests: Vec<u32>, 
+			weights: Vec<u32>
+		) -> DispatchResult {
+			Self::do_set_weights(origin, dests, weights)
+		}
+		
+		// --- Adds stake to a neuron account. The call is made from the
+		// coldkey account linked in the neurons's NeuronMetadata.
+		// Only the associated coldkey is allowed to make staking and
+		// unstaking requests. This protects the neuron against
+		// attacks on its hotkey running in production code.
+		//
+		// # Args:
+		// 	* 'origin': (<T as frame_system::Config>Origin):
+		// 		- The caller, a coldkey signature associated with the hotkey account.
+		//
+		// 	* 'hotkey' (T::AccountId):
+		// 		- The hotkey account to add stake to.
+		//
+		// 	* 'ammount_staked' (u64):
+		// 		- The ammount to transfer from the balances account of the cold key
+		// 		into the staking account of the hotkey.
+		//
+		// # Event:
+		// 	* 'StakeAdded':
+		// 		- On the successful staking of funds.
+		//
+		// # Raises:
+		// 	* 'NotRegistered':
+		// 		- If the hotkey account is not active (has not subscribed)
+		//
+		// 	* 'NonAssociatedColdKey':
+		// 		- When the calling coldkey is not associated with the hotkey account.
+		//
+		// 	* 'InsufficientBalance':
+		// 		- When the amount to stake exceeds the amount of balance in the
+		// 		associated colkey account.
 		//
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn register( 
-				origin:OriginFor<T>, 
-				block_number: u64, 
-				nonce: u64, 
-				work: Vec<u8>,
-				hotkey: T::AccountId, 
-				coldkey: T::AccountId 
+		pub fn add_stake(
+			origin:OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_staked: u64
 		) -> DispatchResult {
-			Self::do_registration(origin, block_number, nonce, work, hotkey, coldkey)
+			Self::do_add_stake(origin, hotkey, ammount_staked)
+		}
+
+		// ---- Remove stake from the staking account. The call must be made
+		// from the coldkey account attached to the neuron metadata. Only this key
+		// has permission to make staking and unstaking requests.
+		//
+		// # Args:
+		// 	* 'origin': (<T as frame_system::Config>Origin):
+		// 		- The caller, a coldkey signature associated with the hotkey account.
+		//
+		// 	* 'hotkey' (T::AccountId):
+		// 		- The hotkey account to withdraw stake from.
+		//
+		// 	* 'ammount_unstaked' (u64):
+		// 		- The ammount to transfer from the staking account into the balance
+		// 		of the coldkey.
+		//
+		// # Event:
+		// 	* 'StakeRemoved':
+		// 		- On successful withdrawl.
+		//
+		// # Raises:
+		// 	* 'NonAssociatedColdKey':
+		// 		- When the calling coldkey is not associated with the hotkey account.
+		//
+		// 	* 'NotEnoughStaketoWithdraw':
+		// 		- When the amount to unstake exceeds the quantity staked in the
+		// 		associated hotkey staking account.
+		//
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn remove_stake(
+			origin:OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_unstaked: u64
+		) -> DispatchResult {
+			Self::do_remove_stake(origin, hotkey, ammount_unstaked)
 		}
 
 		// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
@@ -931,6 +1020,269 @@ pub mod pallet {
 			modality: u8 
 		) -> DispatchResult {
 			Self::do_serve_axon( origin, version, ip, port, ip_type, modality )
+		}
+
+		// ---- Registers a new neuron to the graph. 
+		//
+		// # Args:
+		// 	* 'origin': (<T as frame_system::Config>Origin):
+		// 		- The caller, registration key as found in RegistrationKey::get(0);
+		//
+		// 	* 'block_number' (u64):
+		// 		- Block number of hash to attempt.
+		//
+		// 	* 'nonce' (u64):
+		// 		- Hashing nonce as a u64.
+		//
+		// 	* 'work' (Vec<u8>):
+		// 		- Work hash as list of bytes.
+		// 
+		// 	* 'hotkey' (T::AccountId,):
+		// 		- Hotkey to register.
+		// 
+		// 	* 'coldkey' (T::AccountId,):
+		// 		- Coldkey to register.
+		//
+		// # Event:
+		// 	* 'NeuronRegistered':
+		// 		- On subscription of a new neuron to the active set.
+		//
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn register( 
+				origin:OriginFor<T>, 
+				block_number: u64, 
+				nonce: u64, 
+				work: Vec<u8>,
+				hotkey: T::AccountId, 
+				coldkey: T::AccountId 
+		) -> DispatchResult {
+			Self::do_registration(origin, block_number, nonce, work, hotkey, coldkey)
+		}
+		// ---- SUDO ONLY FUNCTIONS
+		//
+		// # Args:
+		// 	* 'origin': (<T as frame_system::Config>Origin):
+		// 		- The caller, must be sudo.
+		//
+		// ONE OF:
+		// 	* 'adjustment_interval' (u64):
+		// 	* 'activity_cutoff' (u64):
+		// 	* 'difficulty' (u64):
+		//
+		// # Events:
+		//		* 'DifficultySet'
+		// 	* 'AdjustmentIntervalSet'
+		//		* 'ActivityCuttoffSet'
+		//		* 'TargetRegistrationsPerIntervalSet'
+		//
+		// 
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_blocks_per_step ( 
+			origin:OriginFor<T>, 
+			blocks_per_step: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			BlocksPerStep::<T>::set( blocks_per_step );
+			Self::deposit_event( Event::BlocksPerStepSet( blocks_per_step ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_bonds_moving_average ( 
+			origin:OriginFor<T>, 
+			bonds_moving_average: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			BondsMovingAverage::<T>::set( bonds_moving_average );
+			Self::deposit_event( Event::BondsMovingAverageSet( bonds_moving_average ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_difficulty ( 
+			origin:OriginFor<T>, 
+			difficulty: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			Difficulty::<T>::set( difficulty );
+			Self::deposit_event( Event::DifficultySet( difficulty ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_adjustment_interval ( 
+			origin:OriginFor<T>, 
+			adjustment_interval: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			AdjustmentInterval::<T>::set( adjustment_interval );
+			Self::deposit_event( Event::AdjustmentIntervalSet( adjustment_interval ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_activity_cutoff ( 
+			origin:OriginFor<T>, 
+			activity_cutoff: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ActivityCutoff::<T>::set( activity_cutoff );
+			Self::deposit_event( Event::ActivityCuttoffSet( activity_cutoff ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_target_registrations_per_interval ( 
+			origin:OriginFor<T>, 
+			target_registrations_per_interval: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			TargetRegistrationsPerInterval::<T>::set( target_registrations_per_interval );
+			Self::deposit_event( Event::TargetRegistrationsPerIntervalSet( target_registrations_per_interval ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_rho ( 
+			origin:OriginFor<T>, 
+			rho: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			Rho::<T>::set( rho );
+			Self::deposit_event( Event::RhoSet( rho ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_kappa ( 
+			origin:OriginFor<T>, 
+			kappa: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			Kappa::<T>::set( kappa );
+			Self::deposit_event( Event::KappaSet( kappa ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_allowed_uids ( 
+			origin:OriginFor<T>, 
+			max_allowed_uids: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			MaxAllowedUids::<T>::set( max_allowed_uids );
+			Self::deposit_event( Event::MaxAllowedUidsSet( max_allowed_uids ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_min_allowed_weights ( 
+			origin:OriginFor<T>, 
+			min_allowed_weights: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			MinAllowedWeights::<T>::set( min_allowed_weights );
+			Self::deposit_event( Event::MinAllowedWeightsSet( min_allowed_weights ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_allowed_max_min_ratio ( 
+			origin:OriginFor<T>, 
+			max_allowed_max_min_ratio: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			MaxAllowedMaxMinRatio::<T>::set( max_allowed_max_min_ratio );
+			Self::deposit_event( Event::MaxAllowedMaxMinRatioSet( max_allowed_max_min_ratio ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_batch_size ( 
+			origin:OriginFor<T>, 
+			validator_batch_size: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ValidatorBatchSize::<T>::set( validator_batch_size );
+			Self::deposit_event( Event::ValidatorBatchSizeSet( validator_batch_size ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_sequence_length ( 
+			origin:OriginFor<T>, 
+			validator_sequence_length: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ValidatorSequenceLength::<T>::set( validator_sequence_length );
+			Self::deposit_event( Event::ValidatorSequenceLengthSet( validator_sequence_length ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_epoch_len ( 
+			origin:OriginFor<T>, 
+			validator_epoch_len : u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ValidatorEpochLen::<T>::set( validator_epoch_len );
+			Self::deposit_event( Event::ValidatorEpochLenSet( validator_epoch_len ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_epochs_per_reset ( 
+			origin:OriginFor<T>, 
+			validator_epochs_per_reset : u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ValidatorEpochsPerReset::<T>::set( validator_epochs_per_reset );
+			Self::deposit_event( Event::ValidatorEpochsPerResetSet( validator_epochs_per_reset ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_incentive_pruning_denominator( 
+			origin:OriginFor<T>, 
+			incentive_pruning_denominator: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			IncentivePruningDenominator::<T>::set( incentive_pruning_denominator );
+			Self::deposit_event( Event::IncentivePruningDenominatorSet( incentive_pruning_denominator ));
+			Ok(())
+		}
+		
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_stake_pruning_denominator( 
+			origin:OriginFor<T>, 
+			stake_pruning_denominator: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			StakePruningDenominator::<T>::set( stake_pruning_denominator );
+			Self::deposit_event( Event::StakePruningDenominatorSet( stake_pruning_denominator ));
+			Ok(())
+		}
+
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_immunity_period ( 
+			origin:OriginFor<T>, 
+			immunity_period: u64 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ImmunityPeriod::<T>::set( immunity_period );
+			Self::deposit_event( Event::ImmunityPeriodSet( immunity_period ) );
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_reset_bonds ( 
+			origin:OriginFor<T>
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			Self::reset_bonds();
+			Self::deposit_event( Event::ResetBonds() );
+			Ok(())
 		}
 	}
 
