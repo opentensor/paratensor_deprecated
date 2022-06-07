@@ -21,6 +21,7 @@ use sp_runtime::{
 };
 
 use pallet_subtensor::{NeuronMetadata};
+use std::net::{Ipv6Addr, Ipv4Addr};
 use std::{fmt::{self, Debug}};
 use serde::{Serialize, Serializer};
 
@@ -196,14 +197,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 #[allow(dead_code)]
-pub(crate) fn step_block(n: u64) {
-	for _ in 0..n {
-		Subtensor::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		Subtensor::on_initialize(System::block_number());
-	}
+pub fn register_ok_neuron( hotkey_account_id: u64, coldkey_account_id: u64) -> NeuronMetadata<u64> {
+	let block_number: u64 = Subtensor::get_current_block_as_u64();
+	let (nonce, work): (u64, Vec<u8>) = Subtensor::create_work_for_block_number( block_number, (hotkey_account_id + coldkey_account_id) * 1000000 );
+	let result = Subtensor::register( <<Test as frame_system::Config>::Origin>::signed(hotkey_account_id), block_number, nonce, work, hotkey_account_id, coldkey_account_id );
+	assert_ok!(result);
+	let neuron = Subtensor::get_neuron_for_hotkey(&hotkey_account_id);
+	neuron
 }
 
 #[allow(dead_code)]
@@ -214,6 +214,41 @@ pub fn register_ok_neuron_with_nonce( hotkey_account_id: u64, coldkey_account_id
 	assert_ok!(result);
 	let neuron = Subtensor::get_neuron_for_hotkey(&hotkey_account_id);
 	neuron
+}
+
+
+#[allow(dead_code)]
+pub fn serve_axon( hotkey_account_id : u64, version: u32, ip: u128, port: u16, ip_type : u8, modality: u8 ) -> NeuronMetadata<u64> {
+	let result = Subtensor::serve_axon(<<Test as frame_system::Config>::Origin>::signed(hotkey_account_id), version, ip, port, ip_type, modality );
+	assert_ok!(result);
+	let neuron = Subtensor::get_neuron_for_hotkey(&hotkey_account_id);
+	neuron
+}
+
+#[allow(dead_code)]
+pub(crate) fn step_block(n: u64) {
+	for _ in 0..n {
+		Subtensor::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Subtensor::on_initialize(System::block_number());
+	}
+}
+
+// Generates an ipv6 address based on 8 ipv6 words and returns it as u128
+#[allow(dead_code)]
+pub fn ipv6(a: u16, b : u16, c : u16, d : u16, e : u16 ,f: u16, g: u16,h :u16) -> u128 {
+	return Ipv6Addr::new(a,b,c,d,e,f,g,h).into();
+}
+
+// Generate an ipv4 address based on 4 bytes and returns the corresponding u128, so it can be fed
+// to the module::subscribe() function
+#[allow(dead_code)]
+pub fn ipv4(a: u8 ,b: u8,c : u8,d : u8) -> u128 {
+	let ipv4 : Ipv4Addr =  Ipv4Addr::new(a, b, c, d);
+	let integer : u32 = ipv4.into();
+	return u128::from(integer);
 }
 
 

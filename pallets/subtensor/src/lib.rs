@@ -32,6 +32,7 @@ mod benchmarking;
 /// ************************************************************
 mod step;
 mod staking;
+mod serving;
 mod registration;
 
 #[frame_support::pallet]
@@ -895,6 +896,41 @@ pub mod pallet {
 				coldkey: T::AccountId 
 		) -> DispatchResult {
 			Self::do_registration(origin, block_number, nonce, work, hotkey, coldkey)
+		}
+
+		// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
+		// already registered the metadata is updated. If the caller is not registered this call throws NotRegsitered.
+		//
+		// # Args:
+		// 	* 'origin': (<T as frame_system::Config>Origin):
+		// 		- The caller, a hotkey associated of the registered neuron.
+		//
+		// 	* 'ip' (u128):
+		// 		- The u64 encoded IP address of type 6 or 4.
+		//
+		// 	* 'port' (u16):
+		// 		- The port number where this neuron receives RPC requests.
+		//
+		// 	* 'ip_type' (u8):
+		// 		- The ip type one of (4,6).
+		//
+		// 	* 'modality' (u8):
+		// 		- The neuron modality type.
+		//
+		// # Event:
+		// 	* 'AxonServed':
+		// 		- On subscription of a new neuron to the active set.
+		//
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn serve_axon (
+			origin:OriginFor<T>, 
+			version: u32, 
+			ip: u128, 
+			port: u16, 
+			ip_type: u8, 
+			modality: u8 
+		) -> DispatchResult {
+			Self::do_serve_axon( origin, version, ip, port, ip_type, modality )
 		}
 	}
 
