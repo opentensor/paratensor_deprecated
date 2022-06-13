@@ -1,12 +1,13 @@
 [package]
-name = "pallet-template"
-authors = ["Anonymous"]
-description = "FRAME pallet template for defining custom runtime logic."
-version = "0.1.0"
-license = "Unlicense"
-homepage = "https://substrate.io"
-repository = "https://github.com/paritytech/substrate/"
+name = "pallet-szabo"
+authors = ["Const", "Shibshib", "Saeideh"]
+version = "4.0.0-dev"
+description = "FRAME pallet bittensor Szabo control pallet."
+homepage = "https://opentensor.ai"
 edition = "2021"
+license = "Unlicense"
+publish = false
+repository = "https://github.com/opentensor/paratensor"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -14,14 +15,20 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"], default-features = false }
 scale-info = { version = "2.0.0", default-features = false, features = ["derive"] }
+pallet-nakamoto = { path = "../nakamoto", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.20" }
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }
 frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.20"  }
+
+# Non substrate
+substrate-fixed = { git = 'https://github.com/encointer/substrate-fixed.git', tag = "v0.5.9" }
 
 [dev-dependencies]
 serde = { version = "1.0.132" }
+pallet-balances = { version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.20' }
 
 # Substrate
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }

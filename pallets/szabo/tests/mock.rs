@@ -1,5 +1,5 @@
-use crate as pallet_template;
 use frame_support::{parameter_types, traits::Everything};
+use frame_support::traits:: StorageMapShim;
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -18,13 +18,43 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Config<T>, Storage, Event<T>},
+		SzaboModule: pallet_szabo::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
+	pub const InitialIssuance: u64 = 1000;
+}
+
+#[allow(dead_code)]
+pub type AccountId = u64;
+
+/// Balance of an account.
+#[allow(dead_code)]
+pub type Balance = u128;
+
+/// An index to a block.
+#[allow(dead_code)]
+pub type BlockNumber = u64;
+
+impl pallet_balances::Config for Test {
+	type Balance = Balance;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ();
+	type AccountStore = StorageMapShim<
+		pallet_balances::Account<Test>,
+		frame_system::Provider<Test>,
+		AccountId,
+		pallet_balances::AccountData<Balance>,
+	>;
+	type MaxLocks = ();
+	type WeightInfo = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = ();
 }
 
 impl system::Config for Test {
@@ -54,8 +84,10 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
+impl pallet_szabo::Config for Test {
 	type Event = Event;
+	type Currency = Balances;
+	type InitialIssuance = InitialIssuance;
 }
 
 // Build genesis storage according to the mock runtime.

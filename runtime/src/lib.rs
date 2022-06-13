@@ -53,8 +53,11 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
-/// Import the template pallet.
-pub use pallet_subtensor;
+/// Import the szabo pallet.
+pub use pallet_szabo;
+
+/// Import the nakamoto pallet.
+pub use pallet_nakamoto;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -451,10 +454,27 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-/// Configure the pallet template in pallets/template.
-impl pallet_subtensor::Config for Runtime {
-	type Event = Event;
+// Configure the pallet nakamoto.
+parameter_types! {
+	pub const NakamotoInitialMinAllowedWeights: u16 = 0;
+	pub const NakamotoInitialMaxAllowedMaxMinRatio: u16 = 0;
 }
+impl pallet_nakamoto::Config for Runtime {
+	type Event = Event;
+	type NakamotoInitialMinAllowedWeights = NakamotoInitialMinAllowedWeights;
+	type NakamotoInitialMaxAllowedMaxMinRatio = NakamotoInitialMaxAllowedMaxMinRatio;
+}
+
+// Configure the pallet szabo.
+parameter_types! {
+	pub const InitialIssuance: u64 = 0;
+}
+impl pallet_szabo::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type InitialIssuance = InitialIssuance;
+}
+
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -488,8 +508,9 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
-		// Template
-		TemplatePallet: pallet_subtensor::{Pallet, Call, Storage, Event<T>}  = 40,
+		// Pallets
+		NakamotoPallet: pallet_nakamoto::{Pallet, Call, Storage, Event<T>}  = 40,
+		SzaboPallet: pallet_szabo::{Pallet, Call, Storage, Event<T>}  = 41,
 	}
 );
 

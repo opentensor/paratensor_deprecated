@@ -17,7 +17,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>},
+		NakamotoModule: pallet_nakamoto::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -53,8 +53,15 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_subtensor::Config for Test {
+// Configure the pallet nakamoto.
+parameter_types! {
+	pub const NakamotoInitialMinAllowedWeights: u16 = 0;
+	pub const NakamotoInitialMaxAllowedMaxMinRatio: u16 = 0;
+}
+impl pallet_nakamoto::Config for Test {
 	type Event = Event;
+	type NakamotoInitialMinAllowedWeights = NakamotoInitialMinAllowedWeights;
+	type NakamotoInitialMaxAllowedMaxMinRatio = NakamotoInitialMaxAllowedMaxMinRatio;
 }
 
 // Build genesis storage according to the mock runtime.
