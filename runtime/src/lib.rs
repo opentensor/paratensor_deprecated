@@ -499,7 +499,6 @@ construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
 		// Pallets
-		NakamotoPallet: pallet_nakamoto::{Pallet, Call, Storage, Event<T>}  = 40,
 		SzaboPallet: pallet_szabo::{Pallet, Call, Storage, Event<T>}  = 41,
 	}
 );
