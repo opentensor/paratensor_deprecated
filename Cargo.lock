@@ -583,7 +583,6 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-nakamoto",
  "pallet-session",
  "pallet-sudo",
  "pallet-szabo",
@@ -4558,7 +4557,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6c601a85f5ecd1aba625247bca0031585fb1c446461b142878a16f8245ddeb8"
 dependencies = [
- "nalgebra 0.27.1",
+ "nalgebra",
  "statrs",
 ]
 
@@ -4971,21 +4970,7 @@ dependencies = [
  "num-traits",
  "rand 0.8.5",
  "rand_distr",
- "simba 0.5.1",
- "typenum 1.15.0",
-]
-
-[[package]]
-name = "nalgebra"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a89248335f688e4bd994e6d030fd7e185eb41769b8c435395075425e100ac6"
-dependencies = [
- "approx",
- "num-complex",
- "num-rational 0.4.0",
- "num-traits",
- "simba 0.7.1",
+ "simba",
  "typenum 1.15.0",
 ]
 
@@ -5740,22 +5725,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-nakamoto"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "nalgebra 0.31.0",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-nicks"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
@@ -5999,6 +5968,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-subtensor"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-sudo"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.20#563f4820d8f36d256ada7ea3fef46b2e94c4cd5a"
@@ -6020,7 +6004,6 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-nakamoto",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -9897,18 +9880,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simba"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13a2609e876d4f77f6ab7ff5254fc39b4f1927ba8e6db3d18be7c32534d3725e"
-dependencies = [
- "approx",
- "num-complex",
- "num-traits",
- "paste",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10778,7 +10749,7 @@ checksum = "05bdbb8e4e78216a85785a85d3ec3183144f98d0097b9281802c019bb07a6f05"
 dependencies = [
  "approx",
  "lazy_static",
- "nalgebra 0.27.1",
+ "nalgebra",
  "num-traits",
  "rand 0.8.5",
 ]

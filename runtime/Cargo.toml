@@ -24,7 +24,6 @@ smallvec = "1.6.1"
 
 # Local
 pallet-szabo = { path = "../pallets/szabo", default-features = false }
-pallet-nakamoto = { path = "../pallets/nakamoto", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.20" }
@@ -104,7 +103,6 @@ std = [
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-szabo/std",
-	"pallet-nakamoto/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",

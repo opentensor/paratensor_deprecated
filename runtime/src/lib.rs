@@ -56,9 +56,6 @@ use xcm_executor::XcmExecutor;
 /// Import the szabo pallet.
 pub use pallet_szabo;
 
-/// Import the nakamoto pallet.
-pub use pallet_nakamoto;
-
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
@@ -454,25 +451,18 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-// Configure the pallet nakamoto.
-parameter_types! {
-	pub const NakamotoInitialMinAllowedWeights: u16 = 0;
-	pub const NakamotoInitialMaxAllowedMaxMinRatio: u16 = 0;
-}
-impl pallet_nakamoto::Config for Runtime {
-	type Event = Event;
-	type NakamotoInitialMinAllowedWeights = NakamotoInitialMinAllowedWeights;
-	type NakamotoInitialMaxAllowedMaxMinRatio = NakamotoInitialMaxAllowedMaxMinRatio;
-}
-
 // Configure the pallet szabo.
 parameter_types! {
 	pub const InitialIssuance: u64 = 0;
+	pub const InitialMinAllowedWeights: u16 = 0;
+	pub const InitialMaxAllowedMaxMinRatio: u16 = 0;
 }
 impl pallet_szabo::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type InitialIssuance = InitialIssuance;
+	type InitialMinAllowedWeights = InitialMinAllowedWeights;
+	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
 }
 
 

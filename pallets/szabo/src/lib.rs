@@ -18,12 +18,13 @@ use frame_system::{
 	ensure_signed
 };
 
-pub use pallet_nakamoto;
+mod staking;
+mod weights;
+mod utils;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod staking;
-mod accounts;
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -35,60 +36,153 @@ pub mod pallet {
 	/// ==== Config ====
 	/// ================
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_nakamoto::Config {
+	pub trait Config: frame_system::Config {
 		/// --- Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// --- Currency type that will be used to place deposits on neurons
 		type Currency: Currency<Self::AccountId> + Send + Sync;
 
-		/// --- Initial token issuance at pallet construction.
+		/// --- Initialization
 		#[pallet::constant]
 		type InitialIssuance: Get<u64>;
+
+		/// --- Hyperparams
+		#[pallet::constant]
+		type InitialMinAllowedWeights: Get<u16>;
+		#[pallet::constant]
+		type InitialMaxAllowedMaxMinRatio: Get<u16>;
 	}
 
-	/// =================
-	/// ==== Storage ====
-	/// =================
+	/// ==============================
+	/// ==== Super Params Storage ====
+	/// ==============================
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// --- Total number of peers across all subnetworks.
 	#[pallet::storage]
 	#[pallet::getter(fn n)]
-	pub type N<T> = StorageValue<_, u64, ValueQuery>;
+	pub type GlobalN<T> = StorageValue<_, u64, ValueQuery>;
 
-	// --- Stores total staked tao.
 	#[pallet::storage]
 	#[pallet::getter(fn total_stake)]
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 
-	// --- Stores total tao issuance.
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::storage]
 	#[pallet::getter(fn total_issuance)]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
-	// --- Maps from hotkey account index to staked tokens.
+	/// ==============================
+	/// ==== Accounts Storage ====
+	/// ==============================
 	#[pallet::storage]
 	#[pallet::getter(fn stake)]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
-	// --- Maps from hotkey account index to coldkey account.
 	#[pallet::type_value] 
 	pub fn DefaultHotkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
 	#[pallet::getter(fn coldkey)]
     pub(super) type Coldkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultHotkeyAccount<T> >;
 
-	// --- Maps from hotkey to u64 account index.
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
 	#[pallet::getter(fn hotkey)]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
+
+	/// =======================================
+	/// ==== Subnetork Hyperparam stroage  ====
+	/// =======================================
+	#[pallet::type_value] 
+	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
+	#[pallet::storage]
+	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
+	#[pallet::storage]
+	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
+
+	/// =======================================
+	/// ==== Subnetwork Consensus Storage  ====
+	/// =======================================
+	#[pallet::type_value] 
+	pub fn DefaultN<T:Config>() -> u16 { 0 }
+	#[pallet::storage]
+	#[pallet::getter(fn n)]
+	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
+	#[pallet::storage]
+	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultUid<T:Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultUid<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
+	#[pallet::storage]
+    pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
+	#[pallet::storage]
+    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultActive<T:Config>() -> Vec<bool> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn active)]
+	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, DefaultActive<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultStake<T:Config>() -> Vec<u64> { vec![] }
+	#[pallet::storage]
+    #[pallet::getter(fn stake)]
+    pub(super) type Stake<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultStake<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultRank<T:Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn rank)]
+	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultRank<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultTrust<T:Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn trust)]
+	pub(super) type Trust<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultTrust<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultIncentive<T:Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn incentive)]
+	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultIncentive<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultConsensus<T:Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn consensus)]
+	pub(super) type Consensus<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultConsensus<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultDividends<T: Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn dividends)]
+	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultDividends<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultEmission<T:Config>() -> Vec<u64> { vec![] }
+	#[pallet::storage]
+	#[pallet::getter(fn emission)]
+	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultEmission<T> >;
 	
 	/// ===============
 	/// ==== Events ===
@@ -103,6 +197,9 @@ pub mod pallet {
 		/// --- Event created when stake has been removed from 
 		/// the hotkey staking account onto the coldkey account.
 		StakeRemoved(T::AccountId, u64),
+
+		/// ---- Event created when a caller successfully set's their weights on a subnetwork.
+		WeightsSet(u16, u16),
 	}
 	/// ================
 	/// ==== Errors ====
@@ -135,6 +232,30 @@ pub mod pallet {
 		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
 		/// amount could not be withdrawn from the coldkey account
 		BalanceWithdrawalError,
+
+		/// ---- Thrown when the caller requests setting or removing data from
+		/// a neuron which does not exist in the active set.
+		NotRegistered,
+		
+		/// ---- Thrown when the caller attempts to set the weight keys
+		/// and values but these vectors have different size.
+		WeightVecNotEqualSize,
+
+		/// ---- Thrown when the caller attempts to set weights with duplicate uids
+		/// in the weight matrix.
+		DuplicateUids,
+
+		/// ---- Thrown when a caller attempts to set weight to at least one uid that
+		/// does not exist in the metagraph.
+		InvalidUid,
+
+		/// ---- Thrown when the dispatch attempts to set weights on chain with fewer elements 
+		/// than are allowed.
+		NotSettingEnoughWeights,
+
+		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
+		/// max value is more than MaxAllowedMaxMinRatio.
+		MaxAllowedMaxMinRatioExceeded,
 	}
 
 	/// ================
@@ -149,6 +270,58 @@ pub mod pallet {
 	/// ======================
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+
+		/// --- Sets the caller weights for the incentive mechanism. The call can be
+		/// made from the hotkey account so is potentially insecure, however, the damage
+		/// of changing weights is minimal if caught early. This function includes all the
+		/// checks that the passed weights meet the requirements. Stored as u16s they represent
+		/// rational values in the range [0,1] which sum to 1 and can be interpreted as
+		/// probabilities. The specific weights determine how inflation propagates outward
+		/// from this peer. 
+		/// 
+		/// Note: The 16 bit integers weights should represent 1.0 as the max u16.
+		/// However, the function normalizes all integers to u16_max anyway. This means that if the sum of all
+		/// elements is larger or smaller than the amount of elements * u16_max, all elements
+		/// will be corrected for this deviation. 
+		/// 
+		/// # Args:
+		/// 	* `origin`: (<T as frame_system::Config>Origin):
+		/// 		- The caller, a hotkey who wishes to set their weights.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network uid we are setting these weights on.
+		/// 
+		/// 	* `uids` (Vec<u16>):
+		/// 		- The edge endpoint for the weight, i.e. j for w_ij.
+		///
+		/// 	* 'weights' (Vec<u16>):
+		/// 		- The u16 integer encoded weights. Interpreted as rational
+		/// 		values in the range [0,1]. They must sum to in32::MAX.
+		///
+		/// # Event:
+		/// 	* WeightsSet;
+		/// 		- On successfully setting the weights on chain.
+		///
+		/// # Raises:
+		/// 	* 'WeightVecNotEqualSize':
+		/// 		- If the passed weights and uids have unequal size.
+		///
+		/// 	* 'WeightSumToLarge':
+		/// 		- When the calling coldkey is not associated with the hotkey account.
+		///
+		/// 	* 'InsufficientBalance':
+		/// 		- When the amount to stake exceeds the amount of balance in the
+		/// 		associated colkey account.
+		///
+        #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn set_weights(
+			origin:OriginFor<T>, 
+			netuid: u16,
+			dests: Vec<u16>, 
+			weights: Vec<u16>
+		) -> DispatchResult {
+			Self::do_set_weights(origin, netuid, dests, weights)
+		}
 
 		/// --- Adds stake to a neuron account. The call is made from the
 		/// coldkey account linked in the neurons's NeuronMetadata.

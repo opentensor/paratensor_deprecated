@@ -3,14 +3,14 @@ use frame_support::inherent::Vec;
 use frame_support::sp_std::vec;
 
 impl<T: Config> Pallet<T> {
-    pub fn do_set_weights(origin: T::Origin, uids: Vec<u16>, values: Vec<u16>) -> dispatch::DispatchResult
+    pub fn do_set_weights(origin: T::Origin, netuid: u16, uids: Vec<u16>, values: Vec<u16>) -> dispatch::DispatchResult
     {
         // ---- We check the caller signature
         let hotkey_id = ensure_signed( origin )?;
 
         // ---- We check to see that the calling hotkey account is in the active set.
-        ensure!( Self::is_hotkey_active( &hotkey_id ), Error::<T>::NotRegistered );
-        let uid = Self::get_uid( &hotkey_id );
+        ensure!( Self::is_hotkey_active( netuid, &hotkey_id ), Error::<T>::NotRegistered );
+        let uid = Self::get_uid( netuid, &hotkey_id );
 
         // --- We check that the length of these two lists are equal.
         ensure!( uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
@@ -19,16 +19,16 @@ impl<T: Config> Pallet<T> {
         ensure!( !has_duplicate_uids( &uids ), Error::<T>::DuplicateUids );
 
         // --- We check if the weight uids are valid
-        ensure!( !Self::contains_invalid_uids( &uids ), Error::<T>::InvalidUid );
+        ensure!( !Self::contains_invalid_uids( netuid, &uids ), Error::<T>::InvalidUid );
 
         // --- We check if the weights have the desired length.
-        ensure!( Self::check_length( uid, &uids, &values ), Error::<T>::NotSettingEnoughWeights );
+        ensure!( Self::check_length( netuid, uid, &uids, &values ), Error::<T>::NotSettingEnoughWeights );
 
         // Normalize weights.
         let normalized_values = normalize(values);
 
         // --- We check if the weights have an allowed max min multiple.
-        ensure!( Self::min_is_allowed_multiple_of_max(&normalized_values), Error::<T>::MaxAllowedMaxMinRatioExceeded );
+        ensure!( Self::min_is_allowed_multiple_of_max( netuid, &normalized_values ), Error::<T>::MaxAllowedMaxMinRatioExceeded );
 
         // Zip weights.
         let mut zipped_weights: Vec<(u16,u16)> = vec![];
@@ -37,10 +37,10 @@ impl<T: Config> Pallet<T> {
         }
 
         // Sink update.
-        Weights::<T>::insert( uid, zipped_weights );
+        Weights::<T>::insert( netuid, uid, zipped_weights );
 
         // ---- Emit the staking event.
-        Self::deposit_event(Event::WeightsSet(hotkey_id));
+        Self::deposit_event(Event::WeightsSet(netuid, uid));
 
         // --- Emit the event and return ok.
         Ok(())
@@ -50,17 +50,17 @@ impl<T: Config> Pallet<T> {
     --==[[  Helper functions   ]]==--
    *********************************/
     
-    pub fn contains_invalid_uids(uids: &Vec<u16>) -> bool {
+    pub fn contains_invalid_uids(netuid:u16, uids: &Vec<u16>) -> bool {
         for uid in uids {
-            if !Self::is_uid_active(*uid) {
+            if !Self::is_uid_active(netuid, *uid) {
                 return true;
             }
         }
         return false;
     }
 
-    pub fn check_length( uid: u16, uids: &Vec<u16>, weights: &Vec<u16>) -> bool {
-        let min_allowed_length: usize = Self::get_min_allowed_weights() as usize;
+    pub fn check_length( netuid: u16 uid: u16, uids: &Vec<u16>, weights: &Vec<u16>) -> bool {
+        let min_allowed_length: usize = Self::get_min_allowed_weights( netuid ) as usize;
 
         // Check the self weight.
         if weights.len() == 1 {
@@ -80,9 +80,9 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn min_is_allowed_multiple_of_max( weights: &Vec<u16>) -> bool {
+    pub fn min_is_allowed_multiple_of_max( netuid:u16, weights: &Vec<u16>) -> bool {
         // We allow the 0 value multiple to be cardinal -> We always return true.
-        let max_allowed_max_min_ratio: u16 = Self::get_max_allowed_max_min_ratio() as u16;
+        let max_allowed_max_min_ratio: u16 = Self::get_max_allowed_max_min_ratio( netuid ) as u16;
         if max_allowed_max_min_ratio == 0 {
             return true;
         }

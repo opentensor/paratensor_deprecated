@@ -26,7 +26,6 @@ frame_support::construct_runtime!(
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
-	pub const InitialIssuance: u64 = 1000;
 }
 
 #[allow(dead_code)]
@@ -84,10 +83,18 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+parameter_types! {
+	pub const InitialIssuance: u64 = 0;
+	pub const InitialMinAllowedWeights: u16 = 0;
+	pub const InitialMaxAllowedMaxMinRatio: u16 = 0;
+}
 impl pallet_szabo::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type InitialIssuance = InitialIssuance;
+
+	type InitialMinAllowedWeights = InitialMinAllowedWeights;
+	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
 }
 
 // Build genesis storage according to the mock runtime.
