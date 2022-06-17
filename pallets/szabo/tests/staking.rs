@@ -9,6 +9,7 @@ mod mock;
 #[test]
 fn test_account_not_active() {
 	new_test_ext().execute_with(|| {
+		assert_eq!( SzaboModule::get_global_n(), 0 );
 		let result = SzaboModule::add_stake(Origin::signed(0), 0, 0);
 		assert_eq!( result, Err(Error::<Test>::NotRegistered.into()) );
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -18,6 +19,7 @@ fn test_account_not_active() {
 #[test]
 fn test_remove_stake_err_signature() {
 	new_test_ext().execute_with(|| {
+		assert_eq!( SzaboModule::get_global_n(), 0 );
 		let result = SzaboModule::remove_stake(<<Test as Config>::Origin>::none(), 0, 0);
 		assert_eq!(result, DispatchError::BadOrigin.into());
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -27,6 +29,7 @@ fn test_remove_stake_err_signature() {
 #[test]
 fn test_add_stake_err_signature() {
 	new_test_ext().execute_with(|| {
+		assert_eq!( SzaboModule::get_global_n(), 0 );
 		let result = SzaboModule::add_stake(<<Test as Config>::Origin>::none(), 0, 0);
 		assert_eq!(result, DispatchError::BadOrigin.into());
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -36,7 +39,9 @@ fn test_add_stake_err_signature() {
 #[test]
 fn test_remove_stake_wrong_coldkey() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		let result = SzaboModule::remove_stake(Origin::signed(1), 0, 0);
 		assert_eq!(result, Err(Error::<Test>::NonAssociatedColdKey.into()));
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -46,7 +51,8 @@ fn test_remove_stake_wrong_coldkey() {
 #[test]
 fn test_add_stake_wrong_coldkey() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		let result = SzaboModule::add_stake(Origin::signed(1), 0, 0);
 		assert_eq!(result, Err(Error::<Test>::NonAssociatedColdKey.into()));
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -56,7 +62,8 @@ fn test_add_stake_wrong_coldkey() {
 #[test]
 fn test_account_is_active() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		assert_ok!(SzaboModule::add_stake(Origin::signed(0), 0, 0));
 		assert_eq!(SzaboModule::get_total_stake(), 0);
 	});
@@ -65,7 +72,8 @@ fn test_account_is_active() {
 #[test]
 fn test_not_enough_stake() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		let result =  SzaboModule::add_stake(Origin::signed(0), 0, 10) ;
 		assert_eq! ( result, Err(Error::<Test>::NotEnoughBalanceToStake.into()) );
 		assert_eq!(SzaboModule::get_total_stake(), 0);
@@ -75,7 +83,8 @@ fn test_not_enough_stake() {
 #[test]
 fn test_add_non_zero_stake() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		SzaboModule::add_balance_to_coldkey_account( &0, 100000 );
 		assert_ok!(SzaboModule::add_stake(Origin::signed(0), 0, 100000));
 		assert_eq!(SzaboModule::get_total_stake(), 100000);
@@ -85,7 +94,8 @@ fn test_add_non_zero_stake() {
 #[test]
 fn test_add_remove_stake() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		SzaboModule::add_balance_to_coldkey_account( &0, 100000 );
 		assert_ok!(SzaboModule::add_stake(Origin::signed(0), 0, 100000));
 		assert_eq!(SzaboModule::get_total_stake(), 100000);
@@ -114,7 +124,8 @@ fn test_can_remove_balane_from_coldkey_account_insufficient_balance() {
 #[test]
 fn test_has_enough_stake_yes() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		SzaboModule::add_balance_to_coldkey_account( &0, 100000 );
 		assert_ok!(SzaboModule::add_stake(Origin::signed(0), 0, 100000));
 		assert_eq!(SzaboModule::has_enough_stake(&0, 100000), true);
@@ -125,7 +136,8 @@ fn test_has_enough_stake_yes() {
 #[test]
 fn test_does_not_enough_stake_yes() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		SzaboModule::add_balance_to_coldkey_account( &0, 100000 );
 		assert_ok!(SzaboModule::add_stake(Origin::signed(0), 0, 100000));
 		assert_eq!(SzaboModule::has_enough_stake(&0, 100000 + 1), false);
@@ -136,7 +148,8 @@ fn test_does_not_enough_stake_yes() {
 #[test]
 fn test_get_stake_on_hotkey_account() {
 	new_test_ext().execute_with(|| {
-		SzaboModule::add_account( &0, &0 );
+		SzaboModule::add_global_account( &0, &0 );
+		assert_eq!( SzaboModule::get_global_n(), 1 );
 		SzaboModule::add_stake_to_hotkey_account( &0, 100000 );
 		assert_eq!(SzaboModule::get_stake_on_hotkey_account( &0 ), 100000);
 		assert_eq!(SzaboModule::get_total_stake(), 100000);

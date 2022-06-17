@@ -189,10 +189,6 @@ impl<T: Config> Pallet<T> {
         can_withdraw
     }
 
-    pub fn get_total_stake( ) -> u64 {
-        return TotalStake::<T>::get();
-    }
-
     /// Returns the current balance in the cold key account
     ///
     pub fn get_coldkey_balance( coldkey: &T::AccountId ) -> <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance {

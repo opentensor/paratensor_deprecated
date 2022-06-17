@@ -20,7 +20,9 @@ use frame_system::{
 
 mod staking;
 mod weights;
-mod utils;
+mod epoch;
+mod utils_accounts;
+mod utils_consensus;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -61,39 +63,34 @@ pub mod pallet {
 	/// ==============================
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	#[pallet::getter(fn n)]
 	pub type GlobalN<T> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn total_stake)]
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::storage]
-	#[pallet::getter(fn total_issuance)]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
 	#[pallet::storage]
-	#[pallet::getter(fn stake)]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
 	#[pallet::type_value] 
 	pub fn DefaultHotkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
-	#[pallet::getter(fn coldkey)]
     pub(super) type Coldkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultHotkeyAccount<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
-	#[pallet::getter(fn hotkey)]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
 	/// =======================================
@@ -107,7 +104,7 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
 	#[pallet::storage]
-	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
+	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
@@ -115,7 +112,6 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
 	#[pallet::storage]
-	#[pallet::getter(fn n)]
 	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
 	#[pallet::type_value] 
@@ -141,49 +137,41 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultActive<T:Config>() -> Vec<bool> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn active)]
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, DefaultActive<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultStake<T:Config>() -> Vec<u64> { vec![] }
 	#[pallet::storage]
-    #[pallet::getter(fn stake)]
-    pub(super) type Stake<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultStake<T> >;
+    pub(super) type S<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultStake<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultRank<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn rank)]
 	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultRank<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultTrust<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn trust)]
 	pub(super) type Trust<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultTrust<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultIncentive<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn incentive)]
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultIncentive<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultConsensus<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn consensus)]
 	pub(super) type Consensus<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultConsensus<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultDividends<T: Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn dividends)]
 	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultDividends<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultEmission<T:Config>() -> Vec<u64> { vec![] }
 	#[pallet::storage]
-	#[pallet::getter(fn emission)]
 	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultEmission<T> >;
 	
 	/// ===============
@@ -234,10 +222,6 @@ pub mod pallet {
 		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
 		/// amount could not be withdrawn from the coldkey account
 		BalanceWithdrawalError,
-
-		/// ---- Thrown when the caller requests setting or removing data from
-		/// a neuron which does not exist in the active set.
-		NotRegistered,
 		
 		/// ---- Thrown when the caller attempts to set the weight keys
 		/// and values but these vectors have different size.

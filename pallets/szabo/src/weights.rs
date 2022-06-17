@@ -9,8 +9,8 @@ impl<T: Config> Pallet<T> {
         let hotkey_id = ensure_signed( origin )?;
 
         // ---- We check to see that the calling hotkey account is in the active set.
-        ensure!( Self::is_hotkey_active( netuid, &hotkey_id ), Error::<T>::NotRegistered );
-        let uid = Self::get_uid( netuid, &hotkey_id );
+        ensure!( Self::is_hotkey_subnetwork_active( netuid, &hotkey_id ), Error::<T>::NotRegistered );
+        let uid = Self::get_subnetwork_uid( netuid, &hotkey_id );
 
         // --- We check that the length of these two lists are equal.
         ensure!( uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
@@ -52,14 +52,14 @@ impl<T: Config> Pallet<T> {
     
     pub fn contains_invalid_uids(netuid:u16, uids: &Vec<u16>) -> bool {
         for uid in uids {
-            if !Self::is_uid_active(netuid, *uid) {
+            if !Self::is_subnetwork_uid_active(netuid, *uid) {
                 return true;
             }
         }
         return false;
     }
 
-    pub fn check_length( netuid: u16 uid: u16, uids: &Vec<u16>, weights: &Vec<u16>) -> bool {
+    pub fn check_length( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16>) -> bool {
         let min_allowed_length: usize = Self::get_min_allowed_weights( netuid ) as usize;
 
         // Check the self weight.

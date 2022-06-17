@@ -1,54 +1,14 @@
 
 use super::*;
 use frame_support::inherent::Vec;
-use frame_support::IterableDoubleStorageMap;
 use frame_support::sp_std::vec;
+use substrate_fixed::types::I65F63;
+use frame_support::storage::IterableStorageDoubleMap;
 
 #[cfg(feature = "no_std")]
 extern crate nalgebra;
 
 impl<T: Config> Pallet<T> {
-
-	/// ================
-	/// ==== Global ====
-	/// ================
-    pub fn get_global_n() -> u64 { return N::<T>::get() }
-    pub fn get_total_issuance() -> u64 { return TotalIssuance::<T>::get() }
-    pub fn get_total_stake() -> u64 { return TotalStake::<T>::get() }
-
-    /// ==============
-	/// ==== Misc ====
-	/// ==============
-    pub fn is_hotkey_active( netuid:u16, hotkey: &T::AccountId ) -> bool { return Uids::<T>::contains_key( netuid, hotkey ) }
-    pub fn get_uid(  netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
-    pub fn is_uid_active(  netuid:u16, uid: u16 ) -> bool { return Active::<T>::get()[uid as usize] }
-
-	/// ==================
-	/// ==== Accounts ====
-	/// ==================
-    pub fn add_global_account( hotkey: &T::AccountId, coldkey: &T::AccountId )  {
-        if !Hotkeys::<T>::contains_key( &hotkey ) { 
-            Hotkeys::<T>::insert( hotkey.clone(), coldkey.clone() );
-            Coldkeys::<T>::insert( coldkey.clone(), hotkey.clone() );
-            Stake::<T>::insert( hotkey.clone(), 0 );
-            Self::increment_n();
-        }
-    }
-    pub fn increment_global_n() { let n = GlobalN::<T>::get(); if n < u64::MAX { GlobalN::<T>::put(n + 1); } }
-    pub fn decrement_global_n() { let n = GlobalN::<T>::get(); if n > 0 { GlobalN::<T>::put(n - 1); } }
-    pub fn increment_subnetwork_n( netuid:u16 ) { let n = SubnetorkN::<T>::get( netuid ); if n < u64::MAX { SubnetorkN::<T>::put(netuid, n + 1); } }
-    pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetorkN::<T>::get( netuid ); if n > 0 { SubnetorkN::<T>::put(netuid, n - 1); } }
-
-    pub fn insert_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
-        Keys::<T>::insert( netuid, uid, hotkey.clone() );
-        Uids::<T>::insert( netuid, hotkey.clone(), uid );
-    }
-    pub fn remove_subnetwork_account( netuid:u16, uid: u16 ) { 
-        let hotkey = Keys::<T>::get( netuid, uid );
-        Uids::<T>::remove( netuid, hotkey.clone() );
-        Keys::<T>::remove( netuid, uid ); 
-    }
-
     /// =====================
 	/// ==== Hyperparams ====
 	/// =====================
@@ -58,7 +18,7 @@ impl<T: Config> Pallet<T> {
     /// ================================
 	/// ==== Consensus term getters ====
 	/// ================================
-    pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return N::<T>::get( netuid ) }
+    pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
     pub fn get_rank( netuid:u16 ) -> Vec<u16> { return Rank::<T>::get( netuid ) }
     pub fn get_trust( netuid:u16 ) -> Vec<u16> { return Trust::<T>::get( netuid ) }
     pub fn get_incentive( netuid:u16 ) -> Vec<u16> { return Incentive::<T>::get( netuid ) }
@@ -69,12 +29,12 @@ impl<T: Config> Pallet<T> {
     /// =======================================
 	/// ==== Consensus vector term getters ====
 	/// =======================================
-    pub fn get_rank_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Rank::<T>::get( netuid ) ) }
-    pub fn get_trust_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Trust::<T>::get( netuid ) ) }
-    pub fn get_conensus_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Consensus::<T>::get( netuid ) ) }
-    pub fn get_incentive_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Incentive::<T>::get( netuid ) ) }
-    pub fn get_dividends_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Dividends::<T>::get( netuid ) ) }
-    pub fn get_emission_as_vector( netuid:u16 ) -> nalgebra::DVector<u64> { nalgebra::DVector::from_vec( Emission::<T>::get( netuid ) ) }
+    pub fn get_rank_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Self::get_rank( netuid ) ) }
+    pub fn get_trust_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Self::get_trust( netuid ) ) }
+    pub fn get_conensus_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Self::get_consensus( netuid ) ) }
+    pub fn get_incentive_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Self::get_dividends( netuid ) ) }
+    pub fn get_dividends_as_vector( netuid:u16 ) -> nalgebra::DVector<u16> { nalgebra::DVector::from_vec( Self::get_dividends( netuid ) ) }
+    pub fn get_emission_as_vector( netuid:u16 ) -> nalgebra::DVector<u64> { nalgebra::DVector::from_vec( Self::get_emission( netuid ) ) }
 
     /// =============================================
 	/// ==== Consensus float vector term getters ====
@@ -84,14 +44,61 @@ impl<T: Config> Pallet<T> {
     pub fn get_consensus_as_float_vector( netuid:u16 ) -> nalgebra::DVector<f32> { nalgebra::DVector::from_vec( Rank::<T>::get( netuid ).iter().map(|&e| (e as f32 / u16::MAX as f32) ).collect() ) }
     pub fn get_incentive_as_float_vector( netuid:u16 ) -> nalgebra::DVector<f32> { nalgebra::DVector::from_vec( Rank::<T>::get( netuid ).iter().map(|&e| (e as f32 / u16::MAX as f32) ).collect() ) }
     pub fn get_dividends_as_float_vector( netuid:u16 ) -> nalgebra::DVector<f32> { nalgebra::DVector::from_vec( Rank::<T>::get( netuid ).iter().map(|&e| (e as f32 / u16::MAX as f32) ).collect() ) }
-    
+   
+    /// =============================================
+	/// ==== Consensus term float vector setters ====
+	/// =============================================
+    pub fn set_rank_from_vector( netuid:u16, rank: nalgebra::DVector<f32> ) { let vec: Vec<u16> = rank.into_iter().cloned().map(|e| (e * u16::MAX as f32) as u16 ).collect(); return Rank::<T>::insert( netuid, vec ) }
+    pub fn set_trust_from_vector( netuid:u16, trust: nalgebra::DVector<f32> ) { let vec: Vec<u16> = trust.into_iter().cloned().map(|e| (e * u16::MAX as f32) as u16 ).collect(); return Trust::<T>::insert( netuid, vec )  }
+    pub fn set_incentive_from_vector( netuid:u16, incentive: nalgebra::DVector<f32> ) { let vec: Vec<u16> = incentive.into_iter().cloned().map(|e| (e * u16::MAX as f32) as u16 ).collect(); return Incentive::<T>::insert( netuid, vec )  }
+    pub fn set_consensus_from_vector( netuid:u16, consensus: nalgebra::DVector<f32> ) { let vec: Vec<u16> = consensus.into_iter().cloned().map(|e| (e * u16::MAX as f32) as u16 ).collect(); return Consensus::<T>::insert( netuid, vec ) }
+    pub fn set_dividends_from_vector( netuid:u16, dividends: nalgebra::DVector<f32> ) { let vec: Vec<u16> = dividends.into_iter().cloned().map(|e| (e * u16::MAX as f32) as u16 ).collect(); return Dividends::<T>::insert( netuid, vec ) }
+    pub fn set_emission_from_vector( netuid:u16, emission: nalgebra::DVector<u64> ) { let vec: Vec<u64> = emission.into_iter().cloned().collect(); return Emission::<T>::insert( netuid, vec )  }
+
+    /// ===============
+	/// ==== Stake ====
+	/// ===============
+    pub fn get_stake( netuid:u16 ) -> Vec<u64> { 
+        let n = Self::get_subnetwork_n( netuid ) as usize;
+        let mut stake: Vec<u64> = vec![ 0; n ];
+        for ( uid_i, hotkey_i ) in <Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId>>::iter_prefix( netuid ){ 
+            stake [ uid_i as usize ] = Stake::<T>::get( hotkey_i );
+        }
+        return stake
+    }
+    pub fn get_stake_as_vector( netuid:u16 ) -> nalgebra::DVector<u64> { nalgebra::DVector::from_vec( Self::get_stake( netuid ) ) }
+    pub fn get_stake_as_float_vector( netuid:u16 ) -> nalgebra::DVector<f32> { 
+        let n = Self::get_subnetwork_n( netuid ) as usize;
+        let subnetwork_stake: Vec<u64> = Self::get_stake( netuid );
+        let subnetwork_stake_sum: I65F63 = I65F63::from_num( subnetwork_stake.iter().sum::<u64>() );
+        let mut normalized_stake_vector: Vec<f32> = vec![ 0.0; n ];
+        for (uid_i, stake_i) in Self::get_stake( netuid ).iter().enumerate() {
+            let stake_fraction_i: I65F63 = I65F63::from_num( *stake_i ) / subnetwork_stake_sum;
+            normalized_stake_vector[ uid_i ] = stake_fraction_i.to_num::<f32>();
+        }
+        return nalgebra::DVector::from_vec( normalized_stake_vector );
+    }
+
     /// =================
 	/// ==== Weights ====
 	/// =================
+    pub fn set_weights_for_uid( netuid:u16, uid:u16, weights: Vec<f32> ) { 
+        let mut zipped_weights: Vec<(u16,u16)> = vec![];
+        for (i, fw) in weights.iter().enumerate() {
+            let wij: u16 = (*fw * (u16::MAX as f32)) as u16;
+            if wij != 0 { zipped_weights.push((i as u16, wij)) }
+        }
+        Weights::<T>::insert( netuid, uid, zipped_weights );
+    }
+    pub fn set_weights_from_float_matrix( netuid:u16, weights: nalgebra::DMatrix<f32> ) { 
+        for i in 0..weights.nrows() { 
+            Self::set_weights_for_uid( netuid, i as u16, weights.row(i).into_iter().cloned().collect() );
+        }
+    }
     pub fn get_weights_as_matrix( netuid:u16 ) -> nalgebra::DMatrix<u16> { 
         let n = Self::get_subnetwork_n( netuid ) as usize;
         let mut weights: Vec<u16> = vec![ 0; n * n ];
-        for ( uid_i, weights_i ) in < Weights<T> as IterableDoubleStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { weights [ ( n * uid_i as usize ) + (*uid_j as usize) ] = *weight_ij;}
         }
         nalgebra::DMatrix::from_vec(n, n, weights ) 
@@ -99,7 +106,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_weights_as_float_matrix( netuid:u16 ) -> nalgebra::DMatrix<f32> { 
         let n = Self::get_subnetwork_n( netuid ) as usize;
         let mut weights: Vec<f32> = vec![ 0.0; n * n ];
-        for ( uid_i, weights_i ) in < Weights<T> as IterableDoubleStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { weights [ ( n * uid_i as usize ) + (*uid_j as usize) ] = *weight_ij as f32 / u16::MAX as f32;}
         }
         nalgebra::DMatrix::from_vec(n, n, weights ) 
@@ -111,7 +118,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_bonds_as_matrix( netuid:u16 ) -> nalgebra::DMatrix<u16> { 
         let n = Self::get_subnetwork_n( netuid ) as usize;
         let mut bonds: Vec<u16> = vec![ 0; n * n ];
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableDoubleStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { bonds [ ( n * uid_i as usize ) + (*uid_j as usize) ] = *bonds_ij;}
         }
         nalgebra::DMatrix::from_vec(n, n, bonds ) 
@@ -119,7 +126,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_bonds_as_float_matrix( netuid:u16 ) -> nalgebra::DMatrix<f32> { 
         let n = Self::get_subnetwork_n( netuid ) as usize;
         let mut bonds: Vec<f32> = vec![ 0.0; n * n ];
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableDoubleStorageMap<u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { bonds [ ( n * uid_i as usize ) + (*uid_j as usize) ] = *bonds_ij as f32 / u16::MAX as f32;}
         }
         nalgebra::DMatrix::from_vec(n, n, bonds ) 
@@ -134,16 +141,8 @@ impl<T: Config> Pallet<T> {
     pub fn get_consensus_for_uid( netuid:u16, uid: u16 ) -> u16 { return Consensus::<T>::get( netuid )[uid as usize] }
     pub fn get_dividends_for_uid( netuid:u16, uid: u16 ) -> u16 { return Dividends::<T>::get( netuid )[uid as usize] }
     pub fn get_emission_for_uid( netuid:u16, uid: u16 ) -> u64 { return Emission::<T>::get( netuid )[uid as usize] }
+    pub fn get_stake_for_uid( netuid:u16, uid: u16 ) -> u64 { return Stake::<T>::get( &Keys::<T>::get( netuid, uid ) ) }
 
-    /// ================================
-	/// ==== Consensus term setters ====
-	/// ================================
-    pub fn set_rank( netuid:u16, rank: Vec<u16> ) { return Rank::<T>::put( netuid, rank ) }
-    pub fn set_trust( netuid:u16, trust: Vec<u16> ) { return Trust::<T>::put( netuid, trust ) }
-    pub fn set_incentive( netuid:u16, incentive: Vec<u16> ) { return Incentive::<T>::put( netuid, incentive ) }
-    pub fn set_consensus( netuid:u16, consensus: Vec<u16> ) { return Consensus::<T>::put( netuid, consensus ) }
-    pub fn set_dividends( netuid:u16, dividends: Vec<u16> ) { return Dividends::<T>::put( netuid, dividends ) }
-    pub fn set_emission( netuid:u16, emission: Vec<u64> ) { return Emission::<T>::put( netuid, emission ) }
 
     /// ====================================
 	/// ==== Consensus term uid setters ====
@@ -151,32 +150,32 @@ impl<T: Config> Pallet<T> {
     pub fn set_rank_for_uid( netuid:u16, uid: u16, rank: u16 ) { 
         let mut vec: Vec<u16> = Self::get_rank( netuid ); 
         vec[uid as usize] = rank;
-        Rank::<T>::put( vec ) 
+        Rank::<T>::insert( netuid, vec ) 
     }
     pub fn set_trust_for_uid( netuid:u16, uid: u16, trust: u16 ) { 
         let mut vec: Vec<u16> = Self::get_trust( netuid ); 
         vec[uid as usize] = trust;
-        Trust::<T>::put( vec ) 
+        Trust::<T>::insert( netuid, vec ) 
     }
     pub fn set_incentive_for_uid( netuid:u16, uid: u16, incentive: u16 ) { 
         let mut vec: Vec<u16> = Self::get_incentive( netuid ); 
         vec[uid as usize] = incentive;
-        Incentive::<T>::put( vec ) 
+        Incentive::<T>::insert( netuid, vec ) 
     }
     pub fn set_consensus_for_uid( netuid:u16, uid: u16, consensus: u16 ) { 
         let mut vec: Vec<u16> = Self::get_consensus( netuid ); 
         vec[uid as usize] = consensus;
-        Consensus::<T>::put( vec ) 
+        Consensus::<T>::insert( netuid, vec ) 
     }
     pub fn set_dividends_for_uid( netuid:u16, uid: u16, dividends: u16 ) { 
         let mut vec: Vec<u16> = Self::get_dividends( netuid ); 
         vec[uid as usize] = dividends;
-        Dividends::<T>::put( vec ) 
+        Dividends::<T>::insert( netuid, vec ) 
     }
     pub fn set_emission_for_uid( netuid:u16, uid: u16, emission: u64 ) { 
         let mut vec: Vec<u64> = Self::get_emission( netuid ); 
         vec[uid as usize] = emission;
-        Emission::<T>::put( vec ) 
+        Emission::<T>::insert( netuid, vec ) 
     }
 
 
