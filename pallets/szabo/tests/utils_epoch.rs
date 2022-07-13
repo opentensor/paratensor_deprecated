@@ -1,8 +1,5 @@
 use crate::{mock::*};
-use pallet_szabo::{Error};
-use frame_system::{Config};
 use frame_support::assert_ok;
-use frame_support::sp_runtime::DispatchError;
 
 mod mock;
 mod helpers;
@@ -36,12 +33,12 @@ fn test_set_network_conensus() {
 	new_test_ext().execute_with(|| {
 
         // Test zero network.
-        SzaboModule::set_rank( 0, vec![0,1,2,3] );
-        SzaboModule::set_trust( 0, vec![0,1,2,3] );
-        SzaboModule::set_incentive( 0, vec![0,1,2,3] );
-        SzaboModule::set_consensus( 0, vec![0,1,2,3] );
-        SzaboModule::set_dividends( 0, vec![0,1,2,3] );
-        SzaboModule::set_emission( 0, vec![0,1,2,3] );
+        SzaboModule::set_rank_from_vector( 0, vec![0,1,2,3] );
+        SzaboModule::set_trust_from_vector( 0, vec![0,1,2,3] );
+        SzaboModule::set_incentive_from_vector( 0, vec![0,1,2,3] );
+        SzaboModule::set_consensus_from_vector( 0, vec![0,1,2,3] );
+        SzaboModule::set_dividends_from_vector( 0, vec![0,1,2,3] );
+        SzaboModule::set_emission_from_vector( 0, vec![0,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_rank( 0 ), &vec![0,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_trust( 0 ), &vec![0,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_incentive( 0 ), &vec![0,1,2,3] );
@@ -64,12 +61,12 @@ fn test_set_network_conensus() {
         helpers::assert_u64_vec_eq( &SzaboModule::get_stake( 0 ), &vec![0,0,0,0] );
 
         // Test network one
-        SzaboModule::set_rank( 1, vec![5,1,2,3] );
-        SzaboModule::set_trust( 1, vec![5,1,2,3] );
-        SzaboModule::set_incentive( 1, vec![5,1,2,3] );
-        SzaboModule::set_consensus( 1, vec![5,1,2,3] );
-        SzaboModule::set_dividends( 1, vec![5,1,2,3] );
-        SzaboModule::set_emission( 1, vec![5,1,2,3] );
+        SzaboModule::set_rank_from_vector( 1, vec![5,1,2,3] );
+        SzaboModule::set_trust_from_vector( 1, vec![5,1,2,3] );
+        SzaboModule::set_incentive_from_vector( 1, vec![5,1,2,3] );
+        SzaboModule::set_consensus_from_vector( 1, vec![5,1,2,3] );
+        SzaboModule::set_dividends_from_vector( 1, vec![5,1,2,3] );
+        SzaboModule::set_emission_from_vector( 1, vec![5,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_rank( 1 ), &vec![5,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_trust( 1 ), &vec![5,1,2,3] );
         helpers::assert_u16_vec_eq( &SzaboModule::get_incentive( 1 ), &vec![5,1,2,3] );

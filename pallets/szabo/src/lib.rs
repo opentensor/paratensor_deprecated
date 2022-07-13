@@ -21,8 +21,13 @@ use frame_system::{
 mod staking;
 mod weights;
 mod epoch;
+mod tempo;
+mod array;
+
 mod utils_accounts;
-mod utils_consensus;
+mod utils_epoch;
+mod utils_tempo;
+mod utils_misc;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -93,6 +98,34 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
+	/// ===============================
+	/// ==== Distribution Storage  ====
+	/// ===============================
+	#[pallet::type_value] 
+	pub fn DefaultNumSubnetworks<T: Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub type NumSubnetworks<T> = StorageValue<_, u16, ValueQuery, DefaultNumSubnetworks<T>>;
+
+	#[pallet::type_value] 
+	pub fn DefaultNextBlockEmission<T: Config>() -> u64 { 1_000_000_000 }
+	#[pallet::storage]
+	pub type NextBlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultNextBlockEmission<T>>;
+
+	#[pallet::type_value] 
+	pub fn DefaultEmissionDistribution<T: Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub type EmissionDistribution<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultEmissionDistribution<T>>;
+
+	#[pallet::type_value] 
+	pub fn DefaultPendingEmission<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	pub type PendingEmission<T> = StorageMap< _, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
+
+	#[pallet::type_value] 
+	pub fn DefaultTempo<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	pub type Tempo<T> = StorageMap< _, Identity, u16, u64, ValueQuery, DefaultTempo<T>>;
+
 	/// =======================================
 	/// ==== Subnetork Hyperparam stroage  ====
 	/// =======================================
@@ -105,6 +138,21 @@ pub mod pallet {
 	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
 	#[pallet::storage]
 	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultTrustThreshold<T: Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub type TrustThreshold<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultTrustThreshold<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultRho<T: Config>() -> u16 { 10 }
+	#[pallet::storage]
+	pub type Rho<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultKappa<T: Config>() -> u16 { u16::MAX / 2 }
+	#[pallet::storage]
+	pub type Kappa<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultKappa<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
@@ -130,9 +178,9 @@ pub mod pallet {
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 
 	#[pallet::type_value] 
-	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
+	pub fn DefaultBonds<T:Config>() -> Vec<(u8, u8)> { vec![] }
 	#[pallet::storage]
-    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
+    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u8, u8)>, ValueQuery, DefaultBonds<T> >;
 
 	#[pallet::type_value] 
 	pub fn DefaultActive<T:Config>() -> Vec<bool> { vec![] }
@@ -249,6 +297,15 @@ pub mod pallet {
 	/// ================
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		/// ---- Called on the initialization of this pallet. (the order of on_finalize calls is determined in the runtime)
+		///
+		/// # Args:
+		/// 	* 'n': (T::BlockNumber):
+		/// 		- The number of the block we are initializing.
+		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
+			Self::global_step( false );
+			0
+		}
 	}
 
 	/// ======================
