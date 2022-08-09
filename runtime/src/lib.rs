@@ -546,7 +546,7 @@ construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
 		// Template
-		TemplatePallet: pallet_subtensor::{Pallet, Call, Storage, Event<T>}  = 40,
+		Subtensor: pallet_subtensor::{Pallet, Call, Storage, Event<T>}  = 40,
 	}
 );
 
