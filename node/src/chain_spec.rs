@@ -102,6 +102,7 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				1000.into(),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 			)
 		},
 		Vec::new(),
@@ -157,6 +158,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				1000.into(),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 			)
 		},
 		// Bootnodes
@@ -181,6 +183,7 @@ fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
+	root_key: AccountId,
 ) -> bittensor_parachain::GenesisConfig {
 	bittensor_parachain::GenesisConfig {
 		system: bittensor_parachain::SystemConfig {
@@ -191,6 +194,7 @@ fn testnet_genesis(
 		balances: bittensor_parachain::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
 		},
+		sudo: bittensor_parachain::SudoConfig { key: Some(root_key) },
 		parachain_info: bittensor_parachain::ParachainInfoConfig { parachain_id: id },
 		collator_selection: bittensor_parachain::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
@@ -262,6 +266,8 @@ pub fn nobunaga_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				1000.into(),
+				// Initial PoA authorities
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 			)
 		},
 		// Bootnodes
