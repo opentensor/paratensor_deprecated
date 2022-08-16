@@ -5,6 +5,8 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_core::crypto::Ss58Codec;
+//use xcm::latest::Junction::AccountId32;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -38,6 +40,11 @@ impl Extensions {
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
+
+//get account id for customized collators
+pub fn get_aura_from_ss58_addr(s: &str) -> AuraId {
+    AuraId::from_ss58check(s).unwrap()
+}
 
 /// Generate collator keys from seed.
 ///
@@ -102,7 +109,8 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				1000.into(),
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				//get_account_id_from_seed::<sr25519::Public>("Alice"),
+				AccountId::from_ss58check("5CFXaAuLoR273XYj3JU68LWJ7xGGEMCfHxWvSbpkFZde3RpB").unwrap(), //SAM
 			)
 		},
 		Vec::new(),
@@ -112,7 +120,7 @@ pub fn development_config() -> ChainSpec {
 		None,
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 2000,
 		},
 	)
 }
@@ -135,13 +143,13 @@ pub fn local_testnet_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
+                        Ss58Codec::from_ss58check("5Ecgqc8cj6yYGKAFwnZeJjNo4vfLktUeBLfZ6VmDXRGffoc6").unwrap(),
+                        get_aura_from_ss58_addr("5Ecgqc8cj6yYGKAFwnZeJjNo4vfLktUeBLfZ6VmDXRGffoc6"),
+                    ),
+                    (
+                        Ss58Codec::from_ss58check("5GYWR3eKNxQrSyd17gyyupdmwSSf6nBWbSNWQodVqnBWgiSC").unwrap(),
+                        get_aura_from_ss58_addr("5GYWR3eKNxQrSyd17gyyupdmwSSf6nBWbSNWQodVqnBWgiSC"),
+                    ),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -157,8 +165,8 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000.into(),
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				2000.into(),
+				AccountId::from_ss58check("5CFXaAuLoR273XYj3JU68LWJ7xGGEMCfHxWvSbpkFZde3RpB").unwrap(), 
 			)
 		},
 		// Bootnodes
@@ -174,7 +182,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 2000,
 		},
 	)
 }
@@ -267,7 +275,8 @@ pub fn nobunaga_testnet_config() -> ChainSpec {
 				],
 				1000.into(),
 				// Initial PoA authorities
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				//get_account_id_from_seed::<sr25519::Public>("Alice"),
+				AccountId::from_ss58check("5CFXaAuLoR273XYj3JU68LWJ7xGGEMCfHxWvSbpkFZde3RpB").unwrap(), //SAM
 			)
 		},
 		// Bootnodes
@@ -283,7 +292,7 @@ pub fn nobunaga_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 2000,
 		},
 	)
 }
