@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_core::crypto::Ss58Codec;
+use hex_literal::hex;
 //use xcm::latest::Junction::AccountId32;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -143,11 +144,13 @@ pub fn local_testnet_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-                        Ss58Codec::from_ss58check("5Ecgqc8cj6yYGKAFwnZeJjNo4vfLktUeBLfZ6VmDXRGffoc6").unwrap(),
+                        //Ss58Codec::from_ss58check("5Ecgqc8cj6yYGKAFwnZeJjNo4vfLktUeBLfZ6VmDXRGffoc6").unwrap(),
+						hex!["70dce453313339e3843a673da3d0db7445c1750a9a20ee75cd1aeaaeb3dbaa31"].into(),
                         get_aura_from_ss58_addr("5Ecgqc8cj6yYGKAFwnZeJjNo4vfLktUeBLfZ6VmDXRGffoc6"),
                     ),
                     (
-                        Ss58Codec::from_ss58check("5GYWR3eKNxQrSyd17gyyupdmwSSf6nBWbSNWQodVqnBWgiSC").unwrap(),
+                        //Ss58Codec::from_ss58check("5GYWR3eKNxQrSyd17gyyupdmwSSf6nBWbSNWQodVqnBWgiSC").unwrap(),
+						hex!["c62549e992a4c33a3b6edfa693e70da30f1c3d53a6a28ef6ae368c2ee0013956"].into(),
                         get_aura_from_ss58_addr("5GYWR3eKNxQrSyd17gyyupdmwSSf6nBWbSNWQodVqnBWgiSC"),
                     ),
 				],
