@@ -20,3 +20,7 @@ parathreads [here](https://wiki.polkadot.network/docs/learn-parathreads).
 
 🧙 Learn about how to use this template and run your own parachain testnet for it in the
 [Devhub Cumulus Tutorial](https://docs.substrate.io/tutorials/v3/cumulus/start-relay/).
+
+
+# Test individual with logs
+SKIP_WASM_BUILD=1 RUST_LOG=runtime=debug cargo test your_test_name -- --nocapture 

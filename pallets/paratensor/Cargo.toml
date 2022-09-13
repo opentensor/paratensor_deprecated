@@ -1,13 +1,14 @@
+publish = false
 [package]
-name = "pallet-subtensor"
+name = "pallet-paratensor"
 authors = ["Const", "Shibshib", "Saeideh"]
-version = "4.0.0-dev"
+version = "0.0.1-dev"
 description = "FRAME pallet template for defining custom runtime logic."
 homepage = "https://opentensor.ai"
 edition = "2021"
-license = "Unlicense"
+license = "MIT"
 publish = false
-repository = "https://github.com/opentensor/subtensorv2"
+repository = "https://github.com/opentensor/paratensor"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -15,6 +16,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"], default-features = false }
 scale-info = { version = "2.0.0", default-features = false, features = ["derive"] }
+ndarray = { version = "0.15.0", default-features = false }
+fast-math = { version = "0.1" }
 
 # Substrate
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }
@@ -34,6 +37,7 @@ sp-version = { git = "https://github.com/paritytech/substrate", default-features
 # Substrate
 sp-tracing = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }
 parity-util-mem = { version = "0.11.0", features = ['primitive-types'] }
+rand = "0.8"
 
 [features]
 default = ["std"]
