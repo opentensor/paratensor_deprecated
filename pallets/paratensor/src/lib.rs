@@ -39,20 +39,23 @@ pub mod pallet {
 		type InitialMaxAllowedMaxMinRatio: Get<u16>;
 	}
 
-	/// ==============================
-	/// ==== Super Params Storage ====
-	/// ==============================
+	/// ===============================
+	/// ==== Global Params Storage ====
+	/// ===============================
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
+	/// ---- StorageItem Global Total N
 	#[pallet::storage]
 	pub type GlobalN<T> = StorageValue<_, u64, ValueQuery>;
 
+	/// ---- StorageItem Global Total Stake
 	#[pallet::storage]
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 
+	/// ---- StorageItem Hotkey --> Global Stake
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::storage]
@@ -61,14 +64,18 @@ pub mod pallet {
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
+
+	/// ---- SingleMap Hotkey --> Global Stake
 	#[pallet::storage]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
+	/// ---- SingleMap Hotkey --> Coldkey
 	#[pallet::type_value] 
 	pub fn DefaultHotkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
     pub(super) type Coldkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultHotkeyAccount<T> >;
 
+	/// ---- SingleMap Coldkey --> Hotkey
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
@@ -79,11 +86,14 @@ pub mod pallet {
 	/// =======================================
 	/// ==== Subnetork Hyperparam stroage  ====
 	/// =======================================
+	/// ---- SingleMap Network UID --> Hyper-parameter MinAllowedWeights
 	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::storage]
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
 
+	/// ---- SingleMap Network UID --> MaxAllowedMaxMinRatio
+	/// TODO(const): should be moved to max clip ratio.
 	#[pallet::type_value] 
 	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
 	#[pallet::storage]
@@ -97,61 +107,73 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
+	/// ---- DoubleMap Network UID --> Neuron UID --> Hotkey
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 	#[pallet::storage]
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 
+	/// ---- DoubleMap Network UID --> Hotkey --> Neuron UID
 	#[pallet::type_value] 
 	pub fn DefaultUid<T:Config>() -> u16 { 0 }
 	#[pallet::storage]
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultUid<T> >;
 
+	/// ---- DoubleMap Network UID --> Neuron UID --> Row Weights
 	#[pallet::type_value] 
 	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
 	#[pallet::storage]
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 
+	/// ---- DoubleMap Network UID --> Neuron UID --> Row Bonds
 	#[pallet::type_value] 
 	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
 	#[pallet::storage]
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
 
+	/// ---- SingleMap Network UID --> Network Activity Vector
 	#[pallet::type_value] 
 	pub fn DefaultActive<T:Config>() -> Vec<bool> { vec![] }
 	#[pallet::storage]
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, DefaultActive<T> >;
 
+	/// ---- SingleMap Network UID --> Network Stake Vector
 	#[pallet::type_value] 
 	pub fn DefaultStake<T:Config>() -> Vec<u64> { vec![] }
 	#[pallet::storage]
     pub(super) type S<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultStake<T> >;
 
+	/// ---- SingleMap Network UID --> Network Rank Vector
 	#[pallet::type_value] 
 	pub fn DefaultRank<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultRank<T> >;
 
+	/// ---- SingleMap Network UID --> Network Trust Vector
 	#[pallet::type_value] 
 	pub fn DefaultTrust<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Trust<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultTrust<T> >;
 
+	/// ---- SingleMap Network UID --> Network Incentive Vector
 	#[pallet::type_value] 
 	pub fn DefaultIncentive<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultIncentive<T> >;
 
+	/// ---- SingleMap Network UID --> Network Consensus Vector
 	#[pallet::type_value] 
 	pub fn DefaultConsensus<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Consensus<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultConsensus<T> >;
 
+	/// ---- SingleMap Network UID --> Network Dividends Vector
 	#[pallet::type_value] 
 	pub fn DefaultDividends<T: Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultDividends<T> >;
 
+	/// ---- SingleMap Network UID --> Network Emission Vector
 	#[pallet::type_value] 
 	pub fn DefaultEmission<T:Config>() -> Vec<u64> { vec![] }
 	#[pallet::storage]
