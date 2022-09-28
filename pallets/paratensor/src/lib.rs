@@ -31,13 +31,101 @@ pub mod pallet {
 		#[pallet::constant]
 		type InitialIssuance: Get<u64>;
 
+		#[pallet::constant]
+		type InitialBlocksPerStep: Get<u64>;
+
 		/// --- Hyperparams
 		#[pallet::constant]
 		type InitialMinAllowedWeights: Get<u16>;
 
 		#[pallet::constant]
 		type InitialMaxAllowedMaxMinRatio: Get<u16>;
+
+		// Tempo for each network that multiplies in blockPerStep and sets a different blocksPerStep for each network
+		#[pallet::constant]
+		type InitialTempo: Get<u16>;
+		
 	}
+
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub type NeuronMetadataOf<T> = NeuronMetadata<AccountIdOf<T>>;
+
+	#[derive(Encode, Decode, Default, TypeInfo)]
+
+	pub struct NeuronMetadata<AccountId> {
+
+		/// ---- The endpoint's code version.
+        pub version: u32,
+
+        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
+        pub ip: u128,
+
+        /// ---- The endpoint's u16 encoded port.
+        pub port: u16,
+
+        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
+        pub ip_type: u8,
+
+        /// ---- The endpoint's unique identifier.
+        pub uid: u32,
+
+        /// ---- The neuron modality. Modalities specify which datatype
+        /// the neuron endpoint can process. This information is non
+        /// verifiable. However, neurons should set this correctly
+        /// in order to be detected by others with this datatype.
+        /// The initial modality codes are:
+        /// TEXT: 0
+        /// IMAGE: 1
+        /// TENSOR: 2
+        pub modality: u8,
+
+        /// ---- The associated hotkey account.
+        /// Registration and changing weights can be made by this
+        /// account.
+        pub hotkey: AccountId,
+
+        /// ---- The associated coldkey account.
+        /// Staking and unstaking transactions must be made by this account.
+        /// The hotkey account (in the Neurons map) has permission to call
+        /// subscribe and unsubscribe.
+        pub coldkey: AccountId,
+
+		/// ---- Is this neuron active in the incentive mechanism.
+		pub active: u32,
+
+		/// ---- Block number of last chain update.
+		pub last_update: u64,
+
+		/// ---- Transaction priority.
+		pub priority: u64,
+
+		/// ---- The associated stake in this account.
+		pub stake: u64,
+
+		/// ---- The associated rank in this account.
+		pub rank: u64,
+
+		/// ---- The associated trust in this account.
+		pub trust: u64,
+
+		/// ---- The associated consensus in this account.
+		pub consensus: u64,
+
+		/// ---- The associated incentive in this account.
+		pub incentive: u64,
+
+		/// ---- The associated dividends in this account.
+		pub dividends: u64,
+
+		/// ---- The associated emission last block for this account.
+		pub emission: u64,
+
+		/// ---- The associated bond ownership.
+		pub bonds: Vec<(u32,u64)>,
+
+		/// ---- The associated weights ownership.
+		pub weights: Vec<(u32,u32)>,
+    }
 
 	/// ===============================
 	/// ==== Global Params Storage ====
@@ -61,6 +149,23 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
+	/// ---- StorageItem BlocksPerSteps
+	#[pallet::type_value]
+	pub fn DefaultBlocksPerStep<T: Config>() -> u64 {T::InitialBlocksPerStep::get()}
+	#[pallet::storage]
+	pub type BlocksPerStep<T> = StorageValue<_, u64, ValueQuery, DefaultBlocksPerStep<T>>; 
+
+	/// ---- SingleMap Network UID --> EmissionRatio
+	#[pallet::type_value]
+	pub fn DefaultEmissionRatio<T: Config>() ->  u16 { 0}
+	#[pallet::storage]
+	pub(super) type EmissionRatio<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultEmissionRatio<T>>;
+
+	/// ---- Maps from uid to neuron.
+	#[pallet::storage]
+    #[pallet::getter(fn uid)]
+    pub(super) type Neurons<T:Config> = StorageMap<_, Identity, u32, NeuronMetadataOf<T>, OptionQuery>;
+
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
@@ -81,10 +186,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
-	
+
 
 	/// =======================================
-	/// ==== Subnetork Hyperparam stroage  ====
+	/// ==== Subnetwork Hyperparam stroage  ====
 	/// =======================================
 	/// ---- SingleMap Network UID --> Hyper-parameter MinAllowedWeights
 	#[pallet::type_value] 
@@ -98,6 +203,12 @@ pub mod pallet {
 	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
 	#[pallet::storage]
 	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
+
+	/// ---- SingleMap Network UID --> Tempo
+	#[pallet::type_value]
+	pub fn DefaultTempo<T: Config>() -> u16 {T::InitialTempo::get()}
+	#[pallet::storage]
+	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
@@ -194,6 +305,12 @@ pub mod pallet {
 
 		/// ---- Event created when a caller successfully set's their weights on a subnetwork.
 		WeightsSet(u16, u16),
+
+		/// ---- Event created when default blocks per step has been set.
+		BlocksPerStepSet(u64),
+
+		/// ---- Event created when Tempo is set
+		TempoSet(u16),
 	}
 	
 	/// ================
@@ -247,6 +364,10 @@ pub mod pallet {
 		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
 		/// max value is more than MaxAllowedMaxMinRatio.
 		MaxAllowedMaxMinRatioExceeded,
+
+		// --- Error for setting blocksPerStep
+		
+		// --- Error for setting Tempo 
 	}
 
 	/// ================
@@ -390,8 +511,127 @@ pub mod pallet {
 			_hotkey: T::AccountId, 
 			_ammount_unstaked: u64
 		) -> DispatchResult {
-            Ok(())
+            Ok(()) /*TO DO */
 			//Self::do_remove_stake(origin, hotkey, ammount_unstaked)
 		}
+
+		/// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
+		/// already registered the metadata is updated. If the caller is not registered this call throws NotRegsitered.
+		///
+		/// # Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, a hotkey associated of the registered neuron.
+		///
+		/// 	* 'ip' (u128):
+		/// 		- The u64 encoded IP address of type 6 or 4.
+		///
+		/// 	* 'port' (u16):
+		/// 		- The port number where this neuron receives RPC requests.
+		///
+		/// 	* 'ip_type' (u8):
+		/// 		- The ip type one of (4,6).
+		///
+		/// 	* 'modality' (u8):
+		/// 		- The neuron modality type.
+		///
+		/// # Event:
+		/// 	* 'AxonServed':
+		/// 		- On subscription of a new neuron to the active set.
+		///
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn serve_axon (
+			_origin:OriginFor<T>, 
+			_version: u32, 
+			_ip: u128, 
+			_port: u16, 
+			_ip_type: u8, 
+			_modality: u8 
+		) -> DispatchResult {  /*TO DO */
+			Ok(()) 
+		}
+		/// ---- Registers a new neuron to the subnetwork. 
+		///
+		/// # Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, registration key as found in RegistrationKey::get(0);
+		///
+		/// 	* 'block_number' (u64):
+		/// 		- Block number of hash to attempt.
+		///
+		/// 	* 'nonce' (u64):
+		/// 		- Hashing nonce as a u64.
+		///
+		/// 	* 'work' (Vec<u8>):
+		/// 		- Work hash as list of bytes.
+		/// 
+		/// 	* 'hotkey' (T::AccountId,):
+		/// 		- Hotkey to register.
+		/// 
+		/// 	* 'coldkey' (T::AccountId,):
+		/// 		- Coldkey to register.
+		/// 	* 'netuid' (u16):
+		///			- subnetwork registering on
+		/// # Event:
+		/// 	* 'NeuronRegistered':
+		/// 		- On subscription of a new neuron to the active set.
+		///
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn register( 
+				_origin:OriginFor<T>, 
+				_block_number: u64, 
+				_nonce: u64, 
+				_work: Vec<u8>,
+				_hotkey: T::AccountId, 
+				_coldkey: T::AccountId,
+				_netuid: u16 
+		) -> DispatchResult {  /*TO DO */
+			Ok(()) 
+		}
+
+		/// ---- SUDO ONLY FUNCTIONS ------
+		/// Set blocks per Step
+		/// #Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		/// 		
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_set_blocks_per_step(
+			_origin: OriginFor<T>,
+			_blocks_per_step: u64
+		) -> DispatchResult { /*TO DO */
+			Ok(())
+		}
+
+		/// ---- Set emission ratio for each subnetwork
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		/// 	* `netuid` (u16):
+		/// 		- The network uid we are setting emission ratio on.
+		/// 
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_set_emission_ratio(
+			_origin: OriginFor<T>,
+			_netuid: u16,
+			_subnet_emission_ratio: u16
+		) -> DispatchResult{
+				if Self::calculate_emission_ratio_sum() + _subnet_emission_ratio > 1 { 
+						 //we should return error /*To DO */
+				}
+				else{
+					EmissionRatio::<T>::insert(_netuid, _subnet_emission_ratio);
+				}
+			Ok(())
+		}
+
 	}
+
+	/// ---- Paratensor helper functions.
+	impl<T: Config> Pallet<T> {
+	/// ---- returns the sum of emission ratios for defined subnetworks
+		pub fn calculate_emission_ratio_sum() -> u16 {
+			let sum : u16 = 0; /*TO DO */
+			sum
+		}
+	}	
 }

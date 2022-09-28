@@ -59,6 +59,8 @@ impl<T: Config> Pallet<T> {
         let ema_bonds: Vec<Vec<I32F32>> = Self::mat_ema( &weights, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
+        // *TODO: Compute emissions.
+
     }
 
     pub fn sum( x: &Vec<I32F32> ) -> I32F32 {
@@ -227,4 +229,5 @@ impl<T: Config> Pallet<T> {
         }
         bonds
     } 
+
 }

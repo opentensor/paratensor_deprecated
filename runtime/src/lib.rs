@@ -303,6 +303,7 @@ impl frame_system::Config for Runtime {
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	
 }
 
 parameter_types! {
@@ -450,6 +451,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
+
 	type WeightInfo = ();
 }
 
@@ -458,6 +460,8 @@ parameter_types! {
 	pub const ParatensorInitialIssuance: u64 = 0;
 	pub const ParatensorInitialMinAllowedWeights: u16 = 0;
 	pub const ParatensorInitialMaxAllowedMaxMinRatio: u16 = 0;
+	pub const ParatensorInitialBlocksPerStep: u64 = 100;
+	pub const ParatensorInitialTempo: u16 = 0;
 }
 impl pallet_paratensor::Config for Runtime {
 	type Event = Event;
@@ -465,6 +469,8 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialIssuance = ParatensorInitialIssuance;
 	type InitialMinAllowedWeights = ParatensorInitialMinAllowedWeights;
 	type InitialMaxAllowedMaxMinRatio = ParatensorInitialMaxAllowedMaxMinRatio;
+	type InitialBlocksPerStep = ParatensorInitialBlocksPerStep;
+	type InitialTempo = ParatensorInitialTempo;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
