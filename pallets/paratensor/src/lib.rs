@@ -44,7 +44,54 @@ pub mod pallet {
 		// Tempo for each network that multiplies in blockPerStep and sets a different blocksPerStep for each network
 		#[pallet::constant]
 		type InitialTempo: Get<u16>;
-		
+
+		/// Initial Difficulty.
+		#[pallet::constant]
+		type InitialDifficulty: Get<u64>;
+
+		/// Initial adjustment interval.
+		#[pallet::constant]
+		type InitialAdjustmentInterval: Get<u64>;
+
+		/// Initial target registrations per interval.
+		#[pallet::constant]
+		type InitialTargetRegistrationsPerInterval: Get<u64>;
+
+		/// Rho constant
+		#[pallet::constant]
+		type InitialRho: Get<u16>;
+
+		/// Kappa constant
+		#[pallet::constant]
+		type InitialKappa: Get<u16>;
+
+		/// Max UID constant.
+		#[pallet::constant]
+		type InitialMaxAllowedUids: Get<u16>;
+
+		/// Default Batch size.
+		#[pallet::constant]
+		type InitialValidatorBatchSize: Get<u16>;
+
+		/// Default Batch size.
+		#[pallet::constant]
+		type InitialValidatorSequenceLen: Get<u16>;
+
+		/// Default Epoch length.
+		#[pallet::constant]
+		type InitialValidatorEpochLen: Get<u16>;
+
+		/// Default Reset length.
+		#[pallet::constant]
+		type InitialValidatorEpochsPerReset: Get<u16>;
+
+		/// Initial incentive pruning denominator
+		#[pallet::constant]
+		type InitialIncentivePruningDenominator: Get<u16>;
+
+		/// Initial stake pruning denominator
+		#[pallet::constant]
+		type InitialStakePruningDenominator: Get<u16>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -166,6 +213,17 @@ pub mod pallet {
     #[pallet::getter(fn uid)]
     pub(super) type Neurons<T:Config> = StorageMap<_, Identity, u32, NeuronMetadataOf<T>, OptionQuery>;
 
+	/// ---- StorageItem Global Adjustment Interval
+	#[pallet::type_value]
+	pub fn DefaultAdjustmentInterval<T: Config>() -> u64 { T::InitialAdjustmentInterval::get() }
+	#[pallet::storage]
+	pub type AdjustmentInterval<T> = StorageValue<_, u64, ValueQuery, DefaultAdjustmentInterval<T> >;
+
+	#[pallet::type_value] 
+	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u64 { T::InitialTargetRegistrationsPerInterval::get() }
+	#[pallet::storage]
+	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u64, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
+
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
@@ -209,6 +267,66 @@ pub mod pallet {
 	pub fn DefaultTempo<T: Config>() -> u16 {T::InitialTempo::get()}
 	#[pallet::storage]
 	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
+
+	/// ---- SingleMap Network UID --> Difficulty
+	#[pallet::type_value]
+	pub fn DefaultDifficulty<T: Config>() -> u64 {T::InitialDifficulty::get()}
+	#[pallet::storage]
+	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
+
+	/// ---- SingleMap Network UID --> Rho
+	#[pallet::type_value]
+	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
+	#[pallet::storage]
+	pub type Rho<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
+
+	/// --- SingleMap Network UID ---> Kappa
+	#[pallet::type_value]
+	pub fn DefaultKappa<T: Config>() -> u16 {T::InitialKappa::get()}
+	#[pallet::storage]
+	pub type Kappa<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultKappa<T> >;
+
+	/// --- SingleMap Network UID ---> Max Allowed Uids
+	#[pallet::type_value] 
+	pub fn DefaultMaxAllowedUids<T: Config>() -> u16 { T::InitialMaxAllowedUids::get() }
+	#[pallet::storage]
+	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
+
+	/// --- SingleMap Network UID ---> Validator Batch Size
+	#[pallet::type_value] 
+	pub fn DefaultValidatorBatchSize<T: Config>() -> u16 { T::InitialValidatorBatchSize::get() }
+	#[pallet::storage]
+	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
+
+	/// --- SingleMap Network UID ---> Validaotr Sequence Length
+	#[pallet::type_value] 
+	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
+	#[pallet::storage]
+	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
+
+	/// --- SingleMap Network UID ---> Validator Epoch Length
+	#[pallet::type_value] 
+	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
+	#[pallet::storage]
+	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
+
+	/// ---- SingleMap Network UID ---> Valdiator Epochs Per Reset
+	#[pallet::type_value] 
+	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
+	#[pallet::storage]
+	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
+
+	/// ---- SingleMap Network UID ---> Incentive Pruning Denominator
+	#[pallet::type_value] 
+	pub fn DefaultIncentivePruningDenominator<T: Config>() -> u16 { T::InitialIncentivePruningDenominator::get() }
+	#[pallet::storage]
+	pub type IncentivePruningDenominator<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultIncentivePruningDenominator<T> >;
+
+	/// --- SingleMap Network UID ---> Stake Pruning Denominator
+	#[pallet::type_value] 
+	pub fn DefaultStakePruningDenominator<T: Config>() -> u16 { T::InitialStakePruningDenominator::get() }
+	#[pallet::storage]
+	pub type StakePruningDenominator<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningDenominator<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
@@ -610,17 +728,145 @@ pub mod pallet {
 		/// 		- The network uid we are setting emission ratio on.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn sudo_set_emission_ratio(
+		pub fn sudo_set_emission_ratio (
 			_origin: OriginFor<T>,
 			_netuid: u16,
 			_subnet_emission_ratio: u16
 		) -> DispatchResult{
+			ensure_root( _origin )?;
 				if Self::calculate_emission_ratio_sum() + _subnet_emission_ratio > 1 { 
 						 //we should return error /*To DO */
 				}
 				else{
 					EmissionRatio::<T>::insert(_netuid, _subnet_emission_ratio);
 				}
+			Ok(())
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_bonds_moving_average ( 
+			_origin:OriginFor<T>, 
+			_bonds_moving_average: u64 
+		) -> DispatchResult {  
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_difficulty ( 
+			_origin:OriginFor<T>, 
+			_difficulty: u64 
+		) -> DispatchResult {
+			ensure_root( _origin )?;
+			Ok(())  /*TO DO */
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_adjustment_interval ( 
+			_origin:OriginFor<T>, 
+			_adjustment_interval: u64 
+		) -> DispatchResult {
+			ensure_root( _origin )?;
+			Ok(())  /*TO DO */
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_target_registrations_per_interval ( 
+			_origin:OriginFor<T>, 
+			_target_registrations_per_interval: u64 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /* TO DO */
+			Ok(())
+		}
+		//#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		//pub fn sudo_set_activity_cutoff
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_rho ( 
+			_origin:OriginFor<T>, 
+			_rho: u64 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_kappa ( 
+			_origin:OriginFor<T>, 
+			_kappa: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_allowed_uids ( 
+			_origin:OriginFor<T>, 
+			_max_allowed_uids: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_min_allowed_weights ( 
+			_origin:OriginFor<T>, 
+			_min_allowed_weights: u64 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /* TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_allowed_max_min_ratio ( 
+			_origin:OriginFor<T>, 
+			_max_allowed_max_min_ratio: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_batch_size ( 
+			_origin:OriginFor<T>, 
+			_validator_batch_size: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_sequence_length ( 
+			_origin:OriginFor<T>, 
+			_validator_sequence_length: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?;  /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_epochs_per_reset ( 
+			_origin:OriginFor<T>, 
+			_validator_epochs_per_reset : u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_incentive_pruning_denominator( 
+			_origin:OriginFor<T>, 
+			_incentive_pruning_denominator: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_stake_pruning_denominator( 
+			_origin:OriginFor<T>, 
+			_stake_pruning_denominator: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
 			Ok(())
 		}
 
