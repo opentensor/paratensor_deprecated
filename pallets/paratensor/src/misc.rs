@@ -6,7 +6,7 @@ impl<T: Config> Pallet<T> {
 	/// ==== Misc ====
 	/// ==============
     pub fn get_total_issuance() -> u64 { return TotalIssuance::<T>::get() }
-    pub fn get_total_stake() -> u64 { return TotalStake::<T>::get() }
+    //pub fn get_total_stake() -> u64 { return TotalStake::<T>::get() }
     pub fn get_current_block_as_u64( ) -> u64 {
         let block_as_u64: u64 = TryInto::try_into( system::Pallet::<T>::block_number() ).ok().expect("blockchain will not exceed 2^64 blocks; QED.");
         block_as_u64
@@ -15,9 +15,9 @@ impl<T: Config> Pallet<T> {
     /// =========================
 	/// ==== Global Accounts ====
 	/// =========================
-    pub fn get_global_n() -> u64 { return GlobalN::<T>::get() }
+    pub fn get_global_n() -> u16 { return GlobalN::<T>::get() }
     pub fn is_hotkey_globally_active( hotkey: &T::AccountId ) -> bool { return Coldkeys::<T>::contains_key( hotkey ) }
-    pub fn increment_global_n() { let n = GlobalN::<T>::get(); if n < u64::MAX { GlobalN::<T>::put(n + 1); } }
+    pub fn increment_global_n() { let n = GlobalN::<T>::get(); if n < u16::MAX { GlobalN::<T>::put(n + 1); } }
     pub fn decrement_global_n() { let n = GlobalN::<T>::get(); if n > 0 { GlobalN::<T>::put(n - 1); } }
     pub fn add_global_account( hotkey: &T::AccountId, coldkey: &T::AccountId )  {
         if !Hotkeys::<T>::contains_key( &hotkey ) { 

@@ -474,6 +474,10 @@ parameter_types! {
 	pub const ParatensorInitialTargetRegistrationsPerInterval: u64 = 2;
 	pub const ParatensorInitialIncentivePruningDenominator: u16 = 1;
 	pub const ParatensorInitialStakePruningDenominator: u16 = 1;
+	pub const ParatensorInitialImmunityPeriod: u16 = 200;
+	pub const ParatensorInitialActivityCutoff: u16 = 5000;
+	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
+	pub const ParatensorInitialStakePruningMin: u16 = 0;
 	
 }
 impl pallet_paratensor::Config for Runtime {
@@ -496,6 +500,10 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialTargetRegistrationsPerInterval = ParatensorInitialTargetRegistrationsPerInterval;
 	type InitialIncentivePruningDenominator = ParatensorInitialIncentivePruningDenominator;
 	type InitialStakePruningDenominator = ParatensorInitialStakePruningDenominator;
+	type InitialImmunityPeriod = ParatensorInitialImmunityPeriod;
+	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
+	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
+	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

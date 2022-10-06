@@ -1,12 +1,37 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
-use frame_system::{self as system};
+use frame_system::{
+	self as system,
+	ensure_signed
+};
 
-mod epoch;
-mod misc;
+
+use frame_support::{dispatch, ensure, traits::{
+	Currency, 
+	ExistenceRequirement,
+	IsSubType, 
+	tokens::{
+		WithdrawReasons
+	}
+}, weights::{
+	DispatchInfo, 
+	PostDispatchInfo
+}
+};
+use sp_core::U256;
+
+
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+/// ************************************************************
+///	-Paratensor-Imports
+/// ************************************************************
+mod registration;
+mod epoch;
+mod misc;
+mod staking;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -15,6 +40,7 @@ pub mod pallet {
 	use frame_support::traits::Currency;
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
+	use sp_core::{U256};
 
 	/// ================
 	/// ==== Config ====
@@ -92,87 +118,26 @@ pub mod pallet {
 		/// Initial stake pruning denominator
 		#[pallet::constant]
 		type InitialStakePruningDenominator: Get<u16>;
+
+		/// Initial stake pruning min
+		#[pallet::constant]
+		type InitialStakePruningMin: Get<u16>;
+
+		/// Immunity Period Constant.
+		#[pallet::constant]
+		type InitialImmunityPeriod: Get<u16>;
+
+		/// Activity constant
+		#[pallet::constant]
+		type InitialActivityCutoff: Get<u16>;
+
+		/// Initial max registrations per block.
+		#[pallet::constant]
+		type InitialMaxRegistrationsPerBlock: Get<u16>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type NeuronMetadataOf<T> = NeuronMetadata<AccountIdOf<T>>;
-
-	#[derive(Encode, Decode, Default, TypeInfo)]
-
-	pub struct NeuronMetadata<AccountId> {
-
-		/// ---- The endpoint's code version.
-        pub version: u32,
-
-        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
-        pub ip: u128,
-
-        /// ---- The endpoint's u16 encoded port.
-        pub port: u16,
-
-        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
-        pub ip_type: u8,
-
-        /// ---- The endpoint's unique identifier.
-        pub uid: u32,
-
-        /// ---- The neuron modality. Modalities specify which datatype
-        /// the neuron endpoint can process. This information is non
-        /// verifiable. However, neurons should set this correctly
-        /// in order to be detected by others with this datatype.
-        /// The initial modality codes are:
-        /// TEXT: 0
-        /// IMAGE: 1
-        /// TENSOR: 2
-        pub modality: u8,
-
-        /// ---- The associated hotkey account.
-        /// Registration and changing weights can be made by this
-        /// account.
-        pub hotkey: AccountId,
-
-        /// ---- The associated coldkey account.
-        /// Staking and unstaking transactions must be made by this account.
-        /// The hotkey account (in the Neurons map) has permission to call
-        /// subscribe and unsubscribe.
-        pub coldkey: AccountId,
-
-		/// ---- Is this neuron active in the incentive mechanism.
-		pub active: u32,
-
-		/// ---- Block number of last chain update.
-		pub last_update: u64,
-
-		/// ---- Transaction priority.
-		pub priority: u64,
-
-		/// ---- The associated stake in this account.
-		pub stake: u64,
-
-		/// ---- The associated rank in this account.
-		pub rank: u64,
-
-		/// ---- The associated trust in this account.
-		pub trust: u64,
-
-		/// ---- The associated consensus in this account.
-		pub consensus: u64,
-
-		/// ---- The associated incentive in this account.
-		pub incentive: u64,
-
-		/// ---- The associated dividends in this account.
-		pub dividends: u64,
-
-		/// ---- The associated emission last block for this account.
-		pub emission: u64,
-
-		/// ---- The associated bond ownership.
-		pub bonds: Vec<(u32,u64)>,
-
-		/// ---- The associated weights ownership.
-		pub weights: Vec<(u32,u32)>,
-    }
+	//pub type NeuronMetadataOf<T> = NeuronMetadata<AccountIdOf<T>>;
 
 	/// ===============================
 	/// ==== Global Params Storage ====
@@ -184,7 +149,7 @@ pub mod pallet {
 
 	/// ---- StorageItem Global Total N
 	#[pallet::storage]
-	pub type GlobalN<T> = StorageValue<_, u64, ValueQuery>;
+	pub type GlobalN<T> = StorageValue<_, u16, ValueQuery>;
 
 	/// ---- StorageItem Global Total Stake
 	#[pallet::storage]
@@ -209,9 +174,9 @@ pub mod pallet {
 	pub(super) type EmissionRatio<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultEmissionRatio<T>>;
 
 	/// ---- Maps from uid to neuron.
-	#[pallet::storage]
-    #[pallet::getter(fn uid)]
-    pub(super) type Neurons<T:Config> = StorageMap<_, Identity, u32, NeuronMetadataOf<T>, OptionQuery>;
+	//#[pallet::storage]
+    //#[pallet::getter(fn uid)]
+    //pub(super) type Neurons<T:Config> = StorageMap<_, Identity, u64, NeuronMetadataOf<T>, OptionQuery>;
 
 	/// ---- StorageItem Global Adjustment Interval
 	#[pallet::type_value]
@@ -223,6 +188,26 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u64 { T::InitialTargetRegistrationsPerInterval::get() }
 	#[pallet::storage]
 	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u64, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
+
+	/// ---- StorageItem Global Max Registration Per Block
+	#[pallet::type_value] 
+	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
+	#[pallet::storage]
+	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
+
+	#[pallet::storage]
+	pub type RegistrationsThisBlock<T> = StorageValue<_, u16, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn usedwork)]
+    pub(super) type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
+
+	#[pallet::type_value] 
+	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	#[pallet::getter(fn block_at_registration)]
+    pub(super) type BlockAtRegistration<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
+
 
 	/// ==============================
 	/// ==== Accounts Storage ====
@@ -244,7 +229,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
-
+	/// --- SingleMap Hotkey --> Network UID // a list of subnets that each hotkey is registered on
+	#[pallet::type_value] 
+	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![] }
+	#[pallet::storage]
+	pub(super) type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam stroage  ====
@@ -328,9 +317,37 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type StakePruningDenominator<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningDenominator<T> >;
 
+	/// --- SingleMap Network UID ---> Stake Pruning Min
+	#[pallet::type_value] 
+	pub fn DefaultStakePruningMin<T: Config>() -> u16 { T::InitialStakePruningMin::get() }
+	#[pallet::storage]
+	pub type StakePruningMin<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningMin<T> >;
+
+	/// --- SingleMap Network UID ---> Immunity Period
+	#[pallet::type_value] 
+	pub fn DefaultImmunityPeriod<T: Config>() -> u16 { T::InitialImmunityPeriod::get() }
+	#[pallet::storage]
+	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
+
+	/// --- SingleMap Network UID --> Activity Cutoff
+	#[pallet::type_value] 
+	pub fn DefaultActivityCutoff<T: Config>() -> u16 { T::InitialActivityCutoff::get() }
+	#[pallet::storage]
+	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
+
+	/// ---- SingleMap Network UID --> Neuron UID, we use to record uids to prune at next epoch.
+	#[pallet::storage]
+	#[pallet::getter(fn uid_to_prune)]
+    pub(super) type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+
+	// ---- SingleMap Network UID --> Registration This Interval
+	#[pallet::storage]
+	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
 	/// =======================================
+	/// --- SingleMap Network UID --> SubNetwork Size (Number of UIDs in the network)
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
 	#[pallet::storage]
@@ -408,10 +425,17 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultEmission<T> >;
 	
+	/// ************************************************************
+	///	-Genesis-Configuration  
+	/// ************************************************************
+	/// ---- Genesis Configuration (Mostly used for testing.)
+	/// TO DO (If we need it) 
+
 	/// ===============
 	/// ==== Events ===
 	/// ===============
 	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// --- Event created when stake has been transfered from 
 		/// the a coldkey account onto the hotkey staking account.
@@ -429,6 +453,11 @@ pub mod pallet {
 
 		/// ---- Event created when Tempo is set
 		TempoSet(u16),
+		/* TO DO: more events for setting hyper parameters should be defined here */
+
+		/// --- Event created when a new neuron account has been registered to 
+		/// the chain.
+		NeuronRegistered(u16),
 	}
 	
 	/// ================
@@ -485,14 +514,33 @@ pub mod pallet {
 
 		// --- Error for setting blocksPerStep
 		
-		// --- Error for setting Tempo 
+		// --- Error for setting Tempo /* TO DO: more Errors for different hyper parameters should be defined here */
+
+		/// ---- Thrown when registrations this block exceeds allowed number.
+		ToManyRegistrationsThisBlock,
+
+		/// ---- Thrown when the caller requests registering a neuron which 
+		/// already exists in the active set.
+		AlreadyRegistered,
+
+		/// ---- Thrown if the supplied pow hash block is in the future or negative
+		InvalidWorkBlock,
+
+		/// ---- Thrown when the caller attempts to use a repeated work.
+		WorkRepeated,
+
+		/// ---- Thrown if the supplied pow hash block does not meet the network difficulty.
+		InvalidDifficulty,
+
+		/// ---- Thrown if the supplied pow hash seal does not match the supplied work.
+		InvalidSeal,
 	}
 
 	/// ================
 	/// ==== Hooks =====
 	/// ================
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { /*TO DO */
 	}
 
 	/// ======================
@@ -777,8 +825,15 @@ pub mod pallet {
 			ensure_root( _origin )?; /* TO DO */
 			Ok(())
 		}
-		//#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		//pub fn sudo_set_activity_cutoff
+		
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_activity_cutoff ( 
+			_origin:OriginFor<T>, 
+			_activity_cutoff: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?;/*TO DO */
+			Ok(())
+		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_rho ( 
@@ -870,14 +925,88 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_immunity_period ( 
+			_origin:OriginFor<T>, 
+			_immunity_period: u16 
+		) -> DispatchResult {
+			ensure_root( _origin )?; /*TO DO */
+			Ok(())
+		}
+		/*TO DO: reset_bonds function  */ 
 	}
-
 	/// ---- Paratensor helper functions.
 	impl<T: Config> Pallet<T> {
 	/// ---- returns the sum of emission ratios for defined subnetworks
 		pub fn calculate_emission_ratio_sum() -> u16 {
 			let sum : u16 = 0; /*TO DO */
 			sum
+		}
+
+		pub fn get_registrations_this_block( ) -> u16 {
+			RegistrationsThisBlock::<T>::get()
+		}
+
+		pub fn get_max_registratations_per_block( ) -> u16 {
+			MaxRegistrationsPerBlock::<T>::get()
+		}
+
+		pub fn get_difficulty(netuid: u16 ) -> U256 {
+			return U256::from( Self::get_difficulty_as_u64(netuid) );
+		}
+
+		pub fn get_difficulty_as_u64(netuid: u16 ) -> u64 {
+			Difficulty::<T>::get(netuid)
+		}
+
+		pub fn get_max_allowed_uids(netuid: u16 ) -> u16 {
+			return MaxAllowedUids::<T>::get(netuid);
+		}
+
+		// --- Returns the next available network uid.
+		// uids increment up to u64:MAX, this allows the chain to
+		// have 18,446,744,073,709,551,615 peers before an overflow.
+		pub fn get_neuron_count() -> u16 {
+			let uid = GlobalN::<T>::get();
+			uid
+		}
+
+		// --- Returns the next available network uid and increments uid.
+		pub fn get_next_uid() -> u16 {
+			let uid = GlobalN::<T>::get();
+			assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
+			GlobalN::<T>::put(uid + 1);
+			uid
+		}
+
+		pub fn get_immunity_period(netuid: u16 ) -> u16 {
+			return ImmunityPeriod::<T>::get(netuid);
+		}
+
+		pub fn get_total_stake( ) -> u64 {
+			return TotalStake::<T>::get();
+		}
+
+		pub fn get_stake_pruning_denominator( netuid: u16) -> u16 {
+			return StakePruningDenominator::<T>::get(netuid);
+		}
+
+		pub fn get_incentive_pruning_denominator(netuid: u16) -> u16 {
+			return IncentivePruningDenominator::<T>::get(netuid);
+		}
+
+		// --- Returns Option if the u64 converts to a balance
+		// use .unwarp if the result returns .some().
+		pub fn u64_to_balance(input: u64) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance>
+		{
+			input.try_into().ok()
+		}
+
+		pub fn get_stake_pruning_min(netuid: u16) -> u16 {
+			return StakePruningMin::<T>::get(netuid);
+		}
+		pub fn get_registrations_this_interval( netuid: u16) -> u16 {
+			return RegistrationsThisInterval::<T>::get(netuid);
 		}
 	}	
 }
