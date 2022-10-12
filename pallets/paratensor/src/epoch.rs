@@ -165,17 +165,17 @@ impl<T: Config> Pallet<T> {
     pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| Self::u16_proportion_to_fixed(e) ).collect() }
     pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_iter().map(|e| Self::fixed_proportion_to_u16(e) ).collect() }
 
-    pub fn set_ranks( netuid:u16, ranks:Vec<I32F32> ) { Rank::<T>::insert( netuid, Self::vec_fixed_proportions_to_u16( ranks ) ) }
-    pub fn set_trust( netuid:u16, trust:Vec<I32F32> ) { Trust::<T>::insert( netuid, Self::vec_fixed_proportions_to_u16( trust ) ) }
-    pub fn set_consensus( netuid:u16, consensus:Vec<I32F32> ) { Consensus::<T>::insert( netuid, Self::vec_fixed_proportions_to_u16( consensus ) ) }
-    pub fn set_incentives( netuid:u16, incentive:Vec<I32F32> ) { Incentive::<T>::insert( netuid, Self::vec_fixed_proportions_to_u16( incentive ) ) }
-    pub fn set_dividends( netuid:u16, dividends:Vec<I32F32> ) { Dividends::<T>::insert( netuid, Self::vec_fixed_proportions_to_u16( dividends ) ) }
+    pub fn set_ranks( netuid:u16, neuron_uid: u16, ranks:u16 ) { Rank::<T>::insert( netuid, neuron_uid, ranks) }
+    pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
+    pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
+    pub fn set_incentives( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
+    pub fn set_dividends( netuid:u16, neuron_uid:u16, dividends:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividends ) }
 
-    pub fn get_ranks( netuid:u16 ) -> Vec<I32F32> {  Self::vec_u16_proportions_to_fixed( Rank::<T>::get( netuid ) ) }
-    pub fn get_trust( netuid:u16 ) -> Vec<I32F32> { Self::vec_u16_proportions_to_fixed( Trust::<T>::get( netuid ) ) }
-    pub fn get_consensus( netuid:u16 ) -> Vec<I32F32> { Self::vec_u16_proportions_to_fixed( Consensus::<T>::get( netuid ) ) }
-    pub fn get_incentives( netuid:u16 ) -> Vec<I32F32> { Self::vec_u16_proportions_to_fixed( Incentive::<T>::get( netuid ) )  }
-    pub fn get_dividends( netuid:u16 ) -> Vec<I32F32> { Self::vec_u16_proportions_to_fixed( Dividends::<T>::get( netuid ) )  }
+    pub fn get_ranks( netuid:u16, neuron_uid: u16) -> u16 {   Rank::<T>::get( netuid,  neuron_uid) }
+    pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
+    pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
+    pub fn get_incentives( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
+    pub fn get_dividends( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
 
     pub fn get_stake( netuid:u16 ) -> Vec<I32F32> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 

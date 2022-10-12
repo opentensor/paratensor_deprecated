@@ -383,47 +383,47 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, DefaultActive<T> >;
 
-	/// ---- SingleMap Network UID --> Network Stake Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Stake
 	#[pallet::type_value] 
-	pub fn DefaultStake<T:Config>() -> Vec<u64> { vec![] }
+	pub fn DefaultStake<T:Config>() -> u64 {0 }
 	#[pallet::storage]
-    pub(super) type S<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultStake<T> >;
+    pub(super) type S<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultStake<T> >;
 
-	/// ---- SingleMap Network UID --> Network Rank Vector
+	/// ---- DoubleMap Network UID -->  Neuron UID --> Neuron Rank
 	#[pallet::type_value] 
-	pub fn DefaultRank<T:Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultRank<T:Config>() -> u16 {0 }
 	#[pallet::storage]
-	pub(super) type Rank<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultRank<T> >;
+	pub(super) type Rank<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultRank<T> >;
 
-	/// ---- SingleMap Network UID --> Network Trust Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Trust
 	#[pallet::type_value] 
-	pub fn DefaultTrust<T:Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultTrust<T:Config>() -> u16 {0 }
 	#[pallet::storage]
-	pub(super) type Trust<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultTrust<T> >;
+	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
 
-	/// ---- SingleMap Network UID --> Network Incentive Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Incentive
 	#[pallet::type_value] 
-	pub fn DefaultIncentive<T:Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultIncentive<T:Config>() -> u16 { 0}
 	#[pallet::storage]
-	pub(super) type Incentive<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultIncentive<T> >;
+	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
 
-	/// ---- SingleMap Network UID --> Network Consensus Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Consensus
 	#[pallet::type_value] 
-	pub fn DefaultConsensus<T:Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultConsensus<T:Config>() -> u16 {0 }
 	#[pallet::storage]
-	pub(super) type Consensus<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultConsensus<T> >;
+	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
 
-	/// ---- SingleMap Network UID --> Network Dividends Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Dividends
 	#[pallet::type_value] 
-	pub fn DefaultDividends<T: Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultDividends<T: Config>() -> u16 {0 }
 	#[pallet::storage]
-	pub(super) type Dividends<T:Config> = StorageMap< _, Identity, u16, Vec<u16>, ValueQuery, DefaultDividends<T> >;
+	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
 
-	/// ---- SingleMap Network UID --> Network Emission Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Emission 
 	#[pallet::type_value] 
-	pub fn DefaultEmission<T:Config>() -> Vec<u64> { vec![] }
+	pub fn DefaultEmission<T:Config>() -> u64 {0 }
 	#[pallet::storage]
-	pub(super) type Emission<T:Config> = StorageMap< _, Identity, u16, Vec<u64>, ValueQuery, DefaultEmission<T> >;
+	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
 	
 	/// ************************************************************
 	///	-Genesis-Configuration  
@@ -743,15 +743,15 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn register( 
-				_origin:OriginFor<T>, 
-				_block_number: u64, 
-				_nonce: u64, 
-				_work: Vec<u8>,
-				_hotkey: T::AccountId, 
-				_coldkey: T::AccountId,
-				_netuid: u16 
-		) -> DispatchResult {  /*TO DO */
-			Ok(()) 
+				origin:OriginFor<T>, 
+				netuid: u16,
+				block_number: u64, 
+				nonce: u64, 
+				work: Vec<u8>,
+				hotkey: T::AccountId, 
+				coldkey: T::AccountId,
+		) -> DispatchResult { 
+				Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
 
 		/// ---- SUDO ONLY FUNCTIONS ------
@@ -966,9 +966,9 @@ pub mod pallet {
 		// --- Returns the next available network uid.
 		// uids increment up to u64:MAX, this allows the chain to
 		// have 18,446,744,073,709,551,615 peers before an overflow.
-		pub fn get_neuron_count() -> u16 {
-			let uid = GlobalN::<T>::get();
-			uid
+		pub fn get_neuron_count(netuid: u16) -> u16 {
+			let uid_count = SubnetworkN::<T>::get(netuid);
+			uid_count
 		}
 
 		// --- Returns the next available network uid and increments uid.

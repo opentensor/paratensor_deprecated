@@ -7,6 +7,7 @@ use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
+use frame_support::storage::IterableStorageDoubleMap;
 
 
 
@@ -45,8 +46,7 @@ impl<T: Config> Pallet<T> {
         ///         - create a new entry in the table with the new metadata.
         ///         - update appropriate parameters.
         ///         -  add new neuron to neurons. hotkeys, and works
-        
-     
+        //
         // 1. check registration per block 
         let registrations_this_block: u16 = Self:: get_registrations_this_block();
         ensure! (registrations_this_block < Self:: get_max_registratations_per_block(), Error::<T>::ToManyRegistrationsThisBlock); // Number of registrations this block exceeded.
@@ -75,7 +75,7 @@ impl<T: Config> Pallet<T> {
         // 7. check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are prunning or setting with get_next_uid.
         let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
-        let neuron_count: u16 = Self::get_neuron_count(); // Current number of uids.
+        let neuron_count: u16 = Self::get_neuron_count(netuid); // Current number of uids for netuid network.
         let current_block: u64 = Self::get_current_block_as_u64();
         //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
         if neuron_count < max_allowed_uids {
@@ -95,13 +95,11 @@ impl<T: Config> Pallet<T> {
                 if vec_subnets_for_pruning_hotkey[0] == netuid {
                     // we need to remove all stakes since this hotkey is not staked in any other networks
                     // These funds are deposited back into the coldkey account so that no funds are destroyed. 
-                    let mut vec_stake: Vec<u64> = S::<T>::get(netuid);
-                    let stake_to_be_added_on_coldkey = vec_stake.remove(uid_to_prune as usize);
-                    S::<T>::insert(netuid, vec_stake);
+                    let stake_to_remove: u64 = S::<T>::take(netuid, uid_to_prune);
                     //
                     let coldkey_to_add_stake = Coldkeys::<T>::get(&hotkey_to_prune);
-                    Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_be_added_on_coldkey).unwrap() );
-                    Self::decrease_total_stake( stake_to_be_added_on_coldkey );
+                    Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_remove).unwrap());
+                    Self::decrease_total_stake( stake_to_remove );
                     //
                     if Stake::<T>::contains_key(&hotkey_to_prune){
                         Stake::<T>::remove(&hotkey_to_prune);
@@ -136,8 +134,8 @@ impl<T: Config> Pallet<T> {
         Hotkeys::<T>::insert(&hotkey, &coldkey);
         Coldkeys::<T>::insert(&coldkey, &hotkey);
         if Subnets::<T>::contains_key(&hotkey){ //update the list of subnets that hotkey is registered on
-            let mut vec_new_hotkey_subnets: Vec<u16> = Subnets::<T>::get(&hotkey);
-            Subnets::<T>::remove(&hotkey);
+            let mut vec_new_hotkey_subnets: Vec<u16> = Subnets::<T>::take(&hotkey);
+            //Subnets::<T>::remove(&hotkey);
             vec_new_hotkey_subnets.push(netuid);
             Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets);
         }
@@ -247,21 +245,20 @@ impl<T: Config> Pallet<T> {
         let current_block: u64 = Self::get_current_block_as_u64();
         let immunity_period: u64 = Self::get_immunity_period(netuid) as u64; // Num blocks uid cannot be pruned since registration.
         //
-        let stake : Vec<u64> = S::<T>::get(netuid);
-        let incentive : Vec<u16> = Incentive::<T>::get(netuid);
-        //
-        for (i, stake_i) in stake.iter().enumerate(){
+        for (uid_i, stake_i) in <S<T> as IterableStorageDoubleMap<u16, u16, u64>>::iter_prefix(netuid) {
+            //
+            let incentive : u16 = Incentive::<T>::get(netuid, uid_i);
             // If a neuron has more than stake_pruning_min they are ranked based on stake
             // otherwise we prune based on incentive.   
             let mut prunning_score: I65F63;
-            if *stake_i >= Self::get_stake_pruning_min(netuid) as u64 {
+            if stake_i >= Self::get_stake_pruning_min(netuid) as u64 {
                 if Self::get_total_stake() > 0 { //in case stake pruning min == 0
-                    prunning_score = I65F63::from_num( *stake_i) / I65F63::from_num( Self::get_total_stake() );
+                    prunning_score = I65F63::from_num( stake_i) / I65F63::from_num( Self::get_total_stake() );
                 } else {
                     prunning_score = I65F63::from_num( 0 );
                 }
-            }    else {
-                prunning_score = I65F63::from_num( incentive[i] ) / I65F63::from_num( u64::MAX );
+            }   else {
+                        prunning_score = I65F63::from_num( incentive ) / I65F63::from_num( u64::MAX );
             } 
             // Neurons that have registered within an immunity period should not be counted in this pruning
             // unless there are no other peers to prune. This allows new neurons the ability to gain incentive before they are cut. 
@@ -275,7 +272,7 @@ impl<T: Config> Pallet<T> {
             // Find the min purnning score. We will remove this peer first. 
             if prunning_score < min_prunning_score {
                 // Update the min
-                uid_to_prune = i as u16; //return index
+                uid_to_prune = uid_i;
                 min_prunning_score = prunning_score;
             }
         }
