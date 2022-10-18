@@ -1,5 +1,4 @@
 use super::*;
-use substrate_fixed::types::I65F63;
 use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
@@ -7,8 +6,7 @@ use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
-use frame_support::storage::IterableStorageDoubleMap;
-
+use sp_runtime::sp_std::if_std;
 
 
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
@@ -27,25 +25,24 @@ impl<T: Config> Pallet<T> {
 
         // --- Check the callers hotkey signature.
         ensure_signed(origin)?;
-
-        /// TO DO:
-        /// 1.  --- Check that registrations per block and hotkey in this network
-        /// 2. --- Check block number validity.
-        /// 3.  --- Check for repeat work,
-        /// 4. --- Check difficulty.
-        /// 5. --- Check work.
-        /// 6. --- Check that the hotkey has not already been registered in this network.
-        /// 7. --- check to see if the uid limit has been reached.
-        ///     a. YES: 
-        ///         - find a replacement
-        ///         - add this prunned peer to NeuronsToPruneAtNextEpoch.
-        ///         - unstake all the funds that this peer had staked if node is not registered in any other network
-        ///         - update all relevant data structures
-        ///     b. NO:
-        ///         - increment the uid.
-        ///         - create a new entry in the table with the new metadata.
-        ///         - update appropriate parameters.
-        ///         -  add new neuron to neurons. hotkeys, and works
+        // TO DO:
+        // 1.  --- Check that registrations per block and hotkey in this network
+        // 2. --- Check block number validity.
+        // 3.  --- Check for repeat work,
+        // 4. --- Check difficulty.
+        // 5. --- Check work.
+        // 6. --- Check that the hotkey has not already been registered in this network.
+        // 7. --- check to see if the uid limit has been reached.
+        //     a. YES: 
+        //         - find a replacement
+        //         - add this prunned peer to NeuronsToPruneAtNextEpoch.
+        //         - unstake all the funds that this peer had staked if node is not registered in any other network
+        //         - update all relevant data structures
+        //     b. NO:
+        //         - increment the uid.
+        //         - create a new entry in the table with the new metadata.
+        //         - update appropriate parameters.
+        //         -  add new neuron to neurons. hotkeys, and works
         //
         // 1. check registration per block 
         let registrations_this_block: u16 = Self:: get_registrations_this_block();
@@ -81,14 +78,14 @@ impl<T: Config> Pallet<T> {
         if neuron_count < max_allowed_uids {
 
             // 7.b. NO:  The metagraph is not full and we simply increment the uid.
-            uid_to_set_in_metagraph = Self::get_next_uid();
+            uid_to_set_in_metagraph = Self::get_next_uid();  
         } else {
             // 7.a. YES:
                 // - compute the pruning score
-            let uid_to_prune: u16 = Self::find_neuron_to_prune(netuid); // uid_to_prune is the index (neuron UID)
+            let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
             uid_to_set_in_metagraph = uid_to_prune;
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
-            /* TO DO: function to check if the hotkey is deregistred from all networks, 
+            /* check if the hotkey is deregistred from all networks, 
             if so, then we need to transfer stake from hotkey to cold key */
             let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_to_prune); // a list of subnets that hotkey is registered on.
             if vec_subnets_for_pruning_hotkey.len() == 1 {
@@ -100,22 +97,10 @@ impl<T: Config> Pallet<T> {
                     let coldkey_to_add_stake = Coldkeys::<T>::get(&hotkey_to_prune);
                     Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_remove).unwrap());
                     Self::decrease_total_stake( stake_to_remove );
+                    Self::remove_global_stake(&hotkey_to_prune);
                     //
-                    if Stake::<T>::contains_key(&hotkey_to_prune){
-                        Stake::<T>::remove(&hotkey_to_prune);
-                    }
-                    if Keys::<T>::contains_key(netuid, uid_to_prune){
-                        Keys::<T>::remove(netuid, uid_to_prune);
-                    }
-                    if Uids::<T>::contains_key(netuid, &hotkey_to_prune){
-                        Uids::<T>::remove(netuid, &hotkey_to_prune);
-                    }
-                    if Hotkeys::<T>::contains_key(&hotkey_to_prune) {
-                        Hotkeys::<T>::remove( &hotkey_to_prune );
-                    }
-                    if Coldkeys::<T>::contains_key(&coldkey_to_add_stake){
-                        Coldkeys::<T>::remove(&coldkey_to_add_stake);
-                    }
+                    Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph);
+                    Self::remove_global_account(&hotkey);
                     Subnets::<T>::remove(&hotkey_to_prune);
 
                 } 
@@ -130,17 +115,9 @@ impl<T: Config> Pallet<T> {
         
         // next, we add new registered node to all structures
         BlockAtRegistration::<T>::insert( uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
-        SubnetworkN::<T>::mutate(netuid, |val| *val += 1 ); //increment the number of registered uids i the subnet
-        Hotkeys::<T>::insert(&hotkey, &coldkey);
-        Coldkeys::<T>::insert(&coldkey, &hotkey);
-        if Subnets::<T>::contains_key(&hotkey){ //update the list of subnets that hotkey is registered on
-            let mut vec_new_hotkey_subnets: Vec<u16> = Subnets::<T>::take(&hotkey);
-            //Subnets::<T>::remove(&hotkey);
-            vec_new_hotkey_subnets.push(netuid);
-            Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets);
-        }
-        Keys::<T>::insert(netuid, uid_to_set_in_metagraph, &hotkey);
-        Uids::<T>::insert(netuid, &hotkey, uid_to_set_in_metagraph);
+        Self::add_global_account(&hotkey, &coldkey);
+        Self::increment_subnets_for_hotkey(netuid, &hotkey);
+        Self::add_subnetwork_account(netuid, uid_to_set_in_metagraph, &hotkey);
         UsedWork::<T>::insert( &work.clone(), current_block ); // Add the work to current + block. So we can prune at a later date.
         // --- Update avg registrations per 1000 block.
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
@@ -151,10 +128,6 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn get_current_block_as_u64_here( ) -> u64 {
-        let block_as_u64: u64 = TryInto::try_into( system::Pallet::<T>::block_number() ).ok().expect("blockchain will not exceed 2^64 blocks; QED.");
-        block_as_u64
-    }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
@@ -203,6 +176,12 @@ impl<T: Config> Pallet<T> {
         return real_hash;
     }
 
+    pub fn hash_to_vec( hash: H256 ) -> Vec<u8> {
+        let hash_as_bytes: &[u8] = hash.as_bytes();
+        let hash_as_vec: Vec<u8> = hash_as_bytes.iter().cloned().collect();
+        return hash_as_vec
+    }
+
     pub fn create_seal_hash( block_number_u64: u64, nonce_u64: u64 ) -> H256 {
         let nonce = U256::from( nonce_u64 );
         let block_hash_at_number: H256 = Self::get_block_hash_from_u64( block_number_u64 );
@@ -238,45 +217,18 @@ impl<T: Config> Pallet<T> {
 
         return seal_hash;
     }
-    /// --- calculate pruning score and find the neuron that should be prunned in the next epoch
-    pub fn find_neuron_to_prune(netuid: u16) -> u16 {
-        let mut uid_to_prune: u16 = 0; // To be filled. Default to zero but will certainly be filled.
-        let mut min_prunning_score: I65F63 = I65F63::from_num( u64::MAX ); // Start min score as max.
-        let current_block: u64 = Self::get_current_block_as_u64();
-        let immunity_period: u64 = Self::get_immunity_period(netuid) as u64; // Num blocks uid cannot be pruned since registration.
-        //
-        for (uid_i, stake_i) in <S<T> as IterableStorageDoubleMap<u16, u16, u64>>::iter_prefix(netuid) {
-            //
-            let incentive : u16 = Incentive::<T>::get(netuid, uid_i);
-            // If a neuron has more than stake_pruning_min they are ranked based on stake
-            // otherwise we prune based on incentive.   
-            let mut prunning_score: I65F63;
-            if stake_i >= Self::get_stake_pruning_min(netuid) as u64 {
-                if Self::get_total_stake() > 0 { //in case stake pruning min == 0
-                    prunning_score = I65F63::from_num( stake_i) / I65F63::from_num( Self::get_total_stake() );
-                } else {
-                    prunning_score = I65F63::from_num( 0 );
-                }
-            }   else {
-                        prunning_score = I65F63::from_num( incentive ) / I65F63::from_num( u64::MAX );
-            } 
-            // Neurons that have registered within an immunity period should not be counted in this pruning
-            // unless there are no other peers to prune. This allows new neurons the ability to gain incentive before they are cut. 
-            // We use block_at_registration which sets the prunning score above any possible value for stake or incentive.
-            // This also preferences later registering peers if we need to tie break.
-            let block_at_registration = BlockAtRegistration::<T>::get( netuid);  // Default value is 0.
-            if current_block - block_at_registration < immunity_period { // Check for immunity.
-                // Note that adding block_at_registration to the pruning score give peers who have registered later a better score.
-                prunning_score = prunning_score + I65F63::from_num( block_at_registration + 1); // Prunning score now on range (0, current_block)
-            } 
-            // Find the min purnning score. We will remove this peer first. 
-            if prunning_score < min_prunning_score {
-                // Update the min
-                uid_to_prune = uid_i;
-                min_prunning_score = prunning_score;
-            }
+
+      // Helper function for creating nonce and work.
+      pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
+        let difficulty: U256 = Self::get_difficulty(netuid);
+        let mut nonce: u64 = start_nonce;
+        let mut work: H256 = Self::create_seal_hash( block_number, nonce );
+        while !Self::hash_meets_difficulty(&work, difficulty) {
+            nonce = nonce + 1;
+            work = Self::create_seal_hash( block_number, nonce );
         }
-        uid_to_prune
+        let vec_work: Vec<u8> = Self::hash_to_vec( work );
+        return (nonce, vec_work)
     }
 
 }

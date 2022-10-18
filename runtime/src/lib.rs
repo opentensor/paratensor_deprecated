@@ -461,6 +461,7 @@ parameter_types! {
 	pub const ParatensorInitialKappa: u16 = 2;
 	pub const ParatensorInitialMaxAllowedUids: u16 = 2000;
 	pub const ParatensorInitialIssuance: u64 = 0;
+	pub const ParatensorInitialGlobalN : u16 = 0;
 	pub const ParatensorInitialMinAllowedWeights: u16 = 0;
 	pub const ParatensorInitialMaxAllowedMaxMinRatio: u16 = 0;
 	pub const ParatensorInitialValidatorBatchSize: u16 = 10;
@@ -478,6 +479,7 @@ parameter_types! {
 	pub const ParatensorInitialActivityCutoff: u16 = 5000;
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
 	pub const ParatensorInitialStakePruningMin: u16 = 0;
+	pub const ParatensorInitialPrunningScore : u16 = u16::MAX;
 	
 }
 impl pallet_paratensor::Config for Runtime {
@@ -487,6 +489,7 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialKappa = ParatensorInitialKappa;
 	type InitialMaxAllowedUids = ParatensorInitialMaxAllowedUids;
 	type InitialIssuance = ParatensorInitialIssuance;
+	type InitialGlobalN = ParatensorInitialGlobalN;
 	type InitialMinAllowedWeights = ParatensorInitialMinAllowedWeights;
 	type InitialMaxAllowedMaxMinRatio = ParatensorInitialMaxAllowedMaxMinRatio;
 	type InitialValidatorBatchSize = ParatensorInitialValidatorBatchSize;
@@ -504,6 +507,7 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
 	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
+	type InitialPrunningScore = ParatensorInitialPrunningScore;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

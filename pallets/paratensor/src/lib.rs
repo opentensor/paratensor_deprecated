@@ -5,7 +5,6 @@ use frame_system::{
 	ensure_signed
 };
 
-
 use frame_support::{dispatch, ensure, traits::{
 	Currency, 
 	ExistenceRequirement,
@@ -14,13 +13,10 @@ use frame_support::{dispatch, ensure, traits::{
 		WithdrawReasons
 	}
 }, weights::{
-	DispatchInfo, 
-	PostDispatchInfo
+	//DispatchInfo, 
+	//PostDispatchInfo
 }
 };
-use sp_core::U256;
-
-
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -30,7 +26,7 @@ mod benchmarking;
 /// ************************************************************
 mod registration;
 mod epoch;
-mod misc;
+mod utils;
 mod staking;
 
 #[frame_support::pallet]
@@ -40,7 +36,6 @@ pub mod pallet {
 	use frame_support::traits::Currency;
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
-	use sp_core::{U256};
 
 	/// ================
 	/// ==== Config ====
@@ -56,6 +51,9 @@ pub mod pallet {
 		/// --- Initialization
 		#[pallet::constant]
 		type InitialIssuance: Get<u64>;
+
+		#[pallet::constant]
+		type InitialGlobalN: Get<u16>;
 
 		#[pallet::constant]
 		type InitialBlocksPerStep: Get<u64>;
@@ -134,6 +132,10 @@ pub mod pallet {
 		/// Initial max registrations per block.
 		#[pallet::constant]
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
+
+		// Initial prunning score for each neuron
+		#[pallet::constant]
+		type InitialPrunningScore: Get<u16>;		
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -148,6 +150,8 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	/// ---- StorageItem Global Total N
+	#[pallet::type_value] 
+	pub fn DefaultGlobalN<T: Config>() -> u16 { T::InitialGlobalN::get() }
 	#[pallet::storage]
 	pub type GlobalN<T> = StorageValue<_, u16, ValueQuery>;
 
@@ -424,6 +428,12 @@ pub mod pallet {
 	pub fn DefaultEmission<T:Config>() -> u64 {0 }
 	#[pallet::storage]
 	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
+
+	/// ---- DoubleMap Network UID -->  Neuron UID --> Prunning Score
+	#[pallet::type_value] 
+	pub fn DefaultPrunningScore<T: Config>() -> u16 { T::InitialPrunningScore::get() }
+	#[pallet::storage]
+	pub(super) type PrunningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPrunningScore<T> >;
 	
 	/// ************************************************************
 	///	-Genesis-Configuration  
@@ -941,72 +951,6 @@ pub mod pallet {
 		pub fn calculate_emission_ratio_sum() -> u16 {
 			let sum : u16 = 0; /*TO DO */
 			sum
-		}
-
-		pub fn get_registrations_this_block( ) -> u16 {
-			RegistrationsThisBlock::<T>::get()
-		}
-
-		pub fn get_max_registratations_per_block( ) -> u16 {
-			MaxRegistrationsPerBlock::<T>::get()
-		}
-
-		pub fn get_difficulty(netuid: u16 ) -> U256 {
-			return U256::from( Self::get_difficulty_as_u64(netuid) );
-		}
-
-		pub fn get_difficulty_as_u64(netuid: u16 ) -> u64 {
-			Difficulty::<T>::get(netuid)
-		}
-
-		pub fn get_max_allowed_uids(netuid: u16 ) -> u16 {
-			return MaxAllowedUids::<T>::get(netuid);
-		}
-
-		// --- Returns the next available network uid.
-		// uids increment up to u64:MAX, this allows the chain to
-		// have 18,446,744,073,709,551,615 peers before an overflow.
-		pub fn get_neuron_count(netuid: u16) -> u16 {
-			let uid_count = SubnetworkN::<T>::get(netuid);
-			uid_count
-		}
-
-		// --- Returns the next available network uid and increments uid.
-		pub fn get_next_uid() -> u16 {
-			let uid = GlobalN::<T>::get();
-			assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
-			GlobalN::<T>::put(uid + 1);
-			uid
-		}
-
-		pub fn get_immunity_period(netuid: u16 ) -> u16 {
-			return ImmunityPeriod::<T>::get(netuid);
-		}
-
-		pub fn get_total_stake( ) -> u64 {
-			return TotalStake::<T>::get();
-		}
-
-		pub fn get_stake_pruning_denominator( netuid: u16) -> u16 {
-			return StakePruningDenominator::<T>::get(netuid);
-		}
-
-		pub fn get_incentive_pruning_denominator(netuid: u16) -> u16 {
-			return IncentivePruningDenominator::<T>::get(netuid);
-		}
-
-		// --- Returns Option if the u64 converts to a balance
-		// use .unwarp if the result returns .some().
-		pub fn u64_to_balance(input: u64) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance>
-		{
-			input.try_into().ok()
-		}
-
-		pub fn get_stake_pruning_min(netuid: u16) -> u16 {
-			return StakePruningMin::<T>::get(netuid);
-		}
-		pub fn get_registrations_this_interval( netuid: u16) -> u16 {
-			return RegistrationsThisInterval::<T>::get(netuid);
 		}
 	}	
 }
