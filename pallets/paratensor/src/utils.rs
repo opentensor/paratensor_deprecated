@@ -22,6 +22,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_max_registratations_per_block( ) -> u16 {
         MaxRegistrationsPerBlock::<T>::get()
     }
+    pub fn set_max_registratations_per_block( max_registrations: u16 ){
+        MaxRegistrationsPerBlock::<T>::put( max_registrations );
+    }
 
     pub fn get_difficulty(netuid: u16 ) -> U256 {
         return U256::from( Self::get_difficulty_as_u64(netuid) );
@@ -35,18 +38,11 @@ impl<T: Config> Pallet<T> {
         return MaxAllowedUids::<T>::get(netuid);
     }
 
-    // --- Returns the next available network uid.
-    // uids increment up to u64:MAX, this allows the chain to
-    // have 18,446,744,073,709,551,615 peers before an overflow.
-    pub fn get_neuron_count(netuid: u16) -> u16 {
-        let uid_count = SubnetworkN::<T>::get(netuid);
-        uid_count
-    }
     // --- Returns the next available network uid and increments uid.
 		pub fn get_next_uid() -> u16 {
 			let uid = GlobalN::<T>::get();
 			assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
-			GlobalN::<T>::put(uid + 1); if_std! { println!( "uid in next_uid func: {}", uid);};
+			GlobalN::<T>::put(uid + 1);
 			uid
 		}
 
@@ -98,6 +94,34 @@ impl<T: Config> Pallet<T> {
         pub fn get_neuron_stake_for_subnetwork(netuid: u16, neuron_uid: u16) -> u64 {
             S::<T>::get(netuid, neuron_uid)
         }
+        pub fn get_target_registrations_per_interval() -> u16 {
+			TargetRegistrationsPerInterval::<T>::get()
+		}
+        pub fn get_adjustment_interval() -> u16 {
+			AdjustmentInterval::<T>::get()
+		}
+        pub fn get_blocks_since_last_step( ) -> u64 {
+			BlocksSinceLastStep::<T>::get()
+		}
+        pub fn set_blocks_since_last_step( blocks_since_last_step: u64 ) {
+			BlocksSinceLastStep::<T>::set( blocks_since_last_step );
+		}
+        pub fn get_blocks_per_step( ) -> u64 {
+			BlocksPerStep::<T>::get()
+		}
+        // -- Get Block emission.
+		pub fn get_block_emission( ) -> u64 {
+			return 1000000000;
+		}
+        pub fn get_last_mechanism_step_block( ) -> u64 {
+			return LastMechansimStepBlock::<T>::get();
+		}
+        pub fn set_difficulty_from_u64( netuid: u16, difficulty: u64 ) {
+			Difficulty::<T>::insert( netuid, difficulty );
+		}
+        pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
+            PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
+        }
 
     /// =========================
 	/// ==== Global Accounts ====
@@ -130,7 +154,7 @@ impl<T: Config> Pallet<T> {
     pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
     pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
-    pub fn increment_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n < u16::MAX { SubnetworkN::<T>::insert(netuid, n + 1); } }
+    pub fn increment_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n < Self::get_max_allowed_uids(netuid) { SubnetworkN::<T>::insert(netuid, n + 1); } }
     pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n > 0 { SubnetworkN::<T>::insert(netuid, n - 1); } }
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 

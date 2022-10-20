@@ -72,18 +72,18 @@ impl<T: Config> Pallet<T> {
         // 7. check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are prunning or setting with get_next_uid.
         let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
-        let neuron_count: u16 = Self::get_neuron_count(netuid); // Current number of uids for netuid network.
+        let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
         let current_block: u64 = Self::get_current_block_as_u64();
         //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
-        if neuron_count < max_allowed_uids {
+        if neuron_count < max_allowed_uids { 
 
             // 7.b. NO:  The metagraph is not full and we simply increment the uid.
             uid_to_set_in_metagraph = Self::get_next_uid();  
-        } else {
+        } else { 
             // 7.a. YES:
                 // - compute the pruning score
             let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
-            uid_to_set_in_metagraph = uid_to_prune;
+            uid_to_set_in_metagraph = uid_to_prune; 
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
             /* check if the hotkey is deregistred from all networks, 
             if so, then we need to transfer stake from hotkey to cold key */
