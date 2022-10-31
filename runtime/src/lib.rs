@@ -55,8 +55,8 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
-/// Import the template pallet.
-pub use pallet_subtensor;
+/// Import the paratensors pallet.
+pub use pallet_paratensor;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -303,6 +303,7 @@ impl frame_system::Config for Runtime {
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	
 }
 
 parameter_types! {
@@ -455,67 +456,63 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
+
 	type WeightInfo = ();
 }
 
+// Configure the pallet paratensor.
 parameter_types! {
-	pub const SDebug:u64 = 1;
-	pub const InitialRho: u64 = 10;
-	pub const InitialKappa: u64 = 2;
-	pub const SelfOwnership: u64 = 2;
-	pub const InitialValidatorBatchSize: u64 = 10;
-	pub const InitialValidatorSequenceLen: u64 = 10;
-	pub const InitialValidatorEpochLen: u64 = 1000;
-	pub const InitialValidatorEpochsPerReset: u64 = 10;
-	pub const InitialImmunityPeriod: u64 = 200;
-	pub const InitialBlocksPerStep: u64 = 100;
-	pub const InitialMaxAllowedUids: u64 = 2000;
-	pub const InitialMinAllowedWeights: u64 = 1;
-	pub const InitialMaxAllowedMaxMinRatio: u64 = 10;
-	pub const InitialIssuance: u64 = 548833985028256;
-	pub const InitialBondsMovingAverage: u64 = 900_000;
-	pub const InitialIncentivePruningDenominator: u64 = 1;
-	pub const InitialStakePruningDenominator: u64 = 1;
-	pub const InitialFoundationDistribution: u64 = 0;
-	pub const InitialDifficulty: u64 = 10000000;
-	pub const MinimumDifficulty: u64 = 10000000;
-	pub const InitialActivityCutoff: u64 = 5000;
-	pub const MaximumDifficulty: u64 = u64::MAX/4;
-	pub const InitialAdjustmentInterval: u64 = 100;
-	pub const InitialMaxRegistrationsPerBlock: u64 = 2;
-	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const ParatensorInitialRho: u16 = 10;
+	pub const ParatensorInitialKappa: u16 = 2;
+	pub const ParatensorInitialMaxAllowedUids: u16 = 2000;
+	pub const ParatensorInitialIssuance: u64 = 0;
+	pub const ParatensorInitialGlobalN : u16 = 0;
+	pub const ParatensorInitialMinAllowedWeights: u16 = 0;
+	pub const ParatensorInitialMaxAllowedMaxMinRatio: u16 = 0;
+	pub const ParatensorInitialValidatorBatchSize: u16 = 10;
+	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
+	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
+	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
+	pub const ParatensorInitialBlocksPerStep: u64 = 100;
+	pub const ParatensorInitialTempo: u16 = 0;
+	pub const ParatensorInitialDifficulty: u64 = 10000000;
+	pub const ParatensorInitialAdjustmentInterval: u64 = 100;
+	pub const ParatensorInitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const ParatensorInitialIncentivePruningDenominator: u16 = 1;
+	pub const ParatensorInitialStakePruningDenominator: u16 = 1;
+	pub const ParatensorInitialImmunityPeriod: u16 = 200;
+	pub const ParatensorInitialActivityCutoff: u16 = 5000;
+	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
+	pub const ParatensorInitialStakePruningMin: u16 = 0;
+	pub const ParatensorInitialPrunningScore : u16 = u16::MAX;
+	
 }
-
-/// Configure the pallet template in pallets/template.
-impl pallet_subtensor::Config for Runtime {
-	type Currency = Balances;
+impl pallet_paratensor::Config for Runtime {
 	type Event = Event;
-	type TransactionByteFee = ();
-	type SDebug = SDebug;
-	type InitialRho = InitialRho;
-	type InitialKappa = InitialKappa;
-	type SelfOwnership = SelfOwnership;
-	type InitialValidatorBatchSize = InitialValidatorBatchSize;
-	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
-	type InitialValidatorEpochLen = InitialValidatorEpochLen;
-	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
-	type InitialImmunityPeriod = InitialImmunityPeriod;
-	type InitialMaxAllowedUids = InitialMaxAllowedUids;
-	type InitialMinAllowedWeights = InitialMinAllowedWeights;
-	type InitialBondsMovingAverage = InitialBondsMovingAverage;
-	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
-	type InitialStakePruningDenominator = InitialStakePruningDenominator;
-	type InitialIncentivePruningDenominator = InitialIncentivePruningDenominator;
-	type InitialFoundationDistribution = InitialFoundationDistribution;
-	type InitialBlocksPerStep = InitialBlocksPerStep;
-	type InitialIssuance = InitialIssuance;
-	type InitialDifficulty = InitialDifficulty;
-	type MinimumDifficulty = MinimumDifficulty;
-	type MaximumDifficulty = MaximumDifficulty;
-	type InitialActivityCutoff = InitialActivityCutoff;
-	type InitialAdjustmentInterval = InitialAdjustmentInterval;
-	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
-	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+	type Currency = Balances;
+	type InitialRho = ParatensorInitialRho;
+	type InitialKappa = ParatensorInitialKappa;
+	type InitialMaxAllowedUids = ParatensorInitialMaxAllowedUids;
+	type InitialIssuance = ParatensorInitialIssuance;
+	type InitialGlobalN = ParatensorInitialGlobalN;
+	type InitialMinAllowedWeights = ParatensorInitialMinAllowedWeights;
+	type InitialMaxAllowedMaxMinRatio = ParatensorInitialMaxAllowedMaxMinRatio;
+	type InitialValidatorBatchSize = ParatensorInitialValidatorBatchSize;
+	type InitialValidatorSequenceLen = ParatensorInitialValidatorSequenceLen;
+	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;
+	type InitialValidatorEpochsPerReset = ParatensorInitialValidatorEpochsPerReset;
+	type InitialBlocksPerStep = ParatensorInitialBlocksPerStep;
+	type InitialTempo = ParatensorInitialTempo;
+	type InitialDifficulty = ParatensorInitialDifficulty;
+	type InitialAdjustmentInterval = ParatensorInitialAdjustmentInterval;
+	type InitialTargetRegistrationsPerInterval = ParatensorInitialTargetRegistrationsPerInterval;
+	type InitialIncentivePruningDenominator = ParatensorInitialIncentivePruningDenominator;
+	type InitialStakePruningDenominator = ParatensorInitialStakePruningDenominator;
+	type InitialImmunityPeriod = ParatensorInitialImmunityPeriod;
+	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
+	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
+	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
+	type InitialPrunningScore = ParatensorInitialPrunningScore;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -551,9 +548,8 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
-		// Subtensor
-		SubtensorModule: pallet_subtensor::{Pallet, Call, Storage, Event<T>}  = 40,
-
+		// Pallets
+		Paratensor: pallet_paratensor::{Pallet, Call, Storage, Event<T>}  = 41,
 	}
 );
 
