@@ -471,8 +471,8 @@ parameter_types! {
 	pub const ParatensorInitialBlocksPerStep: u64 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
-	pub const ParatensorInitialAdjustmentInterval: u64 = 100;
-	pub const ParatensorInitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const ParatensorInitialAdjustmentInterval: u16 = 100;
+	pub const ParatensorInitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const ParatensorInitialIncentivePruningDenominator: u16 = 1;
 	pub const ParatensorInitialStakePruningDenominator: u16 = 1;
 	pub const ParatensorInitialImmunityPeriod: u16 = 200;
