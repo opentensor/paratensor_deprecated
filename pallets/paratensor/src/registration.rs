@@ -6,7 +6,6 @@ use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
-use sp_runtime::sp_std::if_std;
 
 
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
