@@ -1,10 +1,12 @@
 
 use super::*;
+use frame_support::weights;
 use sp_core::U256;
 use frame_support::inherent::Vec;
 use frame_support::sp_std::vec;
 use frame_support::storage::IterableStorageDoubleMap;
 use sp_runtime::sp_std::if_std;
+use substrate_fixed::types::I32F32;
 
 impl<T: Config> Pallet<T> {
     
@@ -79,6 +81,18 @@ impl<T: Config> Pallet<T> {
                 Stake::<T>::remove(&hotkey);
             }
         }
+
+        pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
+            if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
+                let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
+                //
+                for i in vec_hotkey_subnets{
+                    let neuron_uid = Self::get_neuron_for_net_and_hotkey(i, &hotkey);
+                    S::<T>::remove(i, neuron_uid);
+                }
+            }
+        }
+  
         pub fn get_neuron_to_prune(netuid: u16) -> u16 {
             let mut min_score : u16 = u16::MAX;
             let mut uid_with_min_score = 0;
@@ -122,6 +136,7 @@ impl<T: Config> Pallet<T> {
         pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
             PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
         }
+       
 
     /// =========================
 	/// ==== Global Accounts ====
@@ -145,14 +160,19 @@ impl<T: Config> Pallet<T> {
             Self::decrement_global_n();
         }
     }
-
-
+    pub fn get_stake_for_hotkey(hotkey: &T::AccountId) -> u64 {
+        Stake::<T>::get(hotkey)
+    }
+    pub fn add_stake_for_hotkey(hotkey: &T::AccountId, amount: u64){
+        Stake::<T>::insert(hotkey, amount);
+    }
+   
     /// ==============================
 	/// ==== Subnetworks Accounts ====
 	/// ==============================
     pub fn is_hotkey_subnetwork_active( netuid:u16, hotkey: &T::AccountId ) -> bool { return Uids::<T>::contains_key( netuid, hotkey ) }
     pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
-    pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
+    //pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
     pub fn increment_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n < Self::get_max_allowed_uids(netuid) { SubnetworkN::<T>::insert(netuid, n + 1); } }
     pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n > 0 { SubnetworkN::<T>::insert(netuid, n - 1); } }
@@ -167,11 +187,11 @@ impl<T: Config> Pallet<T> {
         Keys::<T>::remove( netuid, uid ); 
         Self::decrement_subnetwork_n( netuid );
     }
-    pub fn get_coldkey_for_hotkey(hotkey:  T::AccountId) ->  T::AccountId {
+    pub fn get_coldkey_for_hotkey(hotkey:  &T::AccountId) ->  T::AccountId {
         return Hotkeys::<T>::get(hotkey);
     }
 
-    pub fn get_hotkey_for_coldkey(coldkey: T::AccountId) -> T::AccountId {
+    pub fn get_hotkey_for_coldkey(coldkey: &T::AccountId) -> T::AccountId {
         return Coldkeys::<T>::get(coldkey);
     }
 
@@ -184,20 +204,93 @@ impl<T: Config> Pallet<T> {
         return Keys::<T>::get(netuid, neuron_uid);
     }
 
-    pub fn get_neuron_for_net_and_hotkey(netuid: u16, hotkey: T::AccountId) -> u16 {
-        return Uids::<T>::get(netuid, hotkey);
+    pub fn get_neuron_for_net_and_hotkey(netuid: u16, hotkey: &T::AccountId) -> u16 {
+        return Uids::<T>::get(netuid, &hotkey);
     }
     pub fn increment_subnets_for_hotkey(netuid: u16, hotkey: &T::AccountId){
+
         let mut vec_new_hotkey_subnets = vec![];
+
         if Subnets::<T>::contains_key(&hotkey){ //update the list of subnets that hotkey is registered on
             vec_new_hotkey_subnets = Subnets::<T>::take(&hotkey);
-            //Subnets::<T>::remove(&hotkey);
+            
             vec_new_hotkey_subnets.push(netuid);
             Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
         } else {
             vec_new_hotkey_subnets.push(netuid); 
             Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
         }
+    }
+    //check if horkey is registered on any network
+    pub fn is_hotkey_active(hotkey:  &T::AccountId)-> bool {
+        return Subnets::<T>::contains_key( hotkey)
+    }
+    pub fn get_hotkey_stake_for_subnet(netuid: u16, hotkey:  &T::AccountId) -> u64{
+
+        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, hotkey);
+        S::<T>::get(netuid, neuron_uid)
+    }
+    /// ==============================
+	/// ==== Subnetworks Consensus ===
+	/// ==============================
+    pub fn remove_emission_from_subnet(netuid:u16, neuron_uid: u16){
+        Emission::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_emission_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Emission::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_dividend_from_subnet(netuid:u16, neuron_uid: u16){
+        Dividends::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_dividend_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Dividends::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_consensus_from_subnet(netuid:u16, neuron_uid: u16){
+        Consensus::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_consensus_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Consensus::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_incentive_from_subnet(netuid:u16, neuron_uid: u16){
+        Incentive::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_incentive_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Incentive::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_trust_from_subnet(netuid:u16, neuron_uid: u16){
+        Trust::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_trust_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Trust::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_rank_from_subnet(netuid:u16, neuron_uid: u16){
+        Rank::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_rank_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Rank::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_pruning_score_from_subnet(netuid:u16, neuron_uid: u16){
+        PrunningScores::<T>::remove(netuid, neuron_uid);
+    }
+    //
+    pub fn remove_bonds_from_subnet(netuid:u16, neuron_uid: u16){
+        Bonds::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_bonds_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Bonds::<T>::contains_key(netuid, neuron_uid)
+    }
+    //
+    pub fn remove_weights_from_subnet(netuid:u16, neuron_uid: u16){
+        Weights::<T>::remove(netuid, neuron_uid);
+    }
+    pub fn if_weights_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
+        Weights::<T>::contains_key(netuid, neuron_uid)
     }
 }
 

@@ -1,4 +1,4 @@
-use frame_support::{parameter_types, traits::{Everything, Hooks}};
+use frame_support::{assert_ok, parameter_types, traits::{Everything, Hooks}};
 use frame_system::{limits};
 use frame_support::traits:: StorageMapShim;
 use frame_system as system;
@@ -195,3 +195,10 @@ pub(crate) fn step_block(n: u16) {
 	}
 }
 
+#[allow(dead_code)]
+pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_id: u64, start_nonce: u64) {
+	let block_number: u64 = ParatensorModule::get_current_block_as_u64();
+	let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, start_nonce );
+	let result = ParatensorModule::register( <<Test as frame_system::Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id );
+	assert_ok!(result);
+}

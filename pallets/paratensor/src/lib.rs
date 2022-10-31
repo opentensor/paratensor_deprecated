@@ -477,6 +477,9 @@ pub mod pallet {
 		
 		/// --- Event created when max allowed uids has been set for a subnetwor.
 		MaxAllowedUidsSet(u16, u16),
+
+		/// --- Event created when total stake increased
+		TotalStakeIncreased(u64),
 	}
 	
 	/// ================
@@ -556,6 +559,14 @@ pub mod pallet {
 
 		/// ---  Thrown if the vaule is invalid for MaxAllowedUids
 		MaxAllowedUIdsNotAllowed,
+
+		/// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
+		/// but the call fails.
+		CouldNotConvertToBalance,
+
+		/// --- thrown when the caller requests adding stake for a hotkey to the 
+		/// total stake which already added
+		StakeAlreadyAdded,
 	}
 
 	/// ================
@@ -658,8 +669,8 @@ pub mod pallet {
 			//Self::do_set_weights(origin, netuid, dests, weights)
 		}
 
-		/// --- Adds stake to a neuron account. The call is made from the
-		/// coldkey account linked in the neurons's NeuronMetadata.
+		/// --- Adds stake to a hotkey. The call is made from the
+		/// coldkey account linked in the hotkey.
 		/// Only the associated coldkey is allowed to make staking and
 		/// unstaking requests. This protects the neuron against
 		/// attacks on its hotkey running in production code.
@@ -692,12 +703,11 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn add_stake(
-			_origin: OriginFor<T>, 
-			_hotkey: T::AccountId, 
-			_ammount_staked: u64
+			origin: OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_staked: u64
 		) -> DispatchResult {
-            Ok(())
-			//Self::do_add_stake(origin, hotkey, ammount_staked)
+			Self::do_add_stake(origin, hotkey, ammount_staked)
 		}
 
 		/// ---- Remove stake from the staking account. The call must be made
@@ -729,12 +739,11 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn remove_stake(
-			_origin: OriginFor<T>, 
-			_hotkey: T::AccountId, 
-			_ammount_unstaked: u64
+			origin: OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_unstaked: u64
 		) -> DispatchResult {
-            Ok(()) /*TO DO */
-			//Self::do_remove_stake(origin, hotkey, ammount_unstaked)
+			Self::do_remove_stake(origin, hotkey, ammount_unstaked)
 		}
 
 		/// ---- Serves or updates axon information for the neuron associated with the caller. If the caller

@@ -8,6 +8,9 @@ use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
     pub fn epoch( netuid: u16, _total_emission: u64, debug: bool ) {
+        /*TO DO:
+        1. calculate node to prune
+        2. update all other nodes consensus parameters including bonds and weights */
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
