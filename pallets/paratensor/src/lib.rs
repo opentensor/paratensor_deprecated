@@ -66,11 +66,11 @@ pub mod pallet {
 
 		/// Initial adjustment interval.
 		#[pallet::constant]
-		type InitialAdjustmentInterval: Get<u64>;
+		type InitialAdjustmentInterval: Get<u16>;
 
 		/// Initial target registrations per interval.
 		#[pallet::constant]
-		type InitialTargetRegistrationsPerInterval: Get<u64>;
+		type InitialTargetRegistrationsPerInterval: Get<u16>;
 
 		/// Rho constant
 		#[pallet::constant]
@@ -175,14 +175,14 @@ pub mod pallet {
 
 	/// ---- StorageItem Global Adjustment Interval
 	#[pallet::type_value]
-	pub fn DefaultAdjustmentInterval<T: Config>() -> u64 { T::InitialAdjustmentInterval::get() }
+	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
 	#[pallet::storage]
-	pub type AdjustmentInterval<T> = StorageValue<_, u64, ValueQuery, DefaultAdjustmentInterval<T> >;
+	pub type AdjustmentInterval<T> = StorageValue<_, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 
 	#[pallet::type_value] 
-	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u64 { T::InitialTargetRegistrationsPerInterval::get() }
+	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 	#[pallet::storage]
-	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u64, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
+	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 
 	/// ---- StorageItem Global Max Registration Per Block
 	#[pallet::type_value] 
@@ -203,7 +203,13 @@ pub mod pallet {
 	#[pallet::getter(fn block_at_registration)]
     pub(super) type BlockAtRegistration<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
+	#[pallet::type_value] 
+	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	pub type BlocksSinceLastStep<T> = StorageValue<_, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
 
+	#[pallet::storage]
+	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
@@ -459,6 +465,12 @@ pub mod pallet {
 		/// --- Event created when a new neuron account has been registered to 
 		/// the chain.
 		NeuronRegistered(u16),
+		
+		/// --- Event created when max allowed uids has been set for a subnetwor.
+		MaxAllowedUidsSet(u16, u16),
+
+		/// --- Event created when total stake increased
+		TotalStakeIncreased(u64),
 	}
 	
 	/// ================
@@ -535,13 +547,58 @@ pub mod pallet {
 
 		/// ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		InvalidSeal,
+
+		/// ---  Thrown if the vaule is invalid for MaxAllowedUids
+		MaxAllowedUIdsNotAllowed,
+
+		/// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
+		/// but the call fails.
+		CouldNotConvertToBalance,
+
+		/// --- thrown when the caller requests adding stake for a hotkey to the 
+		/// total stake which already added
+		StakeAlreadyAdded,
 	}
 
 	/// ================
 	/// ==== Hooks =====
 	/// ================
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { /*TO DO */
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { 
+		/// ---- Called on the initialization of this pallet. (the order of on_finalize calls is determined in the runtime)
+		///
+		/// # Args:
+		/// 	* 'n': (T::BlockNumber):
+		/// 		- The number of the block we are initializing.
+		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
+			// Only run the block step every `blocks_per_step`.
+			// Initially `blocks_since_last_step + 1` is 0 but increments until it reaches `blocks_per_step`.
+			// We use the >= here in the event that we lower get_blocks per step and these qualities never meet.
+			if Self::get_blocks_since_last_step() + 1 >= Self::get_blocks_per_step() {
+
+				// Compute the amount of emission we perform this step.
+				// Note that we use blocks_since_last_step here instead of block_per_step incase this is lowered
+				// This would mint more tao than is allowed.
+				let emission_this_step:u64 = ( Self::get_blocks_since_last_step() + 1 ) * Self::get_block_emission();
+
+				// Apply emission step based on mechanism and updates values.
+				//Self::mechanism_step( emission_this_step ); /* TO DO */
+
+				// Reset counter down to 0, this ensures that if `blocks_per_step=1` we will do an emission on every block.
+				// If `blocks_per_step=2` we will skip the next block, since (0+1) !>= 2, add one to the counter, and then apply the next
+				// token increment where (1+1) >= 2.
+				Self::set_blocks_since_last_step( 0 );
+
+			} else {
+				// Increment counter.
+				Self::set_blocks_since_last_step( Self::get_blocks_since_last_step() + 1 );
+			}
+
+			// Make a difficulty update.
+			// Self::update_difficulty(); /* TO DO */
+			
+			return 0;
+		}
 	}
 
 	/// ======================
@@ -603,8 +660,8 @@ pub mod pallet {
 			//Self::do_set_weights(origin, netuid, dests, weights)
 		}
 
-		/// --- Adds stake to a neuron account. The call is made from the
-		/// coldkey account linked in the neurons's NeuronMetadata.
+		/// --- Adds stake to a hotkey. The call is made from the
+		/// coldkey account linked in the hotkey.
 		/// Only the associated coldkey is allowed to make staking and
 		/// unstaking requests. This protects the neuron against
 		/// attacks on its hotkey running in production code.
@@ -637,12 +694,11 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn add_stake(
-			_origin: OriginFor<T>, 
-			_hotkey: T::AccountId, 
-			_ammount_staked: u64
+			origin: OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_staked: u64
 		) -> DispatchResult {
-            Ok(())
-			//Self::do_add_stake(origin, hotkey, ammount_staked)
+			Self::do_add_stake(origin, hotkey, ammount_staked)
 		}
 
 		/// ---- Remove stake from the staking account. The call must be made
@@ -674,12 +730,11 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn remove_stake(
-			_origin: OriginFor<T>, 
-			_hotkey: T::AccountId, 
-			_ammount_unstaked: u64
+			origin: OriginFor<T>, 
+			hotkey: T::AccountId, 
+			ammount_unstaked: u64
 		) -> DispatchResult {
-            Ok(()) /*TO DO */
-			//Self::do_remove_stake(origin, hotkey, ammount_unstaked)
+			Self::do_remove_stake(origin, hotkey, ammount_unstaked)
 		}
 
 		/// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
@@ -763,9 +818,12 @@ pub mod pallet {
 		/// 		
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_blocks_per_step(
-			_origin: OriginFor<T>,
-			_blocks_per_step: u64
-		) -> DispatchResult { /*TO DO */
+			origin: OriginFor<T>,
+			blocks_per_step: u64
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			BlocksPerStep::<T>::set( blocks_per_step );
+			Self::deposit_event( Event::BlocksPerStepSet( blocks_per_step ) );
 			Ok(())
 		}
 
@@ -856,10 +914,14 @@ pub mod pallet {
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_uids ( 
-			_origin:OriginFor<T>, 
-			_max_allowed_uids: u16 
+			origin:OriginFor<T>,
+			netuid: u16, 
+			max_allowed_uids: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			ensure!( max_allowed_uids < u16::MAX, Error::<T>::MaxAllowedUIdsNotAllowed );
+			MaxAllowedUids::<T>::insert(netuid, max_allowed_uids);
+			Self::deposit_event( Event::MaxAllowedUidsSet( netuid, max_allowed_uids) );
 			Ok(())
 		}
 

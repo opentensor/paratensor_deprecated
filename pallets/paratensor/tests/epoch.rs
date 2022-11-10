@@ -2,7 +2,7 @@
 use ndarray::{ndarray::Array1, ndarray::Array2, ndarray::arr1};
 
 mod mock;
-
+#[ignore]
 #[allow(dead_code)]
 pub fn print_network_state( netuid: u16, neuron_uid: u16 ) {
 	//println!( "S: {:?}", ParatensorModule::get_stake( netuid, neuron_uid ) );
@@ -14,7 +14,7 @@ pub fn print_network_state( netuid: u16, neuron_uid: u16 ) {
 	//println!( "I: {:?}", ParatensorModule::get_incentives( netuid, neuron_uid ) );
 	//println!( "D: {:?}", ParatensorModule::get_dividends( netuid, neuron_uid ) );
 }
-
+#[ignore]
 #[allow(dead_code)]
 pub fn create_random_subgraph( netuid: u16, n: u16, tempo: u64 ) {
 	/*
@@ -54,6 +54,7 @@ pub fn create_random_subgraph( netuid: u16, n: u16, tempo: u64 ) {
 }
 
 #[test]
+#[ignore]
 fn test_nill_epoch_paratensor() {
 /* 	new_test_ext().execute_with(|| {
         println!( "test_nill_epoch:" );
@@ -62,6 +63,7 @@ fn test_nill_epoch_paratensor() {
 }
 
 #[test]
+#[ignore]
 fn test_many_epochs() {
 /* 	new_test_ext().execute_with(|| {
         println!( "test_1000_epochs:" );

@@ -1,4 +1,4 @@
-use frame_support::{parameter_types, traits::Everything};
+use frame_support::{assert_ok, parameter_types, traits::{Everything, Hooks}};
 use frame_system::{limits};
 use frame_support::traits:: StorageMapShim;
 use frame_system as system;
@@ -105,7 +105,7 @@ parameter_types! {
 	pub const InitialTempo: u16 = 0;
 	pub const SelfOwnership: u64 = 2;
 	pub const InitialImmunityPeriod: u16 = 2;
-	pub const InitialMaxAllowedUids: u16 = 100;
+	pub const InitialMaxAllowedUids: u16 = 2;
 	pub const InitialBondsMovingAverage: u64 = 500_000;
 	pub const InitialIncentivePruningDenominator: u16 = 1;
 	pub const InitialStakePruningDenominator: u16 = 1;
@@ -124,9 +124,9 @@ parameter_types! {
 	pub const MinimumDifficulty: u64 = 10000;
 	pub const InitialActivityCutoff: u16 = 5000;
 	pub const MaximumDifficulty: u64 = u64::MAX/4;
-	pub const InitialAdjustmentInterval: u64 = 100;
-	pub const InitialMaxRegistrationsPerBlock: u16 = 2;
-	pub const InitialTargetRegistrationsPerInterval: u64 = 2;
+	pub const InitialAdjustmentInterval: u16 = 100;
+	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
+	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const InitialPrunningScore : u16 = u16::MAX;
 }
 impl pallet_paratensor::Config for Test {
@@ -184,3 +184,21 @@ pub fn test_ext_with_balances(balances : Vec<(u64, u128)>) -> sp_io::TestExterna
 	t.into()
 }
 
+#[allow(dead_code)]
+pub(crate) fn step_block(n: u16) {
+	for _ in 0..n {
+		ParatensorModule::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		ParatensorModule::on_initialize(System::block_number());
+	}
+}
+
+#[allow(dead_code)]
+pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_id: u64, start_nonce: u64) {
+	let block_number: u64 = ParatensorModule::get_current_block_as_u64();
+	let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, start_nonce );
+	let result = ParatensorModule::register( <<Test as frame_system::Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id );
+	assert_ok!(result);
+}

@@ -71,39 +71,62 @@ impl<T: Config> Pallet<T> {
         // 7. check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are prunning or setting with get_next_uid.
         let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
-        let neuron_count: u16 = Self::get_neuron_count(netuid); // Current number of uids for netuid network.
+        let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
         let current_block: u64 = Self::get_current_block_as_u64();
         //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
-        if neuron_count < max_allowed_uids {
+        if neuron_count < max_allowed_uids { 
 
             // 7.b. NO:  The metagraph is not full and we simply increment the uid.
             uid_to_set_in_metagraph = Self::get_next_uid();  
-        } else {
+        } else { 
             // 7.a. YES:
                 // - compute the pruning score
             let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
-            uid_to_set_in_metagraph = uid_to_prune;
+            uid_to_set_in_metagraph = uid_to_prune; 
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
+            //
+            let stake_to_remove: u64 = S::<T>::take(netuid, uid_to_prune); //remove hotkey stake for this network.
             /* check if the hotkey is deregistred from all networks, 
             if so, then we need to transfer stake from hotkey to cold key */
             let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_to_prune); // a list of subnets that hotkey is registered on.
             if vec_subnets_for_pruning_hotkey.len() == 1 {
+
                 if vec_subnets_for_pruning_hotkey[0] == netuid {
                     // we need to remove all stakes since this hotkey is not staked in any other networks
                     // These funds are deposited back into the coldkey account so that no funds are destroyed. 
-                    let stake_to_remove: u64 = S::<T>::take(netuid, uid_to_prune);
                     //
                     let coldkey_to_add_stake = Coldkeys::<T>::get(&hotkey_to_prune);
                     Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_remove).unwrap());
                     Self::decrease_total_stake( stake_to_remove );
                     Self::remove_global_stake(&hotkey_to_prune);
+                    Self::remove_stake_for_subnet(&hotkey_to_prune);
                     //
-                    Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph);
-                    Self::remove_global_account(&hotkey);
+                    Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph); //UIds, Keys
+                    Self::remove_global_account(&hotkey); //Hotkeys, Coldkeys
                     Subnets::<T>::remove(&hotkey_to_prune);
-
+                    //
                 } 
             } 
+            // remove consensus storage for pruning uid
+            // remove weights
+            Self::remove_weights_from_subnet(netuid, uid_to_prune);
+            // remove bonds
+            Self::remove_bonds_from_subnet(netuid, uid_to_prune);
+            // update network activity vector(?) - Acctive
+            // remove rank
+            Self::remove_rank_from_subnet(netuid, uid_to_prune);
+            // remove trust
+            Self::remove_trust_from_subnet(netuid, uid_to_prune);
+            // remove incentive
+            Self::remove_incentive_from_subnet(netuid, uid_to_prune);
+            // remove consensus
+            Self::remove_consensus_from_subnet(netuid, uid_to_prune);
+            // remove dividend
+            Self::remove_dividend_from_subnet(netuid, uid_to_prune);
+            // remove emission
+            Self::remove_emission_from_subnet(netuid, uid_to_prune);
+            // remove pruning score 
+            Self::remove_pruning_score_from_subnet(netuid, uid_to_prune);
             //
             // Next we will add this prunned peer to NeuronsToPruneAtNextEpoch.
             // We record this set because we need to remove all bonds owned in this uid.
@@ -117,6 +140,7 @@ impl<T: Config> Pallet<T> {
         Self::add_global_account(&hotkey, &coldkey);
         Self::increment_subnets_for_hotkey(netuid, &hotkey);
         Self::add_subnetwork_account(netuid, uid_to_set_in_metagraph, &hotkey);
+        Self::add_hotkey_stake_for_network(netuid, &hotkey);
         UsedWork::<T>::insert( &work.clone(), current_block ); // Add the work to current + block. So we can prune at a later date.
         // --- Update avg registrations per 1000 block.
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
@@ -218,7 +242,7 @@ impl<T: Config> Pallet<T> {
     }
 
       // Helper function for creating nonce and work.
-      pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
+    pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
         let difficulty: U256 = Self::get_difficulty(netuid);
         let mut nonce: u64 = start_nonce;
         let mut work: H256 = Self::create_seal_hash( block_number, nonce );
@@ -228,6 +252,13 @@ impl<T: Config> Pallet<T> {
         }
         let vec_work: Vec<u8> = Self::hash_to_vec( work );
         return (nonce, vec_work)
+    }
+    pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
+        
+        let stake = Stake::<T>::get(&hotkey);
+        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, &hotkey);
+        //
+        S::<T>::insert(netuid, neuron_uid, stake);
     }
 
 }
