@@ -2,6 +2,7 @@ use frame_support::{assert_ok, parameter_types, traits::{Everything, Hooks}};
 use frame_system::{limits};
 use frame_support::traits:: StorageMapShim;
 use frame_system as system;
+use frame_system::Config;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -95,6 +96,8 @@ impl system::Config for Test {
 
 parameter_types! {
 	pub const InitialMinAllowedWeights: u16 = 0;
+	pub const InitialEmissionRatio: u16 = 0;
+	pub const InitialMaxWeightsLimit: u16 = u16::MAX;
 	pub const InitialMaxAllowedMaxMinRatio: u16 = 0;
 	pub BlockWeights: limits::BlockWeights = limits::BlockWeights::simple_max(1024);
 	pub const ExistentialDeposit: Balance = 1;
@@ -117,9 +120,8 @@ parameter_types! {
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
 
-	pub const InitialBlocksPerStep: u64 = 1;
+	pub const InitialBlocksPerStep: u16 = 1;
 	pub const InitialIssuance: u64 = 548833985028256;
-	pub const InitialGlobalN : u16 = 0;
 	pub const InitialDifficulty: u64 = 10000;
 	pub const MinimumDifficulty: u64 = 10000;
 	pub const InitialActivityCutoff: u16 = 5000;
@@ -128,14 +130,17 @@ parameter_types! {
 	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const InitialPrunningScore : u16 = u16::MAX;
+	pub const InitialValidatorExcludeQuantile: u16 = 10;
+
 }
 impl pallet_paratensor::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type InitialIssuance = InitialIssuance;
-	type InitialGlobalN = InitialGlobalN;
 
 	type InitialMinAllowedWeights = InitialMinAllowedWeights;
+	type InitialEmissionRatio = InitialEmissionRatio;
+	type InitialMaxWeightsLimit = InitialMaxWeightsLimit;
 	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
 	type InitialBlocksPerStep = InitialBlocksPerStep;
 	type InitialTempo = InitialTempo;
@@ -156,6 +161,8 @@ impl pallet_paratensor::Config for Test {
 	type InitialActivityCutoff = InitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
 	type InitialPrunningScore = InitialPrunningScore;
+	type InitialBondsMovingAverage = InitialBondsMovingAverage;
+	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -200,5 +207,11 @@ pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_
 	let block_number: u64 = ParatensorModule::get_current_block_as_u64();
 	let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, start_nonce );
 	let result = ParatensorModule::register( <<Test as frame_system::Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id );
+	assert_ok!(result);
+}
+
+#[allow(dead_code)]
+pub fn add_network(netuid: u16, modality: u8){
+	let result = ParatensorModule::do_add_network(<<Test as Config>::Origin>::root(), netuid, modality);
 	assert_ok!(result);
 }

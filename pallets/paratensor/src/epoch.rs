@@ -8,9 +8,12 @@ use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
     pub fn epoch( netuid: u16, _total_emission: u64, debug: bool ) {
-        /*TO DO:
-        1. calculate node to prune
-        2. update all other nodes consensus parameters including bonds and weights */
+        /*TO DO (no particular order):
+        1. calculate pruning scores
+        2. update all other nodes consensus parameters including bonds and weights 
+        3. update weights and bonds for node that is identified to be pruned in registration process
+        3. set priority
+        4. reset Bonds */
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
@@ -64,6 +67,12 @@ impl<T: Config> Pallet<T> {
 
         // *TODO: Compute emissions.
 
+    }
+
+     /* TO DO: impl fn */    
+     //we want to rest bonds for all neurons memebr of network netuid.
+     pub fn reset_bonds(netuid: u16){
+        /*TO DO */
     }
 
     pub fn sum( x: &Vec<I32F32> ) -> I32F32 {

@@ -6,7 +6,6 @@ use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
-use sp_runtime::sp_std::if_std;
 
 
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
@@ -26,13 +25,14 @@ impl<T: Config> Pallet<T> {
         // --- Check the callers hotkey signature.
         ensure_signed(origin)?;
         // TO DO:
-        // 1.  --- Check that registrations per block and hotkey in this network
-        // 2. --- Check block number validity.
-        // 3.  --- Check for repeat work,
-        // 4. --- Check difficulty.
-        // 5. --- Check work.
-        // 6. --- Check that the hotkey has not already been registered in this network.
-        // 7. --- check to see if the uid limit has been reached.
+        // 1. --- Check if network exist 
+        // 2. --- Check that registrations per block and hotkey in this network
+        // 3. --- Check block number validity.
+        // 4. --- Check for repeat work,
+        // 5. --- Check difficulty.
+        // 6. --- Check work.
+        // 7. --- Check that the hotkey has not already been registered in this network.
+        // 8. --- check to see if the uid limit has been reached.
         //     a. YES: 
         //         - find a replacement
         //         - add this prunned peer to NeuronsToPruneAtNextEpoch.
@@ -43,33 +43,37 @@ impl<T: Config> Pallet<T> {
         //         - create a new entry in the table with the new metadata.
         //         - update appropriate parameters.
         //         -  add new neuron to neurons. hotkeys, and works
-        //
-        // 1. check registration per block 
+
+        
+        // 1. check if network exist 
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist); 
+
+        // 2. check registration per block 
         let registrations_this_block: u16 = Self:: get_registrations_this_block();
         ensure! (registrations_this_block < Self:: get_max_registratations_per_block(), Error::<T>::ToManyRegistrationsThisBlock); // Number of registrations this block exceeded.
         ensure! (!Uids::<T>::contains_key(&netuid, &hotkey), Error::<T>::AlreadyRegistered); // Hotkey has already registered.
 
-        /* 2. Check block number validity. */
+        /* 3. Check block number validity. */
         let current_block_number: u64 = Self::get_current_block_as_u64();
         ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
         ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); // Work must have been done within 3 blocks (stops long range attacks).
 
-        // 3. Check for repeat work,
+        // 4. Check for repeat work,
         ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated );  // Work has not been used before.
 
-        // 4. Check difficulty.
+        // 5. Check difficulty.
         let difficulty: U256 = Self::get_difficulty(netuid);
         let work_hash: H256 = Self::vec_to_hash( work.clone() );
         ensure! ( Self::hash_meets_difficulty( &work_hash, difficulty ), Error::<T>::InvalidDifficulty ); // Check that the work meets difficulty.
         
-        // 5. Check Work.
+        // 6. Check Work.
         let seal: H256 = Self::create_seal_hash( block_number, nonce );
         ensure! ( seal == work_hash, Error::<T>::InvalidSeal ); // Check that this work matches hash and nonce.
         
-        // 6. Check that the hotkey has not already been registered.
+        // 7. Check that the hotkey has not already been registered.
         ensure! (!Uids::<T>::contains_key(netuid, &hotkey), Error::<T>::AlreadyRegistered); // Hotkey has already registered.
         
-        // 7. check to see if the uid limit has been reached.
+        // 8. check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are prunning or setting with get_next_uid.
         let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
         let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
@@ -77,10 +81,10 @@ impl<T: Config> Pallet<T> {
         //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
         if neuron_count < max_allowed_uids { 
 
-            // 7.b. NO:  The metagraph is not full and we simply increment the uid.
-            uid_to_set_in_metagraph = Self::get_next_uid();  
+            // 8.b. NO:  The metagraph is not full and we simply increment the uid.
+            uid_to_set_in_metagraph = Self::get_next_uid(netuid);  
         } else { 
-            // 7.a. YES:
+            // 8.a. YES:
                 // - compute the pruning score
             let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
             uid_to_set_in_metagraph = uid_to_prune; 
@@ -113,7 +117,8 @@ impl<T: Config> Pallet<T> {
             Self::remove_weights_from_subnet(netuid, uid_to_prune);
             // remove bonds
             Self::remove_bonds_from_subnet(netuid, uid_to_prune);
-            // update network activity vector(?) - Acctive
+            // remove from active 
+            Self::deactive_neuron(netuid, uid_to_prune);
             // remove rank
             Self::remove_rank_from_subnet(netuid, uid_to_prune);
             // remove trust
@@ -137,6 +142,14 @@ impl<T: Config> Pallet<T> {
         }
         
         // next, we add new registered node to all structures
+        let neuron_metadata = NeuronMetadata {
+            version: 0,
+            ip: 0,
+            port: 0,
+            ip_type: 0,
+        };
+        NeuronsMetaData::<T>::insert(uid_to_set_in_metagraph, neuron_metadata);
+        Active::<T>::insert(netuid, uid_to_set_in_metagraph, true); //set neuron active
         BlockAtRegistration::<T>::insert( uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
         Self::add_global_account(&hotkey, &coldkey);
         Self::increment_subnets_for_hotkey(netuid, &hotkey);

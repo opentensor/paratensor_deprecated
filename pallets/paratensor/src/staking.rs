@@ -20,7 +20,7 @@ impl<T: Config> Pallet<T> {
          let coldkey = ensure_signed(origin)?;
  
          //2. Check if the hotkey is active
-         ensure!(Self::is_hotkey_active(&hotkey), Error::<T>::NotRegistered);
+         ensure!(Self::is_hotkey_registered_any(&hotkey), Error::<T>::NotRegistered);
  
          //3. We check that the hotkey is linked to the calling cold key, 
          // otherwise throw a NonAssociatedColdKey error.
@@ -68,7 +68,7 @@ impl<T: Config> Pallet<T> {
         let coldkey = ensure_signed(origin)?;
 
         // ---- check if hotkey is active
-        ensure!(Self::is_hotkey_active(&hotkey), Error::<T>::NotRegistered);
+        ensure!(Self::is_hotkey_registered_any(&hotkey), Error::<T>::NotRegistered);
 
         // ---- We check that the hotkey is linked to the calling cold key, otherwise throw a NonAssociatedColdKey error.
         ensure!(Self::hotkey_belongs_to_coldkey(&hotkey, &coldkey), Error::<T>::NonAssociatedColdKey);

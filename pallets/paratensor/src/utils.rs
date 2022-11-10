@@ -1,12 +1,12 @@
 
 use super::*;
-use frame_support::weights;
+use frame_support::pallet_prelude::{DispatchError};
+
 use sp_core::U256;
 use frame_support::inherent::Vec;
 use frame_support::sp_std::vec;
 use frame_support::storage::IterableStorageDoubleMap;
-use sp_runtime::sp_std::if_std;
-use substrate_fixed::types::I32F32;
+use frame_support::storage::IterableStorageMap;
 
 impl<T: Config> Pallet<T> {
     
@@ -33,118 +33,170 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn get_difficulty_as_u64(netuid: u16 ) -> u64 {
-        Difficulty::<T>::get(netuid)
+         return Difficulty::<T>::get(netuid); 
     }
 
-    pub fn get_max_allowed_uids(netuid: u16 ) -> u16 {
+    /*pub fn get_max_allowed_uids(netuid: u16 ) -> Result<u16, DispatchError>  {
+        return MaxAllowedUids::<T>::try_get(netuid).map_err(|_err| Error::<T>::NetworkDoesNotExist.into());
+    } */
+    pub fn get_max_allowed_uids(netuid: u16) -> u16 {
         return MaxAllowedUids::<T>::get(netuid);
     }
 
-    // --- Returns the next available network uid and increments uid.
-		pub fn get_next_uid() -> u16 {
-			let uid = GlobalN::<T>::get();
-			assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
-			GlobalN::<T>::put(uid + 1);
-			uid
-		}
+    // --- Returns the next available uid for the network and increments uid.
+	pub fn get_next_uid(netuid: u16) -> u16 {
+		let uid = SubnetworkN::<T>::get(netuid);
+		assert!(uid < MaxAllowedUids::<T>::get(netuid));  // The system should fail if this is ever reached.
+        assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
+		SubnetworkN::<T>::insert(netuid, uid + 1); 
+		uid
+	}
 
-		pub fn get_immunity_period(netuid: u16 ) -> u16 {
-			return ImmunityPeriod::<T>::get(netuid);
-		}
+	pub fn get_immunity_period(netuid: u16 ) -> u16 {
+		return ImmunityPeriod::<T>::get(netuid);
+	}
 
-		pub fn get_total_stake( ) -> u64 {
-			return TotalStake::<T>::get();
-		}
+	pub fn get_total_stake( ) -> u64 {
+		return TotalStake::<T>::get();
+	}
 
-		pub fn get_stake_pruning_denominator( netuid: u16) -> u16 {
-			return StakePruningDenominator::<T>::get(netuid);
-		}
+	pub fn get_stake_pruning_denominator( netuid: u16) -> u16 {
+		return StakePruningDenominator::<T>::get(netuid);
+	}
 
-		pub fn get_incentive_pruning_denominator(netuid: u16) -> u16 {
-			return IncentivePruningDenominator::<T>::get(netuid);
-		}
+	pub fn get_incentive_pruning_denominator(netuid: u16) -> u16 {
+		return IncentivePruningDenominator::<T>::get(netuid);
+	}
 
-		// --- Returns Option if the u64 converts to a balance
-		// use .unwarp if the result returns .some().
-		pub fn u64_to_balance(input: u64) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance>
-		{
-			input.try_into().ok()
-		}
-        pub fn get_stake_pruning_min(netuid: u16) -> u16 {
-			return StakePruningMin::<T>::get(netuid);
-		}
-		pub fn get_registrations_this_interval( netuid: u16) -> u16 {
-			return RegistrationsThisInterval::<T>::get(netuid);
-		}
-        pub fn remove_global_stake(hotkey: &T::AccountId){
-            if Stake::<T>::contains_key(&hotkey){
-                Stake::<T>::remove(&hotkey);
+	// --- Returns Option if the u64 converts to a balance
+	// use .unwarp if the result returns .some().
+	pub fn u64_to_balance(input: u64) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance>
+	{
+		input.try_into().ok()
+	}
+    pub fn get_stake_pruning_min(netuid: u16) -> u16 {
+		return StakePruningMin::<T>::get(netuid);
+	}
+	pub fn get_registrations_this_interval( netuid: u16) -> u16 {
+		return RegistrationsThisInterval::<T>::get(netuid);
+	}
+    pub fn remove_global_stake(hotkey: &T::AccountId){
+        if Stake::<T>::contains_key(&hotkey){
+            Stake::<T>::remove(&hotkey);
+        }
+    }
+
+    pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
+        if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
+            let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
+            //
+            for i in vec_hotkey_subnets{
+                let neuron_uid = Self::get_neuron_for_net_and_hotkey(i, &hotkey);
+                S::<T>::remove(i, neuron_uid);
             }
         }
-
-        pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
-            if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
-                let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
-                //
-                for i in vec_hotkey_subnets{
-                    let neuron_uid = Self::get_neuron_for_net_and_hotkey(i, &hotkey);
-                    S::<T>::remove(i, neuron_uid);
-                }
-            }
-        }
+    }
   
-        pub fn get_neuron_to_prune(netuid: u16) -> u16 {
-            let mut min_score : u16 = u16::MAX;
-            let mut uid_with_min_score = 0;
-            for (uid_i, _prune_score) in <PrunningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-                let value = PrunningScores::<T>::get(netuid, uid_i);
-                if min_score > value { 
-                    min_score = value; 
-                    uid_with_min_score = uid_i;
-                }
+    pub fn get_neuron_to_prune(netuid: u16) -> u16 {
+        let mut min_score : u16 = u16::MAX;
+        let mut uid_with_min_score = 0;
+        for (uid_i, _prune_score) in <PrunningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
+            let value = PrunningScores::<T>::get(netuid, uid_i);
+            if min_score > value { 
+                min_score = value; 
+                uid_with_min_score = uid_i;
             }
-            uid_with_min_score
-        } 
-        pub fn get_neuron_stake_for_subnetwork(netuid: u16, neuron_uid: u16) -> u64 {
-            S::<T>::get(netuid, neuron_uid)
         }
-        pub fn get_target_registrations_per_interval() -> u16 {
-			TargetRegistrationsPerInterval::<T>::get()
-		}
-        pub fn get_adjustment_interval() -> u16 {
-			AdjustmentInterval::<T>::get()
-		}
-        pub fn get_blocks_since_last_step( ) -> u64 {
-			BlocksSinceLastStep::<T>::get()
-		}
-        pub fn set_blocks_since_last_step( blocks_since_last_step: u64 ) {
-			BlocksSinceLastStep::<T>::set( blocks_since_last_step );
-		}
-        pub fn get_blocks_per_step( ) -> u64 {
-			BlocksPerStep::<T>::get()
-		}
-        // -- Get Block emission.
-		pub fn get_block_emission( ) -> u64 {
-			return 1000000000;
-		}
-        pub fn get_last_mechanism_step_block( ) -> u64 {
-			return LastMechansimStepBlock::<T>::get();
-		}
-        pub fn set_difficulty_from_u64( netuid: u16, difficulty: u64 ) {
-			Difficulty::<T>::insert( netuid, difficulty );
-		}
-        pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
-            PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
-        }
-       
-
+        PrunningScores::<T>::remove(netuid, uid_with_min_score);
+        uid_with_min_score
+    } 
+    pub fn get_neuron_stake_for_subnetwork(netuid: u16, neuron_uid: u16) -> u64 {
+        S::<T>::get(netuid, neuron_uid)
+    }
+    pub fn get_target_registrations_per_interval(netuid: u16) -> u16 {
+		TargetRegistrationsPerInterval::<T>::get(netuid)
+	}
+    pub fn get_adjustment_interval(netuid: u16) -> u16 {
+		AdjustmentInterval::<T>::get(netuid)
+	}
+    pub fn get_blocks_since_last_step( ) -> u64 {
+		BlocksSinceLastStep::<T>::get()
+	}
+    pub fn set_blocks_since_last_step( blocks_since_last_step: u64 ) {
+		BlocksSinceLastStep::<T>::set( blocks_since_last_step );
+	}
+    pub fn get_blocks_per_step(netuid: u16 ) -> u16 {
+		BlocksPerStep::<T>::get(netuid)
+	}
+    // -- Get Block emission.
+	pub fn get_block_emission( ) -> u64 {
+		return 1000000000;
+	}
+    pub fn get_last_mechanism_step_block( ) -> u64 {
+		return LastMechansimStepBlock::<T>::get();
+	}
+    pub fn set_difficulty_from_u64( netuid: u16, difficulty: u64 ) {
+		Difficulty::<T>::insert( netuid, difficulty );
+	}
+    pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
+        PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
+    }
+    pub fn get_min_allowed_weights(netuid:u16 ) -> u16 {
+		return MinAllowedWeights::<T>::get(netuid);
+	}
+    pub fn get_max_weight_limit(netuid: u16) -> u16 {
+		return MaxWeightsLimit::<T>::get(netuid);
+	}
+    pub fn set_max_weight_limit( netuid: u16, max_weight_limit: u16 ) {
+        MaxWeightsLimit::<T>::insert(netuid, max_weight_limit )
+    }
+    pub fn set_min_allowed_weights( netuid: u16, min_allowed_weights: u16 ) {
+		MinAllowedWeights::<T>::insert(netuid, min_allowed_weights )
+	}
+    pub fn get_rho() -> u16 {
+        Rho::<T>::get()
+    }
+    pub fn  get_bonds_moving_average(netuid: u16) -> u64 {
+        BondsMovingAverage::<T>::get(netuid)
+    }
+    pub fn get_activity_cutoff(netuid: u16) -> u16{
+        ActivityCutoff::<T>::get(netuid)
+    }
+    pub fn get_kappa(netuid: u16) -> u16{
+        Kappa::<T>::get(netuid)
+    }
+    pub fn get_max_allowed_max_min_ratio(netuid: u16) -> u16{
+        MaxAllowedMaxMinRatio::<T>::get(netuid)
+    }
+    pub fn get_validator_batch_size(netuid: u16) -> u16{
+        ValidatorBatchSize::<T>::get(netuid)
+    }
+    pub fn get_validator_sequence_length(netuid: u16) -> u16{
+        ValidatorSequenceLength::<T>::get(netuid)
+    }
+    pub fn get_validator_epochs_per_reset(netuid: u16)-> u16{
+        ValidatorEpochsPerReset::<T>::get(netuid)
+    }
+    pub fn set_validator_exclude_quantile(netuid: u16, validator_exclude_quantile: u16 ) {
+		ValidatorExcludeQuantile::<T>::insert(netuid, validator_exclude_quantile)
+	}
+    pub fn get_validator_exclude_quantile(netuid: u16 ) -> u16 {
+		return ValidatorExcludeQuantile::<T>::get(netuid);
+	}
+    pub fn is_uid_active(netuid: u16, neuron_uid: u16) ->bool{
+        Active::<T>::get(netuid, neuron_uid)
+    }
+    pub fn deactive_neuron(netuid: u16, neuron_uid: u16){
+        Active::<T>::remove(netuid, neuron_uid)
+    }
+    pub fn set_last_update_for_neuron(netuid: u16, neuron_uid: u16, update: u64){
+        LastUpdate::<T>::insert(netuid, neuron_uid, update);
+    }	
+    
     /// =========================
 	/// ==== Global Accounts ====
 	/// =========================
-    pub fn get_global_n() -> u16 { return GlobalN::<T>::get() }
     pub fn is_hotkey_globally_active( hotkey: &T::AccountId ) -> bool { return Coldkeys::<T>::contains_key( hotkey ) }
-    pub fn increment_global_n() { let n = GlobalN::<T>::get(); if n < u16::MAX { GlobalN::<T>::put(n + 1); } }
-    pub fn decrement_global_n() { let n = GlobalN::<T>::get(); if n > 0 { GlobalN::<T>::put(n - 1); } }
     pub fn add_global_account( hotkey: &T::AccountId, coldkey: &T::AccountId )  {
         if !Hotkeys::<T>::contains_key( &hotkey ) { 
             Hotkeys::<T>::insert( hotkey.clone(), coldkey.clone() );
@@ -157,7 +209,6 @@ impl<T: Config> Pallet<T> {
             let coldkey = Coldkeys::<T>::get( &hotkey.clone() );
             Hotkeys::<T>::remove( coldkey.clone() );
             Coldkeys::<T>::remove( hotkey.clone() );
-            Self::decrement_global_n();
         }
     }
     pub fn get_stake_for_hotkey(hotkey: &T::AccountId) -> u64 {
@@ -170,16 +221,23 @@ impl<T: Config> Pallet<T> {
     /// ==============================
 	/// ==== Subnetworks Accounts ====
 	/// ==============================
-    pub fn is_hotkey_subnetwork_active( netuid:u16, hotkey: &T::AccountId ) -> bool { return Uids::<T>::contains_key( netuid, hotkey ) }
-    pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
+    pub fn is_hotkey_registered( netuid:u16, hotkey: &T::AccountId ) -> bool { return Uids::<T>::contains_key( netuid, hotkey ) }
+    pub fn get_number_of_subnets()-> u16 {
+        let mut number_of_subnets : u16 = 0;
+        for (net_i, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
+            number_of_subnets = number_of_subnets + 1;
+        }
+        return number_of_subnets;
+    }
+    //pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
     //pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
-    pub fn increment_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n < Self::get_max_allowed_uids(netuid) { SubnetworkN::<T>::insert(netuid, n + 1); } }
+    pub fn increment_subnetwork_n( netuid:u16 ) {let n = SubnetworkN::<T>::get( netuid ); if n < Self::get_max_allowed_uids(netuid) { SubnetworkN::<T>::insert(netuid, n + 1); } }
     pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n > 0 { SubnetworkN::<T>::insert(netuid, n - 1); } }
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
-        Self::increment_subnetwork_n( netuid );
+        //Self::increment_subnetwork_n( netuid );
     }
     pub fn remove_subnetwork_account( netuid:u16, uid: u16 ) { 
         let hotkey = Keys::<T>::get( netuid, uid );
@@ -207,6 +265,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_neuron_for_net_and_hotkey(netuid: u16, hotkey: &T::AccountId) -> u16 {
         return Uids::<T>::get(netuid, &hotkey);
     }
+
     pub fn increment_subnets_for_hotkey(netuid: u16, hotkey: &T::AccountId){
 
         let mut vec_new_hotkey_subnets = vec![];
@@ -222,14 +281,46 @@ impl<T: Config> Pallet<T> {
         }
     }
     //check if horkey is registered on any network
-    pub fn is_hotkey_active(hotkey:  &T::AccountId)-> bool {
+    pub fn is_hotkey_registered_any(hotkey:  &T::AccountId)-> bool {
         return Subnets::<T>::contains_key( hotkey)
     }
+
     pub fn get_hotkey_stake_for_subnet(netuid: u16, hotkey:  &T::AccountId) -> u64{
 
         let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, hotkey);
         S::<T>::get(netuid, neuron_uid)
     }
+
+    pub fn is_uid_exist(netuid: u16, uid: u16) -> bool {
+        return  Keys::<T>::contains_key(netuid, uid);
+    }
+
+    pub fn get_priority_for_neuron(netuid:u16, neuron_uid: u16) -> u16 {
+        Priority::<T>::get(netuid, neuron_uid)
+    }
+
+    pub fn get_weights_for_neuron(netuid: u16, neuron_uid: u16) -> Vec<u16>  {
+            
+        let mut w : Vec<u16> = vec![ 0; Self::get_subnetwork_n(netuid) as usize ];
+        let weights = Weights::<T>::get(netuid, neuron_uid);
+		for (uid_j, weights_ij) in weights.iter(){
+			w[ *uid_j as usize ] = *weights_ij;
+		}
+		return w;
+    } 
+
+    pub fn set_priority_for_neuron(netuid:u16, neuron_uid: u16, priority: u16){
+        Priority::<T>::insert(netuid, neuron_uid, priority);
+    }
+
+    pub fn get_emission_ratio(netuid: u16) -> u16 {
+        EmissionRatio::<T>::get(netuid)
+    }
+
+    pub fn get_neuron_metadata(neuron_id: u16) -> NeuronMetadataOf {
+        return NeuronsMetaData::<T>::get(neuron_id).unwrap();
+    }
+
     /// ==============================
 	/// ==== Subnetworks Consensus ===
 	/// ==============================

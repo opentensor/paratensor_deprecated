@@ -1,7 +1,6 @@
-use pallet_paratensor::{Error};
+use pallet_paratensor::{Error, NeuronMetadataOf};
 use frame_support::{assert_ok};
 use frame_system::Config;
-//use mock::*;
 use crate::{mock::*};
 use frame_support::sp_runtime::DispatchError;
 use frame_support::dispatch::{GetDispatchInfo, DispatchInfo};
@@ -47,6 +46,10 @@ fn test_registration_repeat_work() {
 		let hotkey_account_id_2 = 2;
 		let coldkey_account_id = 667; // Neighbour of the beast, har har
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
+		
+		//add network
+		add_network(netuid, 0);
+		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id_1), netuid, block_number, nonce, work.clone(), hotkey_account_id_1, coldkey_account_id));
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id_2), netuid, block_number, nonce, work.clone(), hotkey_account_id_2, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::WorkRepeated.into()) );
@@ -62,6 +65,9 @@ fn test_registration_ok() {
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667; // Neighbour of the beast, har har
 
+		//add network
+		add_network(netuid, 0);
+		
 		// Subscribe and check extrinsic output
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id));
 
@@ -111,6 +117,9 @@ fn test_registration_too_many_registrations_per_block() {
 		let (nonce10, work10): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 345923888);
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
 
+		//add network
+		add_network(netuid, 0);
+		
 		// Subscribe and check extrinsic output
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(0), netuid, block_number, nonce0, work0, 0, 0));
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(1), netuid, block_number, nonce1, work1, 1, 1));
@@ -172,6 +181,9 @@ fn test_registration_already_active_hotkey() {
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 
+		//add network
+		add_network(netuid, 0);
+		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id));
 
 		let block_number: u64 = 0;
@@ -191,6 +203,10 @@ fn test_registration_invalid_seal() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 1, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
+
+		//add network
+		add_network(netuid, 0);
+
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidSeal.into()) );
 	});
@@ -204,6 +220,10 @@ fn test_registration_invalid_block_number() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number(netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
+		
+		//add network
+		add_network(netuid, 0);
+		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidWorkBlock.into()) );
 	});
@@ -218,6 +238,10 @@ fn test_registration_invalid_difficulty() {
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 		ParatensorModule::set_difficulty_from_u64( netuid, 18_446_744_073_709_551_615u64 );
+		
+		//add network
+		add_network(netuid, 0);
+		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidDifficulty.into()) );
 	});
@@ -242,9 +266,9 @@ fn test_registration_failed_no_signature() {
 #[test]
 fn test_registration_get_next_uid() {
 	new_test_ext().execute_with(|| {
-        assert_eq!(ParatensorModule::get_next_uid(), 0); // We start with id 0
-		assert_eq!(ParatensorModule::get_next_uid(), 1); // One up
-		assert_eq!(ParatensorModule::get_next_uid(), 2) // One more
+        let netuid: u16 = 1;
+		assert_eq!(ParatensorModule::get_next_uid(netuid), 0); // We start with id 0
+		assert_eq!(ParatensorModule::get_next_uid(netuid), 1); // One up
 	});
 }
 
@@ -267,6 +291,10 @@ fn test_registration_pruning() {
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
+		
+		//add network
+		add_network(netuid, 0);
+		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
 		ParatensorModule::set_prunning_score(netuid, neuron_uid, 2);
@@ -293,5 +321,26 @@ fn test_registration_pruning() {
 		assert_eq!(ParatensorModule::if_incentive_is_set_for_neuron(netuid, neuron_uid), false);
 		assert_eq!(ParatensorModule::if_consensus_is_set_for_neuron(netuid, neuron_uid), false);
 		assert_eq!(ParatensorModule::if_dividend_is_set_for_neuron(netuid, neuron_uid), false);
+	});
+}
+
+#[test]
+fn test_registration_get_neuron_metadata() {
+	new_test_ext().execute_with(|| {
+		let netuid: u16 = 1;
+		let block_number: u64 = 0;
+		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
+		let hotkey_account_id = 1;
+		let coldkey_account_id = 667;
+
+		add_network(netuid, 0);
+
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
+		//
+		let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
+		let neuron: NeuronMetadataOf = ParatensorModule::get_neuron_metadata(neuron_id);
+		assert_eq!(neuron.ip, 0);
+		assert_eq!(neuron.version, 0);
+		assert_eq!(neuron.port, 0);
 	});
 }

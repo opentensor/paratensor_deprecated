@@ -28,14 +28,20 @@ mod registration;
 mod epoch;
 mod utils;
 mod staking;
+mod weights;
+mod networks;
+mod serving;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::pallet_prelude::{DispatchResult, StorageMap};
+use frame_support::{pallet_prelude::*, Identity};
 	use frame_system::pallet_prelude::*;
-	use frame_support::traits::Currency;
+	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
+	use substrate_fixed::types::extra::U1;
+
 
 	/// ================
 	/// ==== Config ====
@@ -53,14 +59,19 @@ pub mod pallet {
 		type InitialIssuance: Get<u64>;
 
 		#[pallet::constant]
-		type InitialGlobalN: Get<u16>;
-
-		#[pallet::constant]
-		type InitialBlocksPerStep: Get<u64>;
+		type InitialBlocksPerStep: Get<u16>;
 
 		/// --- Hyperparams
 		#[pallet::constant]
 		type InitialMinAllowedWeights: Get<u16>;
+
+		/// Initial Emission Ratio
+		#[pallet::constant]
+		type InitialEmissionRatio: Get<u16>;
+
+		/// Initial max weight limit.
+		#[pallet::constant]
+		type InitialMaxWeightsLimit: Get<u16>;
 
 		#[pallet::constant]
 		type InitialMaxAllowedMaxMinRatio: Get<u16>;
@@ -76,6 +87,10 @@ pub mod pallet {
 		/// Initial adjustment interval.
 		#[pallet::constant]
 		type InitialAdjustmentInterval: Get<u16>;
+
+		/// Initial bonds moving average.
+		#[pallet::constant]
+		type InitialBondsMovingAverage: Get<u64>;
 
 		/// Initial target registrations per interval.
 		#[pallet::constant]
@@ -135,12 +150,31 @@ pub mod pallet {
 
 		// Initial prunning score for each neuron
 		#[pallet::constant]
-		type InitialPrunningScore: Get<u16>;		
+		type InitialPrunningScore: Get<u16>;	
+		
+		/// Initial validator exclude quantile.
+		#[pallet::constant]
+		type InitialValidatorExcludeQuantile: Get<u16>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	//pub type NeuronMetadataOf<T> = NeuronMetadata<AccountIdOf<T>>;
+	pub type NeuronMetadataOf = NeuronMetadata;
 
+	#[derive(Encode, Decode, Default, TypeInfo)]
+    pub struct NeuronMetadata {
+
+		/// ---- The endpoint's code version.
+        pub version: u32,
+
+        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
+        pub ip: u128,
+
+        /// ---- The endpoint's u16 encoded port.
+        pub port: u16,
+
+        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
+        pub ip_type: u8,
+	}
 	/// ===============================
 	/// ==== Global Params Storage ====
 	/// ===============================
@@ -148,12 +182,6 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
-
-	/// ---- StorageItem Global Total N
-	#[pallet::type_value] 
-	pub fn DefaultGlobalN<T: Config>() -> u16 { T::InitialGlobalN::get() }
-	#[pallet::storage]
-	pub type GlobalN<T> = StorageValue<_, u16, ValueQuery>;
 
 	/// ---- StorageItem Global Total Stake
 	#[pallet::storage]
@@ -165,33 +193,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
-	/// ---- StorageItem BlocksPerSteps
-	#[pallet::type_value]
-	pub fn DefaultBlocksPerStep<T: Config>() -> u64 {T::InitialBlocksPerStep::get()}
-	#[pallet::storage]
-	pub type BlocksPerStep<T> = StorageValue<_, u64, ValueQuery, DefaultBlocksPerStep<T>>; 
-
 	/// ---- SingleMap Network UID --> EmissionRatio
 	#[pallet::type_value]
 	pub fn DefaultEmissionRatio<T: Config>() ->  u16 { 0}
 	#[pallet::storage]
 	pub(super) type EmissionRatio<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultEmissionRatio<T>>;
-
-	/// ---- Maps from uid to neuron.
-	//#[pallet::storage]
-    //#[pallet::getter(fn uid)]
-    //pub(super) type Neurons<T:Config> = StorageMap<_, Identity, u64, NeuronMetadataOf<T>, OptionQuery>;
-
-	/// ---- StorageItem Global Adjustment Interval
-	#[pallet::type_value]
-	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
-	#[pallet::storage]
-	pub type AdjustmentInterval<T> = StorageValue<_, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
-
-	#[pallet::type_value] 
-	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
-	#[pallet::storage]
-	pub type TargetRegistrationsPerInterval<T> = StorageValue<_, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 
 	/// ---- StorageItem Global Max Registration Per Block
 	#[pallet::type_value] 
@@ -199,15 +205,19 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
+	/// ---- StorageItem Global Registration this Block
 	#[pallet::storage]
 	pub type RegistrationsThisBlock<T> = StorageValue<_, u16, ValueQuery>;
 
+	/// ---- StorageItem Global Used Work
 	#[pallet::storage]
 	#[pallet::getter(fn usedwork)]
     pub(super) type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 
+	/// ---- StorageItem Global Default Block Registration
 	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
+
 	#[pallet::storage]
 	#[pallet::getter(fn block_at_registration)]
     pub(super) type BlockAtRegistration<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
@@ -219,6 +229,23 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
+
+	/// ---- SingleMap Network UID --> Rho
+	#[pallet::type_value]
+	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
+	#[pallet::storage]
+	pub type Rho<T> = StorageValue<_, u16, ValueQuery, DefaultRho<T> >;
+
+	/// ---- SingleMap Network UID --> validator Exclude Quantile
+	#[pallet::type_value]
+	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
+	#[pallet::storage]
+	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
+	//	
+	/// ---- SingleMap Neuron UID --> Neuron Metadata (veriosn, ip address, port, ip type)
+	#[pallet::storage]
+	#[pallet::getter(fn uid)]
+	pub(super) type NeuronsMetaData<T:Config> = StorageMap<_, Identity, u16, NeuronMetadataOf, OptionQuery>;
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
@@ -239,20 +266,63 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
-	/// --- SingleMap Hotkey --> Network UID // a list of subnets that each hotkey is registered on
+	/// --- SingleMap Hotkey --> A Vector of Network UIDs // a list of subnets that each hotkey is registered on
 	#[pallet::type_value] 
 	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;
 
+	/// ---- DoubleMap Network UID --> neuron UID --> priority
+	#[pallet::type_value] 
+	pub fn DefaultPriority<T:Config>() -> u16 { 0 }
+	#[pallet::storage]
+    pub(super) type Priority<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16 , ValueQuery, DefaultPriority<T> >;
+
+	/// ---- DoubleMap Network UID --> neuron UID --> last_update
+	#[pallet::type_value] 
+	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
+	#[pallet::storage]
+    pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
+
 	/// =======================================
 	/// ==== Subnetwork Hyperparam stroage  ====
 	/// =======================================
+	
 	/// ---- SingleMap Network UID --> Hyper-parameter MinAllowedWeights
 	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::storage]
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+
+	/// ---- SingleMap Network UID -->  BlocksPerSteps
+	#[pallet::type_value]
+	pub fn DefaultBlocksPerStep<T: Config>() -> u16 {T::InitialBlocksPerStep::get()}
+	#[pallet::storage]
+	pub type BlocksPerStep<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultBlocksPerStep<T>>; 
+
+	/// ---- SingleMap Network UID -->  Adjustment Interval
+	#[pallet::type_value]
+	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
+	#[pallet::storage]
+	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
+
+	/// ---- SingleMap Network UID -->  Bonds Moving Average
+	#[pallet::type_value]
+	pub fn DefaultBondsMovingAverage<T: Config>() -> u64 { T::InitialBondsMovingAverage::get() }
+	#[pallet::storage]
+	pub type BondsMovingAverage<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBondsMovingAverage<T> >;
+
+	/// ---- SingleMap Network UID -->  Target Registration Per Interval
+	#[pallet::type_value] 
+	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
+	#[pallet::storage]
+	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
+
+	/// ---- SingleMap Network UID --> Hyper-parameter MaxWeightsLimit
+	#[pallet::type_value] 
+	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
+	#[pallet::storage]
+	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
 
 	/// ---- SingleMap Network UID --> MaxAllowedMaxMinRatio
 	/// TODO(const): should be moved to max clip ratio.
@@ -272,12 +342,6 @@ pub mod pallet {
 	pub fn DefaultDifficulty<T: Config>() -> u64 {T::InitialDifficulty::get()}
 	#[pallet::storage]
 	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
-
-	/// ---- SingleMap Network UID --> Rho
-	#[pallet::type_value]
-	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
-	#[pallet::storage]
-	pub type Rho<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
 
 	/// --- SingleMap Network UID ---> Kappa
 	#[pallet::type_value]
@@ -363,6 +427,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
+	/// ---- SingleMap Network UID --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
+	#[pallet::type_value] 
+	pub fn DefaultModality<T:Config>() -> u8 { 0 }
+	#[pallet::storage]
+	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u8, ValueQuery, DefaultModality<T>> ;
+
 	/// ---- DoubleMap Network UID --> Neuron UID --> Hotkey
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
@@ -387,11 +457,11 @@ pub mod pallet {
 	#[pallet::storage]
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
 
-	/// ---- SingleMap Network UID --> Network Activity Vector
+	/// ---- DoubleMap Network UID --> Neuron UID --> is active
 	#[pallet::type_value] 
-	pub fn DefaultActive<T:Config>() -> Vec<bool> { vec![] }
+	pub fn DefaultActive<T:Config>() -> bool { false }
 	#[pallet::storage]
-	pub(super) type Active<T:Config> = StorageMap< _, Identity, u16, Vec<bool>, ValueQuery, DefaultActive<T> >;
+	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
 
 	/// ---- DoubleMap Network UID --> Neuron UID --> Neuron Stake
 	#[pallet::type_value] 
@@ -453,6 +523,12 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// --- Event created when a new network is added
+		NetworkAdded(u16, u8),
+
+		/// --- Event created when a network is removed
+		NetworkRemoved(u16),
+
 		/// --- Event created when stake has been transfered from 
 		/// the a coldkey account onto the hotkey staking account.
 		StakeAdded(T::AccountId, u64),
@@ -465,11 +541,10 @@ pub mod pallet {
 		WeightsSet(u16, u16),
 
 		/// ---- Event created when default blocks per step has been set.
-		BlocksPerStepSet(u64),
+		BlocksPerStepSet(u16, u16),
 
 		/// ---- Event created when Tempo is set
 		TempoSet(u16),
-		/* TO DO: more events for setting hyper parameters should be defined here */
 
 		/// --- Event created when a new neuron account has been registered to 
 		/// the chain.
@@ -480,6 +555,63 @@ pub mod pallet {
 
 		/// --- Event created when total stake increased
 		TotalStakeIncreased(u64),
+
+		/// --- Event created when the max weight limit has been set.
+		MaxWeightLimitSet( u16, u16 ),
+
+		/// --- Event created when the difficulty has been set for a subnet.
+		DifficultySet(u16, u64),
+
+		/// --- Event created when the adjustment interval is set for a subnet.
+		AdjustmentIntervalSet(u16, u16),
+
+		/// --- Event created when registeration per interval is set for a subnet.
+		RegistrationPerIntervalSet(u16, u16),
+
+		/// --- Event created when an activity cutoff is set for a subnet.
+		ActivityCutoffSet(u16, u16),
+
+		/// --- Event created when Rho value is set
+		RhoSet(u16),
+
+		/// --- Event created when kappa is set for a subnet.
+		KappaSet(u16, u16),
+
+		/// --- Event created when minimun aloowed weight is set for a subnet.
+		MinAllowedWeightSet(u16, u16),
+
+		/// --- Event created when max allowded max min ratio is set for a subnet.
+		MaxAllowedMaxMinRatioSet(u16, u16),
+
+		/// --- Event created when validator batch size is set for a subnet.
+		ValidatorBatchSizeSet(u16, u16),
+
+		/// --- Event created when validator sequence length i set for a subnet.
+		ValidatorSequenceLengthSet(u16, u16),
+
+		/// --- Event created when validator epoch per reset is set for a subnet.
+		ValidatorEpochPerResetSet(u16, u16),
+
+		/// --- Event created when incentive pruning denominator is set for a subnet.
+		IncentivePruningDenominatorSet(u16, u16),
+
+		/// --- Event created when stake pruning denominator is set for a subnet.
+		StakePruningDenominatorSet(u16, u16),
+
+		/// --- Event created when immunity period is set for a subnet
+		ImmunityPeriodSet(u16, u16),
+
+		/// --- Event created when bonds moving average is set for a subnet
+		BondsMovingAverageSet(u16, u64),
+
+		/// --- Event thrown when bonds have been reset for a subnet.
+		ResetBonds(u16),
+
+		/// --- Event created when the validator exclude quantile has been set for a subnet.
+		ValidatorExcludeQuantileSet( u16, u16 ),
+
+		/// --- Event created when the axon server information is added to the network.
+		AxonServed(u16),
 	}
 	
 	/// ================
@@ -487,6 +619,22 @@ pub mod pallet {
 	/// ================
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Network does not exist
+		NetworkDoesNotExist,
+
+		/// Network already exist
+		NetworkExist,
+
+		/// --- Thrown when an invalid modality attempted on serve.
+		InvalidModality,
+
+		/// ---- Thrown when the user tries to serve an axon which is not of type
+	    /// 4 (IPv4) or 6 (IPv6).
+		InvalidIpType,
+
+		/// --- Thrown when an invalid IP address is passed to the serve function.
+		InvalidIpAddress,
+		
 		/// Error names should be descriptive.
 		NoneValue,
 
@@ -567,6 +715,13 @@ pub mod pallet {
 		/// --- thrown when the caller requests adding stake for a hotkey to the 
 		/// total stake which already added
 		StakeAlreadyAdded,
+
+		/// ---- Thrown when the dispatch attempts to set weights on chain with where any normalized
+		/// weight is more than MaxWeightLimit.
+		MaxWeightExceeded,
+
+		/// ---- Thrown when the caller attempts to set a storage value outside of its allowed range.
+		StorageValueOutOfRange,
 	}
 
 	/// ================
@@ -581,31 +736,8 @@ pub mod pallet {
 		/// 		- The number of the block we are initializing.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
 			// Only run the block step every `blocks_per_step`.
-			// Initially `blocks_since_last_step + 1` is 0 but increments until it reaches `blocks_per_step`.
-			// We use the >= here in the event that we lower get_blocks per step and these qualities never meet.
-			if Self::get_blocks_since_last_step() + 1 >= Self::get_blocks_per_step() {
-
-				// Compute the amount of emission we perform this step.
-				// Note that we use blocks_since_last_step here instead of block_per_step incase this is lowered
-				// This would mint more tao than is allowed.
-				let emission_this_step:u64 = ( Self::get_blocks_since_last_step() + 1 ) * Self::get_block_emission();
-
-				// Apply emission step based on mechanism and updates values.
-				//Self::mechanism_step( emission_this_step ); /* TO DO */
-
-				// Reset counter down to 0, this ensures that if `blocks_per_step=1` we will do an emission on every block.
-				// If `blocks_per_step=2` we will skip the next block, since (0+1) !>= 2, add one to the counter, and then apply the next
-				// token increment where (1+1) >= 2.
-				Self::set_blocks_since_last_step( 0 );
-
-			} else {
-				// Increment counter.
-				Self::set_blocks_since_last_step( Self::get_blocks_since_last_step() + 1 );
-			}
-
-			// Make a difficulty update.
-			// Self::update_difficulty(); /* TO DO */
-			
+			/* TO DO SAM: we should calculate blocks per step for each network based on tempo
+			and run it for different blocks per steps for different networks. */
 			return 0;
 		}
 	}
@@ -660,13 +792,12 @@ pub mod pallet {
 		///
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn set_weights(
-			_origin:OriginFor<T>, 
-			_netuid: u16,
-			_dests: Vec<u16>, 
-			_weights: Vec<u16>
+			origin:OriginFor<T>, 
+			netuid: u16,
+			dests: Vec<u16>, 
+			weights: Vec<u16>
 		) -> DispatchResult {
-            Ok(())
-			//Self::do_set_weights(origin, netuid, dests, weights)
+			Self::do_set_weights(origin, netuid, dests, weights)
 		}
 
 		/// --- Adds stake to a hotkey. The call is made from the
@@ -771,14 +902,15 @@ pub mod pallet {
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn serve_axon (
-			_origin:OriginFor<T>, 
-			_version: u32, 
-			_ip: u128, 
-			_port: u16, 
-			_ip_type: u8, 
-			_modality: u8 
-		) -> DispatchResult {  /*TO DO */
-			Ok(()) 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			version: u32, 
+			ip: u128, 
+			port: u16, 
+			ip_type: u8, 
+			modality: u8 
+		) -> DispatchResult {
+				Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, modality ) 
 		}
 		/// ---- Registers a new neuron to the subnetwork. 
 		///
@@ -828,11 +960,12 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_blocks_per_step(
 			origin: OriginFor<T>,
-			blocks_per_step: u64
+			netuid: u16,
+			blocks_per_step: u16
 		) -> DispatchResult {
 			ensure_root( origin )?;
-			BlocksPerStep::<T>::set( blocks_per_step );
-			Self::deposit_event( Event::BlocksPerStepSet( blocks_per_step ) );
+			BlocksPerStep::<T>::insert(netuid, blocks_per_step );
+			Self::deposit_event( Event::BlocksPerStepSet( netuid, blocks_per_step ) );
 			Ok(())
 		}
 
@@ -860,64 +993,84 @@ pub mod pallet {
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_bonds_moving_average ( 
-			_origin:OriginFor<T>, 
-			_bonds_moving_average: u64 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			bonds_moving_average: u64 
 		) -> DispatchResult {  
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			BondsMovingAverage::<T>::insert( netuid, bonds_moving_average );
+			Self::deposit_event( Event::BondsMovingAverageSet( netuid, bonds_moving_average ) );
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_difficulty ( 
-			_origin:OriginFor<T>, 
-			_difficulty: u64 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			difficulty: u64 
 		) -> DispatchResult {
-			ensure_root( _origin )?;
-			Ok(())  /*TO DO */
+			ensure_root( origin )?;
+			Difficulty::<T>::insert( netuid, difficulty );
+			Self::deposit_event( Event::DifficultySet( netuid, difficulty ) );
+			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_adjustment_interval ( 
-			_origin:OriginFor<T>, 
-			_adjustment_interval: u64 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			adjustment_interval: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?;
-			Ok(())  /*TO DO */
+			ensure_root( origin )?;
+			AdjustmentInterval::<T>::insert(netuid, adjustment_interval);
+			Self::deposit_event( Event::AdjustmentIntervalSet( netuid, adjustment_interval) );
+			Ok(()) 
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_target_registrations_per_interval ( 
-			_origin:OriginFor<T>, 
-			_target_registrations_per_interval: u64 
+		pub fn sudo_set_target_registrations_per_interval ( 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			target_registrations_per_interval: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /* TO DO */
+			ensure_root( origin )?;
+			TargetRegistrationsPerInterval::<T>::insert(netuid, target_registrations_per_interval);
+			Self::deposit_event( Event::RegistrationPerIntervalSet( netuid, target_registrations_per_interval) );
 			Ok(())
 		}
 		
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_activity_cutoff ( 
-			_origin:OriginFor<T>, 
-			_activity_cutoff: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			activity_cutoff: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?;/*TO DO */
+			ensure_root( origin )?;
+			ActivityCutoff::<T>::insert(netuid, activity_cutoff);
+			Self::deposit_event( Event::ActivityCutoffSet( netuid, activity_cutoff) );
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_rho ( 
-			_origin:OriginFor<T>, 
-			_rho: u64 
+			origin:OriginFor<T>, 
+			rho: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			Rho::<T>::put(rho);
+			Self::deposit_event( Event::RhoSet( rho) );
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_kappa ( 
-			_origin:OriginFor<T>, 
-			_kappa: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			kappa: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			Kappa::<T>::insert(netuid, kappa);
+			Self::deposit_event( Event::KappaSet( netuid, kappa) );
 			Ok(())
 		}
 
@@ -936,76 +1089,155 @@ pub mod pallet {
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_min_allowed_weights ( 
-			_origin:OriginFor<T>, 
-			_min_allowed_weights: u64 
+			origin:OriginFor<T>,
+			netuid: u16, 
+			min_allowed_weights: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /* TO DO */
+			ensure_root( origin )?;
+			MinAllowedWeights::<T>::insert(netuid, min_allowed_weights);
+			Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_max_min_ratio ( 
-			_origin:OriginFor<T>, 
-			_max_allowed_max_min_ratio: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			max_allowed_max_min_ratio: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			MaxAllowedMaxMinRatio::<T>::insert(netuid, max_allowed_max_min_ratio);
+			Self::deposit_event( Event::MaxAllowedMaxMinRatioSet( netuid, max_allowed_max_min_ratio) );
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_batch_size ( 
-			_origin:OriginFor<T>, 
-			_validator_batch_size: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			validator_batch_size: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			ValidatorBatchSize::<T>::insert(netuid, validator_batch_size);
+			Self::deposit_event(Event::ValidatorBatchSizeSet(netuid, validator_batch_size));
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_sequence_length ( 
-			_origin:OriginFor<T>, 
-			_validator_sequence_length: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			validator_sequence_length: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?;  /*TO DO */
+			ensure_root( origin )?; 
+			ValidatorSequenceLength::<T>::insert(netuid, validator_sequence_length);
+			Self::deposit_event(Event::ValidatorSequenceLengthSet(netuid, validator_sequence_length));
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_epochs_per_reset ( 
-			_origin:OriginFor<T>, 
-			_validator_epochs_per_reset : u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			validator_epochs_per_reset : u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			ValidatorEpochsPerReset::<T>::insert(netuid, validator_epochs_per_reset);
+			Self::deposit_event(Event::ValidatorEpochPerResetSet(netuid, validator_epochs_per_reset));
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_incentive_pruning_denominator( 
-			_origin:OriginFor<T>, 
-			_incentive_pruning_denominator: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			incentive_pruning_denominator: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			IncentivePruningDenominator::<T>::insert(netuid, incentive_pruning_denominator);
+			Self::deposit_event(Event::IncentivePruningDenominatorSet(netuid, incentive_pruning_denominator));
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_stake_pruning_denominator( 
-			_origin:OriginFor<T>, 
-			_stake_pruning_denominator: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			stake_pruning_denominator: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			StakePruningDenominator::<T>::insert(netuid, stake_pruning_denominator);
+			Self::deposit_event(Event::StakePruningDenominatorSet(netuid, stake_pruning_denominator));
 			Ok(())
 		}
 
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_immunity_period ( 
-			_origin:OriginFor<T>, 
-			_immunity_period: u16 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			immunity_period: u16 
 		) -> DispatchResult {
-			ensure_root( _origin )?; /*TO DO */
+			ensure_root( origin )?;
+			ImmunityPeriod::<T>::insert(netuid, immunity_period);
+			Self::deposit_event(Event::ImmunityPeriodSet(netuid, immunity_period));
 			Ok(())
 		}
-		/*TO DO: reset_bonds function  */ 
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_max_weight_limit ( 
+			origin:OriginFor<T>,
+			netuid: u16, 
+			max_weight_limit: u16 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			MaxWeightsLimit::<T>::insert( netuid, max_weight_limit );
+			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
+			Ok(())
+		}
+		/*TO DO: impl reset_bonds in epoch,  
+		sudo_set_validator_exclude_quantile function  */ 
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_reset_bonds (
+			origin: OriginFor<T>,
+			netuid: u16
+		)-> DispatchResult {
+			ensure_root( origin )?;
+			Self::reset_bonds(netuid);
+			Self::deposit_event( Event::ResetBonds(netuid) );
+			Ok(())
+		}
+		// --- SUDO functions to manage NETWORKS ---
+		//
+		 #[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_add_network (
+			origin: OriginFor<T>,
+			netuid: u16,
+			modality: u8
+		)-> DispatchResult {
+			Self::do_add_network(origin, netuid, modality)
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_remove_network (
+			origin: OriginFor<T>,
+			netuid: u16
+		) -> DispatchResult {
+			Self::do_remove_network(origin, netuid)
+		} 
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_exclude_quantile( 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			validator_exclude_quantile: u16 
+		) -> DispatchResult {
+			ensure_root( origin )?;
+			ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
+		    ValidatorExcludeQuantile::<T>::insert(netuid, validator_exclude_quantile );
+			Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
+			Ok(())
+		}
 	}
 	/// ---- Paratensor helper functions.
 	impl<T: Config> Pallet<T> {
