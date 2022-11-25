@@ -4,8 +4,32 @@ use frame_support::sp_std::vec;
 
 
 impl<T: Config> Pallet<T> {
-    pub fn do_serve_axon( origin: T::Origin, netuid: u16, version: u32, ip: u128, port: u16, ip_type: u8, modality: u8 ) -> dispatch::DispatchResult {
 
+    /// ---- The implementation for the extrinsic serve_axon which sets the ip endpoint information for a uid on a network.
+    ///
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The signature of the caller.
+    ///
+    /// 	* 'netuid' (u16):
+    /// 		- The u16 network identifier.
+    ///
+    /// 	* 'version' (u64):
+    /// 		- The bittensor version identifier.
+    ///
+    /// 	* 'ip' (u64):
+    /// 		- The endpoint ip information as a u128 encoded integer.
+    ///
+    /// 	* 'port' (u16):
+    /// 		- The endpoint port information as a u16 encoded integer.
+    /// 
+    /// 	* 'ip_type' (u8):
+    /// 		- The endpoint ip version as a u8, 4 or 6.
+    /// 
+    /// 	* 'modality' (u8):
+    /// 		- The endpoint modality. TODO: The modality should be known by the network.
+    ///
+    pub fn do_serve_axon( origin: T::Origin, netuid: u16, version: u32, ip: u128, port: u16, ip_type: u8, modality: u8 ) -> dispatch::DispatchResult {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
 
