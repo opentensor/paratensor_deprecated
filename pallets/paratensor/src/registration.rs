@@ -45,20 +45,20 @@ impl<T: Config> Pallet<T> {
         //         -  add new neuron to neurons. hotkeys, and works
 
         
-        // 1. check if network exist 
+        // 1. Check if network exist.
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist); 
 
-        // 2. check registration per block 
+        // 2. Check registration per block.
         let registrations_this_block: u16 = Self:: get_registrations_this_block();
         ensure! (registrations_this_block < Self:: get_max_registratations_per_block(), Error::<T>::ToManyRegistrationsThisBlock); // Number of registrations this block exceeded.
         ensure! (!Uids::<T>::contains_key(&netuid, &hotkey), Error::<T>::AlreadyRegistered); // Hotkey has already registered.
 
-        /* 3. Check block number validity. */
+        // 3. Check block number validity.
         let current_block_number: u64 = Self::get_current_block_as_u64();
         ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
         ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); // Work must have been done within 3 blocks (stops long range attacks).
 
-        // 4. Check for repeat work,
+        // 4. Check for repeat work.
         ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated );  // Work has not been used before.
 
         // 5. Check difficulty.
@@ -73,7 +73,7 @@ impl<T: Config> Pallet<T> {
         // 7. Check that the hotkey has not already been registered.
         ensure! (!Uids::<T>::contains_key(netuid, &hotkey), Error::<T>::AlreadyRegistered); // Hotkey has already registered.
         
-        // 8. check to see if the uid limit has been reached.
+        // 8. Check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are prunning or setting with get_next_uid.
         let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
         let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
