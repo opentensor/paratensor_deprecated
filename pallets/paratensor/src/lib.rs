@@ -762,7 +762,7 @@ use frame_support::{pallet_prelude::*, Identity};
 		/// 	* `netuid` (u16):
 		/// 		- The network uid we are setting these weights on.
 		/// 
-		/// 	* `uids` (Vec<u16>):
+		/// 	* `dests` (Vec<u16>):
 		/// 		- The edge endpoint for the weight, i.e. j for w_ij.
 		///
 		/// 	* 'weights' (Vec<u16>):
@@ -878,6 +878,9 @@ use frame_support::{pallet_prelude::*, Identity};
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, a hotkey associated of the registered neuron.
 		///
+		/// 	* 'netuid' (u16):
+		/// 		- The u16 network identifier.
+		///
 		/// 	* 'ip' (u128):
 		/// 		- The u64 encoded IP address of type 6 or 4.
 		///
@@ -904,13 +907,16 @@ use frame_support::{pallet_prelude::*, Identity};
 			ip_type: u8, 
 			modality: u8 
 		) -> DispatchResult {
-				Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, modality ) 
+			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, modality ) 
 		}
 		/// ---- Registers a new neuron to the subnetwork. 
 		///
 		/// # Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, registration key as found in RegistrationKey::get(0);
+		///
+		/// 	* 'netuid' (u16):
+		/// 		- The u16 network identifier.
 		///
 		/// 	* 'block_number' (u64):
 		/// 		- Block number of hash to attempt.
@@ -942,14 +948,20 @@ use frame_support::{pallet_prelude::*, Identity};
 				hotkey: T::AccountId, 
 				coldkey: T::AccountId,
 		) -> DispatchResult { 
-				Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
+			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
 
 		/// ---- SUDO ONLY FUNCTIONS ------
-		/// Set blocks per Step
-		/// #Args:
+		/// ---- Sudo set this networks blocks per step.
+		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
+		///
+		/// 	* 'netuid' (u16):
+		/// 		- The u16 network identifier.
+		///
+		/// 	* 'blocks_per_step' (u16):
+		/// 		- The number of blocks per step for this network.
 		/// 		
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_blocks_per_step(
@@ -963,12 +975,16 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
-		/// ---- Set emission ratio for each subnetwork
+		/// ---- Sudo set this networks emission ratio.
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
+		///
 		/// 	* `netuid` (u16):
 		/// 		- The network uid we are setting emission ratio on.
+		///
+		/// 	* `subnet_emission_ratio` (u16):
+		/// 		- The emission rate for this network.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_emission_ratio (
@@ -985,6 +1001,18 @@ use frame_support::{pallet_prelude::*, Identity};
 				}
 			Ok(())
 		}
+
+		/// ---- Sudo set this network's bonds moving average.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network we are setting the moving average on.
+		///
+		/// 	* `bonds_moving_average` (u16):
+		/// 		- The bonds moving average.
+		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_bonds_moving_average ( 
 			origin:OriginFor<T>, 
@@ -997,6 +1025,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set networks difficulty hyper parameters.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network we are setting the hyper parameter on.
+		///
+		/// 	* `difficulty` (u16):
+		/// 		- The network POW difficulty.
+		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_difficulty ( 
 			origin:OriginFor<T>, 
@@ -1009,6 +1048,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set the POW adjustment interval for this network.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set the adjustment interval.
+		///
+		/// 	* `adjustment_interval` (u16):
+		/// 		- The network POW adjustment interval.
+		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_adjustment_interval ( 
 			origin:OriginFor<T>, 
@@ -1021,6 +1071,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(()) 
 		}
 
+		/// ---- Sudo set the target registrations per interval for this network.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set the adjustment interval.
+		///
+		/// 	* `target_registrations_per_interval` (u16):
+		/// 		- The network POW target registrations per interval
+		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_target_registrations_per_interval ( 
 			origin:OriginFor<T>, 
@@ -1033,6 +1094,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 		
+		/// ---- Sudo set the activity for this network.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set the adjustment interval.
+		///
+		/// 	* `target_registrations_per_interval` (u16):
+		/// 		- The network POW target registrations per interval
+		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_activity_cutoff ( 
 			origin:OriginFor<T>, 
@@ -1045,6 +1117,19 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// TODO( Saeideh ): This needs to be network specific.
+		/// ---- Sudo set rho.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		///     TODO( Saeideh ): This needs to be added.
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set rho.
+		///
+		/// 	* `rho` (u16):
+		/// 		- The network rho value.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_rho ( 
 			origin:OriginFor<T>, 
@@ -1056,6 +1141,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set kappa.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set kappa on.
+		///
+		/// 	* `kappa` (u16):
+		/// 		- The network kappa value.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_kappa ( 
 			origin:OriginFor<T>, 
@@ -1068,6 +1164,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set max allowed uids.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set max_allowed_uids on.
+		///
+		/// 	* `max_allowed_uids` (u16):
+		/// 		- The network max_allowed_uids hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_uids ( 
 			origin:OriginFor<T>,
@@ -1081,6 +1188,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set min_allowed_weights.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set min_allowed_weights  on.
+		///
+		/// 	* `min_allowed_weights` (u16):
+		/// 		- The network min_allowed_weights  hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_min_allowed_weights ( 
 			origin:OriginFor<T>,
@@ -1093,6 +1211,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set max_allowed_max_min_ratio.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set max_allowed_max_min_ratio  on.
+		///
+		/// 	* `max_allowed_max_min_ratio` (u16):
+		/// 		- The network max_allowed_max_min_ratio hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_max_min_ratio ( 
 			origin:OriginFor<T>, 
@@ -1105,6 +1234,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set validator_batch_size.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set validator_batch_size on.
+		///
+		/// 	* `validator_batch_size` (u16):
+		/// 		- The network validator_batch_size hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_batch_size ( 
 			origin:OriginFor<T>, 
@@ -1117,6 +1257,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set validator_sequence_length.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set validator_sequence_length on.
+		///
+		/// 	* `validator_sequence_length` (u16):
+		/// 		- The network validator_sequence_length hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_sequence_length ( 
 			origin:OriginFor<T>, 
@@ -1129,6 +1280,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set validator_epochs_per_reset.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set validator_epochs_per_reset on.
+		///
+		/// 	* `validator_epochs_per_reset` (u16):
+		/// 		- The network validator_epochs_per_reset hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_epochs_per_reset ( 
 			origin:OriginFor<T>, 
@@ -1141,6 +1303,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set incentive_pruning_denominator.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set incentive_pruning_denominator on.
+		///
+		/// 	* `incentive_pruning_denominator` (u16):
+		/// 		- The network incentive_pruning_denominator hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_incentive_pruning_denominator( 
 			origin:OriginFor<T>, 
@@ -1153,6 +1326,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set stake_pruning_denominator.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set stake_pruning_denominator on.
+		///
+		/// 	* `stake_pruning_denominator ` (u16):
+		/// 		- The network stake_pruning_denominator hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_stake_pruning_denominator( 
 			origin:OriginFor<T>, 
@@ -1165,6 +1349,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set immunity_period.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set immunity_period on.
+		///
+		/// 	* `immunity_period ` (u16):
+		/// 		- The network immunity_period hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_immunity_period ( 
 			origin:OriginFor<T>, 
@@ -1177,6 +1372,17 @@ use frame_support::{pallet_prelude::*, Identity};
 			Ok(())
 		}
 
+		/// ---- Sudo set max_weight_limit.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set max_weight_limit on.
+		///
+		/// 	* `max_weight_limit ` (u16):
+		/// 		- The network max_weight_limit hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_weight_limit ( 
 			origin:OriginFor<T>,
@@ -1188,39 +1394,18 @@ use frame_support::{pallet_prelude::*, Identity};
 			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
 			Ok(())
 		}
-		/*TO DO: impl reset_bonds in epoch,  
-		sudo_set_validator_exclude_quantile function  */ 
 
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_reset_bonds (
-			origin: OriginFor<T>,
-			netuid: u16
-		)-> DispatchResult {
-			ensure_root( origin )?;
-			// TODO (const) This function should be implemented
-			// Self::reset_bonds(netuid);
-			Self::deposit_event( Event::ResetBonds(netuid) );
-			Ok(())
-		}
-		// --- SUDO functions to manage NETWORKS ---
-		//
-		 #[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network (
-			origin: OriginFor<T>,
-			netuid: u16,
-			modality: u8
-		)-> DispatchResult {
-			Self::do_add_network(origin, netuid, modality)
-		}
-
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network (
-			origin: OriginFor<T>,
-			netuid: u16
-		) -> DispatchResult {
-			Self::do_remove_network(origin, netuid)
-		} 
-
+		/// ---- Sudo set validator_exclude_quantile.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network id to set validator_exclude_quantile on.
+		///
+		/// 	* `validator_exclude_quantile ` (u16):
+		/// 		- The network validator_exclude_quantile hyper-parameter.
+		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_validator_exclude_quantile( 
 			origin:OriginFor<T>, 
@@ -1233,6 +1418,67 @@ use frame_support::{pallet_prelude::*, Identity};
 			Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
 			Ok(())
 		}
+
+		/*TO DO: impl reset_bonds in epoch,  
+		sudo_set_validator_exclude_quantile function  */ 
+
+
+		/// ---- Sudo reset bonds on a network.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network to reset bonds on.
+		///	
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_reset_bonds (
+			origin: OriginFor<T>,
+			netuid: u16
+		)-> DispatchResult {
+			ensure_root( origin )?;
+			// TODO (const) This function should be implemented
+			// Self::reset_bonds(netuid);
+			Self::deposit_event( Event::ResetBonds(netuid) );
+			Ok(())
+		}
+
+		/// ---- Sudo add a network to the network set.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network uid to create.
+		///
+		/// 	* `modality` (u8):
+		/// 		- The network modality identifier.
+		///	
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_add_network (
+			origin: OriginFor<T>,
+			netuid: u16,
+			modality: u8
+		)-> DispatchResult {
+			Self::do_add_network(origin, netuid, modality)
+		}
+
+		/// ---- Sudo remove a network from the network set.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network uid to remove.
+		///
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_remove_network (
+			origin: OriginFor<T>,
+			netuid: u16
+		) -> DispatchResult {
+			Self::do_remove_network(origin, netuid)
+		} 
+
 	}
 	/// ---- Paratensor helper functions.
 	impl<T: Config> Pallet<T> {
