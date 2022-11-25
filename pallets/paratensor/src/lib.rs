@@ -8,15 +8,10 @@ use frame_system::{
 use frame_support::{dispatch, ensure, traits::{
 	Currency, 
 	ExistenceRequirement,
-	IsSubType, 
 	tokens::{
 		WithdrawReasons
 	}
-}, weights::{
-	//DispatchInfo, 
-	//PostDispatchInfo
-}
-};
+}};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -40,7 +35,6 @@ use frame_support::{pallet_prelude::*, Identity};
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
-	use substrate_fixed::types::extra::U1;
 
 
 	/// ================
@@ -1203,7 +1197,8 @@ use frame_support::{pallet_prelude::*, Identity};
 			netuid: u16
 		)-> DispatchResult {
 			ensure_root( origin )?;
-			Self::reset_bonds(netuid);
+			// TODO (const) This function should be implemented
+			// Self::reset_bonds(netuid);
 			Self::deposit_event( Event::ResetBonds(netuid) );
 			Ok(())
 		}

@@ -1,5 +1,4 @@
 use super::*;
-use frame_support::sp_std::vec;
 
 impl<T: Config> Pallet<T> {
 
@@ -217,11 +216,8 @@ impl<T: Config> Pallet<T> {
         TotalStake::<T>::put(total_stake.saturating_add(increment));
     }
     pub fn add_stake_for_subnet( hotkey: &T::AccountId, amount: u64){
-
-        let mut vec_new_hotkey_subnets = vec![];
-        //
         if Subnets::<T>::contains_key(&hotkey){
-            vec_new_hotkey_subnets = Subnets::<T>::get(&hotkey);
+            let vec_new_hotkey_subnets = Subnets::<T>::get(&hotkey);
                 for i in vec_new_hotkey_subnets{
 
                     let netuid = i;

@@ -1,6 +1,5 @@
 
 use super::*;
-use frame_support::pallet_prelude::{DispatchError};
 
 use sp_core::U256;
 use frame_support::inherent::Vec;
@@ -224,7 +223,7 @@ impl<T: Config> Pallet<T> {
     pub fn is_hotkey_registered( netuid:u16, hotkey: &T::AccountId ) -> bool { return Uids::<T>::contains_key( netuid, hotkey ) }
     pub fn get_number_of_subnets()-> u16 {
         let mut number_of_subnets : u16 = 0;
-        for (net_i, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
+        for (_, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
             number_of_subnets = number_of_subnets + 1;
         }
         return number_of_subnets;

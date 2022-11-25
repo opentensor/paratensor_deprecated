@@ -1,11 +1,8 @@
 mod mock;
 use mock::*;
-use pallet_paratensor::{Error};
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
 use frame_support::{assert_ok};
-use sp_runtime::DispatchError;
 use frame_system::Config;
-use sp_core::U256;
 use frame_support::{sp_std::vec};
 
 /*TO DO SAM: write test for LatuUpdate after it is set */
@@ -92,8 +89,6 @@ fn test_remove_uid_for_network() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
-        let mut result = 00;
-
         add_network(netuid, 0);
         //
 		register_ok_neuron( 1, 55, 66, 0);
@@ -106,7 +101,7 @@ fn test_remove_uid_for_network() {
         //
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         //
-        result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
+        let result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
         assert_eq!(result, 00);
 
 	});

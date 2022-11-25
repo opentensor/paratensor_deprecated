@@ -15,6 +15,9 @@ impl<T: Config> Pallet<T> {
         3. set priority
         4. reset Bonds */
 
+        // Get subnetwork size.
+        let n: u16 = Self::get_subnetwork_n( netuid );
+
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
         Self::inplace_normalize( &mut stake );
@@ -52,7 +55,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "C:\n{:?}\n", consensus.clone() );}}
 
         // Compute incentive.
-        let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus ).map( |(ri, ci)| ri * ci ).collect();
+        let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus.clone() ).map( |(ri, ci)| ri * ci ).collect();
         Self::inplace_normalize( &mut incentive );
         if debug { if_std! { println!( "I:\n{:?}\n", incentive.clone() );}}
 
@@ -65,15 +68,22 @@ impl<T: Config> Pallet<T> {
         let ema_bonds: Vec<Vec<I32F32>> = Self::mat_ema( &weights, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
-        // *TODO: Compute emissions.
+        // Sync parameter updates.
+        for i in 0..n {
+            Self::set_ranks( netuid, i, Self::fixed_proportion_to_u16( ranks[i as usize] ) );
+            Self::set_trust( netuid, i, Self::fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_consensus( netuid, i, Self::fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_incentives( netuid, i, Self::fixed_proportion_to_u16( incentive[i as usize] ) );
+            Self::set_dividends( netuid, i, Self::fixed_proportion_to_u16( dividends[i as usize] ) );
+        }    
 
     }
 
-     /* TO DO: impl fn */    
-     //we want to rest bonds for all neurons memebr of network netuid.
-     pub fn reset_bonds(netuid: u16){
-        /*TO DO */
-    }
+    /* TOD (const) O: impl fn */    
+    //we want to rest bonds for all neurons memebr of network netuid.
+    //pub fn reset_bonds(netuid: u16){
+    //    /*TO DO */
+    //}
 
     pub fn sum( x: &Vec<I32F32> ) -> I32F32 {
         x.iter().sum()
@@ -119,6 +129,10 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
+        // Check Nill length. 
+        if x.len() == 0 {
+            return vec![ vec![ ] ];
+        }
         let mut result: Vec<Vec<I32F32>> = vec![ vec![ lower; x[0].len() ]; x.len() ]; 
         for i in 0..x.len() {
             for j in 0..x[i].len() {
@@ -177,13 +191,24 @@ impl<T: Config> Pallet<T> {
     pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| Self::u16_proportion_to_fixed(e) ).collect() }
     pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_iter().map(|e| Self::fixed_proportion_to_u16(e) ).collect() }
 
+    // Testing function.
+    pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
+        Stake::<T>::insert( hotkey, stake );
+    }
+    pub fn set_weights_for_testing( netuid: u16, uid: u16, weights: Vec<(u16,u16)>) {
+        Weights::<T>::insert(netuid, uid, weights);
+    }
+    pub fn set_bonds_for_testing( netuid: u16, uid: u16, bonds: Vec<(u16,u16)>) {
+        Bonds::<T>::insert(netuid, uid, bonds);
+    }
+
     pub fn set_ranks( netuid:u16, neuron_uid: u16, ranks:u16 ) { Rank::<T>::insert( netuid, neuron_uid, ranks) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
     pub fn set_incentives( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
     pub fn set_dividends( netuid:u16, neuron_uid:u16, dividends:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividends ) }
 
-    pub fn get_ranks( netuid:u16, neuron_uid: u16) -> u16 {   Rank::<T>::get( netuid,  neuron_uid) }
+    pub fn get_ranks( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
     pub fn get_incentives( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
