@@ -13,8 +13,21 @@ impl<T: Config> Pallet<T> {
      5. transfer stake from coldkey to hotkey
      6. emit the staking event.*/
 
-     pub fn do_add_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_added: u64) -> dispatch::DispatchResult
-     {
+
+    /// ---- The implementation for the extrinsic add_stake: Adds stake to a hotkey account.
+    ///
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The signature of the caller's coldkey.
+    ///
+    /// 	* 'hotkey' (T::AccountId):
+    /// 		- The associated hotkey account.
+    ///
+    /// 	* 'stake_to_be_added' (u64):
+    /// 		- The amount of stake to be added to the hotkey staking account.
+    ///
+    pub fn do_add_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_added: u64) -> dispatch::DispatchResult
+    {
          //1. We check the transaction is signed by the caller and retrieve the T::AccountId pubkey information.
          let coldkey = ensure_signed(origin)?;
  

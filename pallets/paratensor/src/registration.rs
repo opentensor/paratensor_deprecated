@@ -158,6 +158,8 @@ impl<T: Config> Pallet<T> {
         UsedWork::<T>::insert( &work.clone(), current_block ); // Add the work to current + block. So we can prune at a later date.
         // --- Update avg registrations per 1000 block.
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
+
+        // TODO (Saeideh): This needs to be network based.
         RegistrationsThisBlock::<T>::mutate( |val| *val += 1 );
         //
         Self::deposit_event(Event::NeuronRegistered( uid_to_set_in_metagraph ));
@@ -171,6 +173,13 @@ impl<T: Config> Pallet<T> {
         let de_de_ref_hash: &[u8] = &de_ref_hash; // c: &[u8]
         let real_hash: H256 = H256::from_slice( de_de_ref_hash );
         return real_hash
+    }
+
+    /// Get peer to deregister: Determine the net peer to deregister
+    /// by finding the peer in the network with the min pruning score.
+    pub fn get_peer_to_deregister() -> u16 {
+
+    
     }
 
     /// Determine whether the given hash satisfies the given difficulty.
