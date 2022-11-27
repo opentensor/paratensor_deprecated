@@ -62,7 +62,7 @@ impl<T: Config> Pallet<T> {
      }
     
     
- /// This function removes stake from a hotkey account and puts into a coldkey account.
+    /// This function removes stake from a hotkey account and puts into a coldkey account.
     /// This function should be called through an extrinsic signed with the coldkeypair's private
     /// key. It takes a hotkey account id and an ammount as parameters.
     ///
@@ -80,29 +80,30 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn do_remove_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_removed: u64) -> dispatch::DispatchResult {
 
-        // ---- We check the transaction is signed by the caller
+        // ---- 1. We check the transaction is signed by the caller
         // and retrieve the T::AccountId pubkey information.
         let coldkey = ensure_signed(origin)?;
 
-        // ---- check if hotkey is active
+        // ---- 2. We check if hotkey is active on any subnetworks. Optionally throw not registered error.
+        // TODO(Saeideh): Same todo as above.
         ensure!(Self::is_hotkey_registered_any(&hotkey), Error::<T>::NotRegistered);
 
-        // ---- We check that the hotkey is linked to the calling cold key, otherwise throw a NonAssociatedColdKey error.
+        // ---- 3. We check that the hotkey is linked to the calling cold key, otherwise throw a NonAssociatedColdKey error.
         ensure!(Self::hotkey_belongs_to_coldkey(&hotkey, &coldkey), Error::<T>::NonAssociatedColdKey);
 
-        // ---- We check that the hotkey has enough stake to withdraw
-        // and then withdraw from the account.
+        // ---- 4. We check that the hotkey has enough stake to withdraw
+        // and then withdraw from the account and convert to a balance currency object.
         ensure!(Self::has_enough_stake(&hotkey, stake_to_be_removed), Error::<T>::NotEnoughStaketoWithdraw);
         let stake_to_be_added_as_currency = Self::u64_to_balance(stake_to_be_removed);
         ensure!(stake_to_be_added_as_currency.is_some(), Error::<T>::CouldNotConvertToBalance);
 
-        // --- We perform the withdrawl by converting the stake to a u64 balance
+        // --- 5. We perform the withdrawl by converting the stake to a u64 balance
         // and deposit the balance into the coldkey account. If the coldkey account
         // does not exist it is created.
         Self::remove_stake_from_hotkey_account(&hotkey, stake_to_be_removed);
         Self::add_balance_to_coldkey_account(&coldkey, stake_to_be_added_as_currency.unwrap());
 
-        // ---- Emit the unstaking event.
+        // ---- 6. Emit the unstaking event.
         Self::deposit_event(Event::StakeRemoved(hotkey, stake_to_be_removed));
 
         // --- Done and ok.
