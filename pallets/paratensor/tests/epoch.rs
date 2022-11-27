@@ -37,7 +37,6 @@ fn test_1_graph() {
 		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), u16::MAX );
 		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 );
-
 	});
 }
 

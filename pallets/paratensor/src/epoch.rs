@@ -20,7 +20,7 @@ impl<T: Config> Pallet<T> {
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
-        Self::inplace_normalize( &mut stake );
+        inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
         // Access network weights row normalized.
@@ -32,19 +32,19 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute ranks.
-        let mut ranks: Vec<I32F32> = Self::matmul( &weights, &stake );
-        Self::inplace_normalize( &mut ranks );
+        let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
+        inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R:\n{:?}\n", ranks.clone() );}}
 
         // Compute thresholded weights.
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
         let threshold: I32F32 = I32F32::from_num( 0.01 );
-        let clipped_weights: Vec<Vec<I32F32>> = Self::clip( &weights, threshold, upper, lower );
+        let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
         if debug { if_std! { println!( "tW:\n{:?}\n", clipped_weights.clone() );}}
 
         // Compute trust scores.
-        let trust: Vec<I32F32> = Self::matmul( &clipped_weights, &stake );
+        let trust: Vec<I32F32> = matmul( &clipped_weights, &stake );
         if debug { if_std! { println!( "T:\n{:?}\n", trust.clone() );}}
 
         // Compute consensus.
@@ -57,39 +57,39 @@ impl<T: Config> Pallet<T> {
 
         // Compute incentive.
         let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus.clone() ).map( |(ri, ci)| ri * ci ).collect();
-        Self::inplace_normalize( &mut incentive );
+        inplace_normalize( &mut incentive );
         if debug { if_std! { println!( "I:\n{:?}\n", incentive.clone() );}}
 
         // Compute dividends.
-        let dividends: Vec<I32F32> = Self::matmul( &bonds, &incentive );
+        let dividends: Vec<I32F32> = matmul( &bonds, &incentive );
         if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.9 );
-        let ema_bonds: Vec<Vec<I32F32>> = Self::mat_ema( &weights, &bonds, alpha );
+        let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &weights, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
         // Compute emission scores.
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        Self::inplace_normalize( &mut normalized_emission );
+        inplace_normalize( &mut normalized_emission );
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
         if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
 
         // Compute prunnind scores.
         let mut prunning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        Self::inplace_normalize( &mut prunning );
+        inplace_normalize( &mut prunning );
         if debug { if_std! { println!( "P:\n{:?}\n", prunning.clone() );}}
 
         // Sync parameter updates.
         for i in 0..n {
-            Self::set_rank( netuid, i, Self::fixed_proportion_to_u16( ranks[i as usize] ) );
-            Self::set_trust( netuid, i, Self::fixed_proportion_to_u16( trust[i as usize] ) );
-            Self::set_consensus( netuid, i, Self::fixed_proportion_to_u16( consensus[i as usize] ) );
-            Self::set_incentive( netuid, i, Self::fixed_proportion_to_u16( incentive[i as usize] ) );
-            Self::set_dividend( netuid, i, Self::fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_prunning( netuid, i, Self::fixed_proportion_to_u16( prunning[i as usize] ) );
-            Self::set_emission( netuid, i, Self::fixed_to_u64( emission[i as usize] ) );
+            Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
+            Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
+            Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
+            Self::set_prunning( netuid, i, fixed_proportion_to_u16( prunning[i as usize] ) );
+            Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
             //Self::set_bonds( netuid, i, Self::vec_fixed_proportions_to_u16( ema_bonds[i as usize] ) );
         }  
 
@@ -105,114 +105,7 @@ impl<T: Config> Pallet<T> {
     //    /*TO DO */
     //}
 
-    pub fn sum( x: &Vec<I32F32> ) -> I32F32 {
-        x.iter().sum()
-    }
-
-    pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
-        let x_sum: I32F32 = Self::sum( x );
-        if x_sum != I32F32::from_num( 0.0 as f32 ) {
-            return x.iter().map( |xi| xi / x_sum ).collect();
-        } else {
-            return x.clone();
-        }
-    }
-
-    pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
-        let x_sum: I32F32 = x.iter().sum();
-        if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
-        for i in 0..x.len() {
-            x[i] = x[i]/x_sum;
-        }
-    }
-
-    pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-        if w.len() == 0 { return vec![] }
-        if w[0].len() == 0 { return vec![] }
-        let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-        for (i, w_row) in w.iter().enumerate() {
-            for (j, x_i) in x.iter().enumerate() {
-                result [ i ] += x_i * w_row [ j ] 
-            }
-        }
-        result
-    }
-
-    pub fn sparse_matmul( w: &Vec<Vec<(u16, I32F32)>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-        let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-        for row in w.iter() {
-            for r_i in row.iter() {
-                result [ r_i.0 as usize ] = r_i.1 * x[ r_i.0 as usize ]; 
-            }
-        }
-        result
-    }
-
-    pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
-        // Check Nill length. 
-        if x.len() == 0 {
-            return vec![ vec![ ] ];
-        }
-        let mut result: Vec<Vec<I32F32>> = vec![ vec![ lower; x[0].len() ]; x.len() ]; 
-        for i in 0..x.len() {
-            for j in 0..x[i].len() {
-                if x [ i ][ j ] >= threshold {
-                    result[ i ][ j ] = upper;
-                }
-            }
-        }
-        result
-    }
-
-    pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32 ) {
-        for i in 0..x.len() {
-            for j in 0..x[i].len() {
-                if x [ i ][ j ] >= threshold {
-                    x[ i ][ j ] = upper;
-                } else {
-                    x[ i ][ j ] = lower;
-                }
-            }
-        }
-    }
-
-    pub fn mat_ema( a: &Vec<Vec<I32F32>>, b: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
-        if a.len() == 0 { return vec![vec![];1] }
-        if a[0].len() == 0 { return vec![vec![];1] }
-        let one: I32F32 = I32F32::from_num( 1.0 );
-        let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
-        let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; a[0].len() ]; a.len() ]; 
-        assert!(a.len() == b.len());
-        for i in 0..a.len() {
-            assert!(a[i].len() == b[i].len());
-            for j in 0..a[i].len() {
-                result[i][j] = alpha * a[i][j] + one_minus_alpha * b[i][j] 
-            }
-        }
-        result
-    }
-
-    pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec<Vec<(u16, I32F32)>> {
-        let mut sparse_threshold_result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; w.len() ]; 
-        for ( uid_i, weights_i ) in w.iter().enumerate() {
-            for (uid_j, weight_ij) in weights_i.iter() { 
-                if *weight_ij > threshold {
-                    sparse_threshold_result [ uid_i as usize ].push( ( *uid_j, *weight_ij ));
-                }
-            }
-        }
-        sparse_threshold_result
-    }
-
-    // TODO(const): this function is dangerous and can cause overflows.
-    pub fn fixed_to_u16( x: I32F32 ) -> u16 { x.to_num::<u16>() }
-    pub fn fixed_to_u64( x: I32F32 ) -> u64 { x.to_num::<u64>() }
-    pub fn u16_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) }
-    pub fn u16_proportion_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) / I32F32::from_num( u16::MAX ) }
-    pub fn fixed_proportion_to_u16( x: I32F32 ) -> u16 { Self::fixed_to_u16( x * I32F32::from_num( u16::MAX )) }
-    pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| Self::u16_proportion_to_fixed(e) ).collect() }
-    pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_iter().map(|e| Self::fixed_proportion_to_u16(e) ).collect() }
-    //pub fn vec_fixed_proportions_to_sparse_u16( vec: Vec<I32F32> ) -> Vec<(u16, u16)> { vec.into_iter().enumerate().collect() }
+       //pub fn vec_fixed_proportions_to_sparse_u16( vec: Vec<I32F32> ) -> Vec<(u16, u16)> { vec.into_iter().enumerate().collect() }
 
     // Testing function.
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
@@ -260,7 +153,7 @@ impl<T: Config> Pallet<T> {
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
-                weights [ uid_i as usize ].push( ( *uid_j, Self::u16_proportion_to_fixed( *weight_ij ) ));
+                weights [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *weight_ij ) ));
             }
         }
         weights
@@ -271,7 +164,7 @@ impl<T: Config> Pallet<T> {
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, weight_ij) in weights_i.iter() { 
-                weights [ uid_i as usize ] [ *uid_j as usize ] = Self::u16_proportion_to_fixed(  *weight_ij );
+                weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed(  *weight_ij );
             }
         }
         weights
@@ -282,7 +175,7 @@ impl<T: Config> Pallet<T> {
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                bonds [ uid_i as usize ].push( ( *uid_j, Self::u16_proportion_to_fixed( *bonds_ij ) ));
+                bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
             }
         }
         bonds
@@ -293,7 +186,7 @@ impl<T: Config> Pallet<T> {
         let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                bonds [ uid_i as usize ] [ *uid_j as usize ] = Self::u16_proportion_to_fixed( *bonds_ij );
+                bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
             }
         }
         bonds
@@ -305,7 +198,7 @@ impl<T: Config> Pallet<T> {
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
                 if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16 ) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
-                    bonds [ uid_i as usize ].push( ( *uid_j, Self::u16_proportion_to_fixed( *bonds_ij ) ));
+                    bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
                 }
             }
         }
@@ -318,10 +211,222 @@ impl<T: Config> Pallet<T> {
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
                 if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
-                    bonds [ uid_i as usize ] [ *uid_j as usize ] = Self::u16_proportion_to_fixed( *bonds_ij );
+                    bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
                 }
             }
         }
         bonds
     } 
+}
+
+#[allow(dead_code)]
+pub fn fixed_to_u16( x: I32F32 ) -> u16 { x.to_num::<u16>() }
+
+#[allow(dead_code)]
+pub fn fixed_to_u64( x: I32F32 ) -> u64 { x.to_num::<u64>() }
+
+#[allow(dead_code)]
+pub fn u16_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) }
+
+#[allow(dead_code)]
+pub fn u16_proportion_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) / I32F32::from_num( u16::MAX ) }
+
+#[allow(dead_code)]
+pub fn fixed_proportion_to_u16( x: I32F32 ) -> u16 { fixed_to_u16( x * I32F32::from_num( u16::MAX )) }
+
+#[allow(dead_code)]
+pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| u16_proportion_to_fixed(e) ).collect() }
+
+#[allow(dead_code)]
+pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_iter().map(|e| fixed_proportion_to_u16(e) ).collect() }
+
+#[allow(dead_code)]
+pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
+
+#[allow(dead_code)]
+pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
+    let x_sum: I32F32 = sum( x );
+    if x_sum != I32F32::from_num( 0.0 as f32 ) {
+        return x.iter().map( |xi| xi / x_sum ).collect();
+    } else {
+        return x.clone();
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
+    let x_sum: I32F32 = x.iter().sum();
+    if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
+    for i in 0..x.len() {
+        x[i] = x[i]/x_sum;
+    }
+}
+
+#[allow(dead_code)]
+pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
+    if w.len() == 0 { return vec![] }
+    if w[0].len() == 0 { return vec![] }
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
+    for (i, w_row) in w.iter().enumerate() {
+        for (j, x_i) in x.iter().enumerate() {
+            result [ i ] += x_i * w_row [ j ] 
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_matmul( w: &Vec<Vec<(u16, I32F32)>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
+    for row in w.iter() {
+        for r_i in row.iter() {
+            result [ r_i.0 as usize ] = r_i.1 * x[ r_i.0 as usize ]; 
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
+    // Check Nill length. 
+    if x.len() == 0 {
+        return vec![ vec![ ] ];
+    }
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ lower; x[0].len() ]; x.len() ]; 
+    for i in 0..x.len() {
+        for j in 0..x[i].len() {
+            if x [ i ][ j ] >= threshold {
+                result[ i ][ j ] = upper;
+            }
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32 ) {
+    for i in 0..x.len() {
+        for j in 0..x[i].len() {
+            if x [ i ][ j ] >= threshold {
+                x[ i ][ j ] = upper;
+            } else {
+                x[ i ][ j ] = lower;
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn mat_ema( a: &Vec<Vec<I32F32>>, b: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
+    if a.len() == 0 { return vec![vec![];1] }
+    if a[0].len() == 0 { return vec![vec![];1] }
+    let one: I32F32 = I32F32::from_num( 1.0 );
+    let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; a[0].len() ]; a.len() ]; 
+    assert!(a.len() == b.len());
+    for i in 0..a.len() {
+        assert!(a[i].len() == b[i].len());
+        for j in 0..a[i].len() {
+            result[i][j] = alpha * a[i][j] + one_minus_alpha * b[i][j] 
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec<Vec<(u16, I32F32)>> {
+    let mut sparse_threshold_result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; w.len() ]; 
+    for ( uid_i, weights_i ) in w.iter().enumerate() {
+        for (uid_j, weight_ij) in weights_i.iter() { 
+            if *weight_ij > threshold {
+                sparse_threshold_result [ uid_i as usize ].push( ( *uid_j, *weight_ij ));
+            }
+        }
+    }
+    sparse_threshold_result
+}
+
+#[cfg(test)]
+mod tests {
+
+    use substrate_fixed::types::I32F32;
+    use crate::epoch::{sum};
+
+    // pub fn sum( x: &Vec<I32F32> ) -> I32F32 {
+    //     x.iter().sum()
+    // }
+
+    #[test]
+    fn test_math_sum() {
+        let x: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)];
+        assert!( sum(&x) == I32F32::from_num(41));
+    }
+
+    // pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
+    //     let x_sum: I32F32 = Self::sum( x );
+    //     if x_sum != I32F32::from_num( 0.0 as f32 ) {
+    //         return x.iter().map( |xi| xi / x_sum ).collect();
+    //     } else {
+    //         return x.clone();
+    //     }
+    // }
+
+    // pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
+    //     let x_sum: I32F32 = x.iter().sum();
+    //     if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
+    //     for i in 0..x.len() {
+    //         x[i] = x[i]/x_sum;
+    //     }
+    // }
+
+    // pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
+    //     if w.len() == 0 { return vec![] }
+    //     if w[0].len() == 0 { return vec![] }
+    //     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
+    //     for (i, w_row) in w.iter().enumerate() {
+    //         for (j, x_i) in x.iter().enumerate() {
+    //             result [ i ] += x_i * w_row [ j ] 
+    //         }
+    //     }
+    //     result
+    // }
+
+    // pub fn sparse_matmul( w: &Vec<Vec<(u16, I32F32)>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
+    //     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
+    //     for row in w.iter() {
+    //         for r_i in row.iter() {
+    //             result [ r_i.0 as usize ] = r_i.1 * x[ r_i.0 as usize ]; 
+    //         }
+    //     }
+    //     result
+    // }
+
+    // pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
+    //     // Check Nill length. 
+    //     if x.len() == 0 {
+    //         return vec![ vec![ ] ];
+    //     }
+    //     let mut result: Vec<Vec<I32F32>> = vec![ vec![ lower; x[0].len() ]; x.len() ]; 
+    //     for i in 0..x.len() {
+    //         for j in 0..x[i].len() {
+    //             if x [ i ][ j ] >= threshold {
+    //                 result[ i ][ j ] = upper;
+    //             }
+    //         }
+    //     }
+    //     result
+    // }
+
+    // pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32 ) {
+    //     for i in 0..x.len() {
+    //         for j in 0..x[i].len() {
+    //             if x [ i ][ j ] >= threshold {
+    //                 x[ i ][ j ] = upper;
+    //             } else {
+    //                 x[ i ][ j ] = lower;
+    //             }
+    //         }
+    //     }
+    // }
+
 }
