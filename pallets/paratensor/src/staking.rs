@@ -28,28 +28,33 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn do_add_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_added: u64) -> dispatch::DispatchResult
     {
-         //1. We check the transaction is signed by the caller and retrieve the T::AccountId pubkey information.
+         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId pubkey information.
          let coldkey = ensure_signed(origin)?;
  
-         //2. Check if the hotkey is active
+         // --- 2. We check if the hotkey is active on any subnetworks.
+         // TODO(Saeideh): I think we should remove the functionality here where a peer cannot stake/unstake unless they are registered
+         // Staking can be disjoint from registration to networks for instance if they are staking to the DAO contract.
          ensure!(Self::is_hotkey_registered_any(&hotkey), Error::<T>::NotRegistered);
  
-         //3. We check that the hotkey is linked to the calling cold key, 
+         //  --- 3. We check that the hotkey is linked to the calling cold key, 
          // otherwise throw a NonAssociatedColdKey error.
          ensure!(Self::hotkey_belongs_to_coldkey(&hotkey, &coldkey), Error::<T>::NonAssociatedColdKey);
  
-         //4. We check that the calling coldkey contains enough funds to
+         //  --- 4. We check that the calling coldkey contains enough funds to
          // create the staking transaction.
          let stake_as_balance = Self::u64_to_balance(stake_to_be_added);
          ensure!(stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance);
  
+         // --- 5. We check if the staking coldkey has enough stake to add to the hotkey.
+         // otherwise we throw a NotEnoughBalanceToStake error.
          ensure!(Self::can_remove_balance_from_coldkey_account(&coldkey, stake_as_balance.unwrap()), Error::<T>::NotEnoughBalanceToStake);
 
-         //5. Transfer stake from coldkey to hotkey
+         // --- 6. Transfer stake from coldkey to hotkey. Removing first from coldkey and then adding to the hotkey.
+         // This can throw a BalanceWidthdrawError so we remove from the coldkey first before adding to the hotkey.
          ensure!(Self::remove_balance_from_coldkey_account(&coldkey, stake_as_balance.unwrap()) == true, Error::<T>::BalanceWithdrawalError);
          Self::add_stake_to_neuron_hotkey_account(&hotkey, stake_to_be_added);
  
-         //6. Emit the staking event.
+         // --- 7. Emit the staking event.
          Self::deposit_event(Event::StakeAdded(hotkey, stake_to_be_added));
  
          // --- ok and return.
