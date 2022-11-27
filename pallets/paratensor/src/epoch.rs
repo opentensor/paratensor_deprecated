@@ -7,12 +7,12 @@ use substrate_fixed::types::I32F32;
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
-    pub fn epoch( netuid: u16, _total_emission: u64, debug: bool ) {
+    pub fn epoch( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<I32F32> {
         /*TO DO (no particular order):
-        1. calculate pruning scores
-        2. update all other nodes consensus parameters including bonds and weights 
+        1. DONE calculate pruning scores
+        2. DONE (const) update all other nodes consensus parameters including bonds and weights 
         3. update weights and bonds for node that is identified to be pruned in registration process
-        3. set priority
+        3. DONE set priority
         4. reset Bonds */
 
         // Get subnetwork size.
@@ -28,11 +28,12 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
         // Acess network bonds row normalized.
-        let bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
-        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}
+        let bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
+        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute ranks.
-        let ranks: Vec<I32F32> = Self::matmul( &weights, &stake );
+        let mut ranks: Vec<I32F32> = Self::matmul( &weights, &stake );
+        Self::inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R:\n{:?}\n", ranks.clone() );}}
 
         // Compute thresholded weights.
@@ -47,7 +48,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "T:\n{:?}\n", trust.clone() );}}
 
         // Compute consensus.
-        let one: I32F32 = I32F32::from_num(1.0);
+        let one: I32F32 = I32F32::from_num(1.0); 
         let rho: I32F32 = I32F32::from_num(10.0);
         let kappa: I32F32 = I32F32::from_num(0.5);
         let exp_trust: Vec<I32F32> = trust.iter().map( |t|  exp( -rho * (t - kappa) ).expect("") ).collect();
@@ -68,15 +69,34 @@ impl<T: Config> Pallet<T> {
         let ema_bonds: Vec<Vec<I32F32>> = Self::mat_ema( &weights, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
+        // Compute emission scores.
+        let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
+        let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
+        Self::inplace_normalize( &mut normalized_emission );
+        let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
+        if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
+
+        // Compute prunnind scores.
+        let mut prunning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
+        Self::inplace_normalize( &mut prunning );
+        if debug { if_std! { println!( "P:\n{:?}\n", prunning.clone() );}}
+
         // Sync parameter updates.
         for i in 0..n {
-            Self::set_ranks( netuid, i, Self::fixed_proportion_to_u16( ranks[i as usize] ) );
+            Self::set_rank( netuid, i, Self::fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, Self::fixed_proportion_to_u16( trust[i as usize] ) );
             Self::set_consensus( netuid, i, Self::fixed_proportion_to_u16( consensus[i as usize] ) );
-            Self::set_incentives( netuid, i, Self::fixed_proportion_to_u16( incentive[i as usize] ) );
-            Self::set_dividends( netuid, i, Self::fixed_proportion_to_u16( dividends[i as usize] ) );
-        }    
+            Self::set_incentive( netuid, i, Self::fixed_proportion_to_u16( incentive[i as usize] ) );
+            Self::set_dividend( netuid, i, Self::fixed_proportion_to_u16( dividends[i as usize] ) );
+            Self::set_prunning( netuid, i, Self::fixed_proportion_to_u16( prunning[i as usize] ) );
+            Self::set_emission( netuid, i, Self::fixed_to_u64( emission[i as usize] ) );
+            //Self::set_bonds( netuid, i, Self::vec_fixed_proportions_to_u16( ema_bonds[i as usize] ) );
+        }  
 
+        // Remove peers to prune.
+        Self::clear_neurons_to_prune_for_subnet(netuid);
+
+        emission
     }
 
     /* TOD (const) O: impl fn */    
@@ -184,12 +204,15 @@ impl<T: Config> Pallet<T> {
         sparse_threshold_result
     }
 
+    // TODO(const): this function is dangerous and can cause overflows.
     pub fn fixed_to_u16( x: I32F32 ) -> u16 { x.to_num::<u16>() }
+    pub fn fixed_to_u64( x: I32F32 ) -> u64 { x.to_num::<u64>() }
     pub fn u16_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) }
     pub fn u16_proportion_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) / I32F32::from_num( u16::MAX ) }
     pub fn fixed_proportion_to_u16( x: I32F32 ) -> u16 { Self::fixed_to_u16( x * I32F32::from_num( u16::MAX )) }
     pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| Self::u16_proportion_to_fixed(e) ).collect() }
     pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_iter().map(|e| Self::fixed_proportion_to_u16(e) ).collect() }
+    //pub fn vec_fixed_proportions_to_sparse_u16( vec: Vec<I32F32> ) -> Vec<(u16, u16)> { vec.into_iter().enumerate().collect() }
 
     // Testing function.
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
@@ -202,23 +225,32 @@ impl<T: Config> Pallet<T> {
         Bonds::<T>::insert(netuid, uid, bonds);
     }
 
-    pub fn set_ranks( netuid:u16, neuron_uid: u16, ranks:u16 ) { Rank::<T>::insert( netuid, neuron_uid, ranks) }
+    pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
-    pub fn set_incentives( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
-    pub fn set_dividends( netuid:u16, neuron_uid:u16, dividends:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividends ) }
+    pub fn set_incentive( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
+    pub fn set_dividend( netuid:u16, neuron_uid:u16, dividend:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividend ) }
+    pub fn set_prunning( netuid:u16, neuron_uid:u16, prunning:u16) { PrunningScores::<T>::insert( netuid, neuron_uid, prunning ) }
+    pub fn set_emission( netuid:u16, neuron_uid:u16, emission:u64) { Emission::<T>::insert( netuid, neuron_uid, emission ) }
+    pub fn set_bonds( netuid:u16, neuron_uid:u16, bonds:Vec<(u16,u16)>) { Bonds::<T>::insert( netuid, neuron_uid, bonds ) }
 
-    pub fn get_ranks( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
+    pub fn get_rank( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
-    pub fn get_incentives( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
-    pub fn get_dividends( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
+    pub fn get_incentive( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
+    pub fn get_dividend( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
+    pub fn get_emission( netuid:u16, neuron_uid: u16 ) -> u64 { Emission::<T>::get( netuid, neuron_uid )  }
 
     pub fn get_stake( netuid:u16 ) -> Vec<I32F32> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut stake: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); n ]; 
-        for ( uid_i, _ ) in <Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId>>::iter_prefix( netuid ){ 
-            stake [ uid_i as usize ] = I32F32::from_num( 0.0 );
+        let mut stake: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ]; 
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                let hotkey: T::AccountId = Keys::<T>::get( netuid, neuron_uid as u16 );
+                if Stake::<T>::contains_key( hotkey.clone() ) {
+                    stake[neuron_uid as usize] = I32F32::from_num( Stake::<T>::get( hotkey ) ); 
+                }
+            }
         }
         stake
     }
@@ -267,4 +299,29 @@ impl<T: Config> Pallet<T> {
         bonds
     } 
 
+    pub fn get_prunned_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+            for (uid_j, bonds_ij) in bonds_i.iter() { 
+                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16 ) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                    bonds [ uid_i as usize ].push( ( *uid_j, Self::u16_proportion_to_fixed( *bonds_ij ) ));
+                }
+            }
+        }
+        bonds
+    } 
+
+    pub fn get_prunned_bonds_dense( netuid:u16 ) -> Vec<Vec<I32F32>> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
+        let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
+        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+            for (uid_j, bonds_ij) in bonds_i.iter() { 
+                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                    bonds [ uid_i as usize ] [ *uid_j as usize ] = Self::u16_proportion_to_fixed( *bonds_ij );
+                }
+            }
+        }
+        bonds
+    } 
 }

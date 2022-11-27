@@ -403,11 +403,6 @@ use frame_support::{pallet_prelude::*, Identity};
 	#[pallet::storage]
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
 
-	/// ---- SingleMap Network UID --> Neuron UID, we use to record uids to prune at next epoch.
-	#[pallet::storage]
-	#[pallet::getter(fn uid_to_prune)]
-    pub(super) type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-
 	// ---- SingleMap Network UID --> Registration This Interval
 	#[pallet::storage]
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
@@ -422,6 +417,7 @@ use frame_support::{pallet_prelude::*, Identity};
 	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
 	/// ---- SingleMap Network UID --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
+	/// TODO(Saeideh): Lets increase the resolution on this item from u8 to u16 
 	#[pallet::type_value] 
 	pub fn DefaultModality<T:Config>() -> u8 { 0 }
 	#[pallet::storage]
@@ -504,6 +500,13 @@ use frame_support::{pallet_prelude::*, Identity};
 	pub fn DefaultPrunningScore<T: Config>() -> u16 { T::InitialPrunningScore::get() }
 	#[pallet::storage]
 	pub(super) type PrunningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPrunningScore<T> >;
+
+	/// ---- SingleMap Network UID --> Neuron UID, we use to record uids to prune at next epoch.
+	#[pallet::type_value] 
+	pub fn DefaultShouldPrune<T: Config>() -> bool { false }
+	#[pallet::storage]
+	pub(super) type NeuronsShouldPruneAtNextEpoch<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultShouldPrune<T> >;
+	
 	
 	/// ************************************************************
 	///	-Genesis-Configuration  

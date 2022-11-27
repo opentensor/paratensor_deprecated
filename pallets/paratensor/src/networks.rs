@@ -77,9 +77,6 @@ impl<T: Config> Pallet<T> {
         if !ActivityCutoff::<T>::contains_key(netuid)
             { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
 
-        if !NeuronsToPruneAtNextEpoch::<T>::contains_key(netuid)
-            { NeuronsToPruneAtNextEpoch::<T>::insert(netuid, NeuronsToPruneAtNextEpoch::<T>::get(netuid));}
-
         if !RegistrationsThisInterval::<T>::contains_key(netuid)
             { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
         
@@ -128,7 +125,7 @@ impl<T: Config> Pallet<T> {
         Self::clear_stake_prunning_min_for_subnet(netuid);
         Self::clear_immunity_period_for_subnet(netuid);
         Self::clear_activity_cutoff_for_subnet(netuid);
-        Self::clear_neuron_to_prune_next_epoch_for_subnet(netuid);
+        Self::clear_neurons_to_prune_for_subnet(netuid);
         Self::clear_reg_this_interval_for_subnet(netuid);
         //
         Self::remove_uids_for_subnet(netuid);
@@ -305,9 +302,8 @@ impl<T: Config> Pallet<T> {
             {ActivityCutoff::<T>::remove(netuid);}
     }
 
-    pub fn clear_neuron_to_prune_next_epoch_for_subnet(netuid: u16){
-        if NeuronsToPruneAtNextEpoch::<T>::contains_key(netuid)
-            {NeuronsToPruneAtNextEpoch::<T>::remove(netuid);}
+    pub fn clear_neurons_to_prune_for_subnet(netuid: u16){
+        NeuronsShouldPruneAtNextEpoch::<T>::remove_prefix(netuid, None);
     }
 
     pub fn clear_reg_this_interval_for_subnet(netuid: u16){

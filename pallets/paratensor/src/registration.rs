@@ -6,6 +6,7 @@ use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
+use frame_support::storage::IterableStorageDoubleMap;
 
 
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
@@ -89,7 +90,8 @@ impl<T: Config> Pallet<T> {
             let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
             uid_to_set_in_metagraph = uid_to_prune; 
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
-            //
+            // TODO( Saeideh ): Re other comments we should not remove stake from peer being prunned. 
+            // The stake can remain on the network. 
             let stake_to_remove: u64 = S::<T>::take(netuid, uid_to_prune); //remove hotkey stake for this network.
             /* check if the hotkey is deregistred from all networks, 
             if so, then we need to transfer stake from hotkey to cold key */
@@ -133,12 +135,12 @@ impl<T: Config> Pallet<T> {
             Self::remove_emission_from_subnet(netuid, uid_to_prune);
             // remove pruning score 
             Self::remove_pruning_score_from_subnet(netuid, uid_to_prune);
-            //
-            // Next we will add this prunned peer to NeuronsToPruneAtNextEpoch.
+            
+            // Next we will add this prunned peer to NeuronsShouldPruneAtNextEpoch.
             // We record this set because we need to remove all bonds owned in this uid.
             // neuron.bonds records all bonds this peer owns which will be removed by default. 
             // However there are other peers with bonds in this peer, these need to be cleared as well. 
-            NeuronsToPruneAtNextEpoch::<T>::insert( netuid, uid_to_prune ); // Subtrate does not contain a set storage item.
+            NeuronsShouldPruneAtNextEpoch::<T>::insert( netuid, uid_to_prune, true ); // Subtrate does not contain a set storage item.
         }
         
         // next, we add new registered node to all structures
@@ -175,12 +177,24 @@ impl<T: Config> Pallet<T> {
         return real_hash
     }
 
-    /// Get peer to deregister: Determine the net peer to deregister
-    /// by finding the peer in the network with the min pruning score.
-    pub fn get_peer_to_deregister() -> u16 {
-
-    
-    }
+    /// Determine which peer to prune from the network by finding the element with the lowest prunning score.
+    /// This function will always return an element to prune.
+    pub fn get_neuron_to_prune(netuid: u16) -> u16 {
+        let mut min_score : u16 = u16::MAX;
+        let mut uid_with_min_score = 0;
+        for (uid_i, _prune_score) in <PrunningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
+            let value = PrunningScores::<T>::get(netuid, uid_i);
+            if min_score > value { 
+                min_score = value; 
+                uid_with_min_score = uid_i;
+            }
+        }
+        // We replace the prunning score here with u16 max to ensure that all peers always have a 
+        // prunning score. In the event that every peer has been prunned this function will prune
+        // the last element in the network continually.
+        PrunningScores::<T>::insert(netuid, uid_with_min_score, u16::MAX );
+        uid_with_min_score
+    } 
 
     /// Determine whether the given hash satisfies the given difficulty.
     /// The test is done by multiplying the two together. If the product

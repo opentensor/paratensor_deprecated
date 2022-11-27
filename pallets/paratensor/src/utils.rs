@@ -4,7 +4,6 @@ use super::*;
 use sp_core::U256;
 use frame_support::inherent::Vec;
 use frame_support::sp_std::vec;
-use frame_support::storage::IterableStorageDoubleMap;
 use frame_support::storage::IterableStorageMap;
 
 impl<T: Config> Pallet<T> {
@@ -41,6 +40,10 @@ impl<T: Config> Pallet<T> {
     pub fn get_max_allowed_uids(netuid: u16) -> u16 {
         return MaxAllowedUids::<T>::get(netuid);
     }
+    pub fn set_max_allowed_uids(netuid: u16, max_allowed: u16) {
+        return MaxAllowedUids::<T>::insert(netuid, max_allowed);
+    }
+
 
     // --- Returns the next available uid for the network and increments uid.
 	pub fn get_next_uid(netuid: u16) -> u16 {
@@ -84,7 +87,6 @@ impl<T: Config> Pallet<T> {
             Stake::<T>::remove(&hotkey);
         }
     }
-
     pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
         if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
             let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
@@ -96,19 +98,6 @@ impl<T: Config> Pallet<T> {
         }
     }
   
-    pub fn get_neuron_to_prune(netuid: u16) -> u16 {
-        let mut min_score : u16 = u16::MAX;
-        let mut uid_with_min_score = 0;
-        for (uid_i, _prune_score) in <PrunningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-            let value = PrunningScores::<T>::get(netuid, uid_i);
-            if min_score > value { 
-                min_score = value; 
-                uid_with_min_score = uid_i;
-            }
-        }
-        PrunningScores::<T>::remove(netuid, uid_with_min_score);
-        uid_with_min_score
-    } 
     pub fn get_neuron_stake_for_subnetwork(netuid: u16, neuron_uid: u16) -> u64 {
         S::<T>::get(netuid, neuron_uid)
     }
