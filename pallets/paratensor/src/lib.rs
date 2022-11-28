@@ -427,6 +427,11 @@ use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, Va
 	#[pallet::storage]
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
 
+	/// ---- SingleMap Network UID --> Neuron UID, we use to record uids to prune at next epoch.
+	#[pallet::storage]
+	#[pallet::getter(fn uid_to_prune)]
+    pub(super) type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+
 	// ---- SingleMap Network UID --> Registration This Interval
 	#[pallet::storage]
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
@@ -1445,36 +1450,8 @@ use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, Va
 		}
 		/*TO DO: impl reset_bonds in epoch,  
 		sudo_set_validator_exclude_quantile function  */ 
-
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_reset_bonds (
-			origin: OriginFor<T>,
-			netuid: u16
-		)-> DispatchResult {
-			ensure_root( origin )?;
-			Self::reset_bonds(netuid);
-			Self::deposit_event( Event::ResetBonds(netuid) );
-			Ok(())
-		}
+		
 		// --- SUDO functions to manage NETWORKS ---
-		//
-		 #[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network (
-			origin: OriginFor<T>,
-			netuid: u16,
-			tempo: u16,
-			modality: u8
-		)-> DispatchResult {
-			Self::do_add_network(origin, netuid, tempo, modality)
-		}
-
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network (
-			origin: OriginFor<T>,
-			netuid: u16
-		) -> DispatchResult {
-			Self::do_remove_network(origin, netuid)
-		} 
 
 		/// ---- Sudo set validator_exclude_quantile.
 		/// Args:
@@ -1539,9 +1516,10 @@ use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, Va
 		pub fn sudo_add_network (
 			origin: OriginFor<T>,
 			netuid: u16,
+			tempo: u16,
 			modality: u8
 		)-> DispatchResult {
-			Self::do_add_network(origin, netuid, modality)
+			Self::do_add_network(origin, netuid, tempo, modality)
 		}
 
 		/// ---- Sudo remove a network from the network set.
