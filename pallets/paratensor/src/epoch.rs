@@ -99,14 +99,6 @@ impl<T: Config> Pallet<T> {
         emission
     }
 
-    /* TOD (const) O: impl fn */    
-    //we want to rest bonds for all neurons memebr of network netuid.
-    //pub fn reset_bonds(netuid: u16){
-    //    /*TO DO */
-    //}
-
-       //pub fn vec_fixed_proportions_to_sparse_u16( vec: Vec<I32F32> ) -> Vec<(u16, u16)> { vec.into_iter().enumerate().collect() }
-
     // Testing function.
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
         Stake::<T>::insert( hotkey, stake );
@@ -350,83 +342,68 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 mod tests {
 
     use substrate_fixed::types::I32F32;
-    use crate::epoch::{sum};
+    use crate::epoch::{sum, normalize, inplace_normalize, matmul};
 
-    // pub fn sum( x: &Vec<I32F32> ) -> I32F32 {
-    //     x.iter().sum()
-    // }
+    fn assert_float_compare(a: I32F32, b: I32F32, epsilon: I32F32 ) {
+        assert!( I32F32::abs( a - b ) < epsilon, "a({:?}) != b({:?})", a, b);
+    }
+    fn assert_vec_compare(va: &Vec<I32F32>, vb: &Vec<I32F32>, epsilon: I32F32) {
+        assert!(va.len() == vb.len());
+        for i in 0..va.len(){
+            assert!( I32F32::abs( va[i] - vb[i] ) < epsilon, "a_{:?}({:?}) != b_{:?}({:?})", i, va[i], i, vb[i]);
+        }  
+    }
 
     #[test]
     fn test_math_sum() {
-        let x: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)];
-        assert!( sum(&x) == I32F32::from_num(41));
+        assert!( sum(&vec![]) == I32F32::from_num(0));
+        assert!( sum(&vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(41));
+        assert!( sum(&vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(39));
     }
 
-    // pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
-    //     let x_sum: I32F32 = Self::sum( x );
-    //     if x_sum != I32F32::from_num( 0.0 as f32 ) {
-    //         return x.iter().map( |xi| xi / x_sum ).collect();
-    //     } else {
-    //         return x.clone();
-    //     }
-    // }
+    #[test]
+    fn test_math_normalize() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let x: Vec<I32F32> = vec![]; 
+        let y: Vec<I32F32> = normalize(&x);
+        assert_vec_compare( &x, &y, epsilon);
+        let x: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
+        let y: Vec<I32F32> = normalize(&x);
+        assert_vec_compare( &y, &vec![ I32F32::from_num(0.0243902437),  I32F32::from_num(0.243902439),  I32F32::from_num(0.7317073171)], epsilon );
+        assert_float_compare( sum( &y ), I32F32::from_num(1.0), epsilon);
+        let x: Vec<I32F32> = vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
+        let y: Vec<I32F32> = normalize(&x);
+        assert_vec_compare( &y, &vec![ I32F32::from_num(-0.0256410255),  I32F32::from_num(0.2564102563),  I32F32::from_num(0.769230769)], epsilon );
+        assert_float_compare( sum( &y ), I32F32::from_num(1.0), epsilon );
+    }
 
-    // pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
-    //     let x_sum: I32F32 = x.iter().sum();
-    //     if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
-    //     for i in 0..x.len() {
-    //         x[i] = x[i]/x_sum;
-    //     }
-    // }
+    #[test]
+    fn test_math_inplace_normalize() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let mut x1: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
+        inplace_normalize(&mut x1);
+        assert_vec_compare( &x1, &vec![ I32F32::from_num(0.0243902437),  I32F32::from_num(0.243902439),  I32F32::from_num(0.7317073171)], epsilon );
+        let mut x2: Vec<I32F32> = vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
+        inplace_normalize(&mut x2);
+        assert_vec_compare( &x2, &vec![ I32F32::from_num(-0.0256410255),  I32F32::from_num(0.2564102563),  I32F32::from_num(0.769230769)], epsilon );
+    }
 
-    // pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-    //     if w.len() == 0 { return vec![] }
-    //     if w[0].len() == 0 { return vec![] }
-    //     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    //     for (i, w_row) in w.iter().enumerate() {
-    //         for (j, x_i) in x.iter().enumerate() {
-    //             result [ i ] += x_i * w_row [ j ] 
-    //         }
-    //     }
-    //     result
-    // }
-
-    // pub fn sparse_matmul( w: &Vec<Vec<(u16, I32F32)>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-    //     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    //     for row in w.iter() {
-    //         for r_i in row.iter() {
-    //             result [ r_i.0 as usize ] = r_i.1 * x[ r_i.0 as usize ]; 
-    //         }
-    //     }
-    //     result
-    // }
-
-    // pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
-    //     // Check Nill length. 
-    //     if x.len() == 0 {
-    //         return vec![ vec![ ] ];
-    //     }
-    //     let mut result: Vec<Vec<I32F32>> = vec![ vec![ lower; x[0].len() ]; x.len() ]; 
-    //     for i in 0..x.len() {
-    //         for j in 0..x[i].len() {
-    //             if x [ i ][ j ] >= threshold {
-    //                 result[ i ][ j ] = upper;
-    //             }
-    //         }
-    //     }
-    //     result
-    // }
-
-    // pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32 ) {
-    //     for i in 0..x.len() {
-    //         for j in 0..x[i].len() {
-    //             if x [ i ][ j ] >= threshold {
-    //                 x[ i ][ j ] = upper;
-    //             } else {
-    //                 x[ i ][ j ] = lower;
-    //             }
-    //         }
-    //     }
-    // }
+    #[test]
+    fn test_math_matmul() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ]; 3 ]; 
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(6),  I32F32::from_num(6)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(9),  I32F32::from_num(9),  I32F32::from_num(9)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
+        let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(-1.0);3 ]; 3 ]; 
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(-6),  I32F32::from_num(-6),  I32F32::from_num(-6)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(-9),  I32F32::from_num(-9),  I32F32::from_num(-9)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
+        let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ], vec![ I32F32::from_num(2.0); 3], vec![ I32F32::from_num(3.0);3 ] ]; 
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(12),  I32F32::from_num(18)], epsilon );
+    }
 
 }
