@@ -44,13 +44,14 @@ fn test_registration_repeat_work() {
 	new_test_ext().execute_with(|| {
 		let block_number: u64 = 0;
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let hotkey_account_id_1 = 1;
 		let hotkey_account_id_2 = 2;
 		let coldkey_account_id = 667; // Neighbour of the beast, har har
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id_1), netuid, block_number, nonce, work.clone(), hotkey_account_id_1, coldkey_account_id));
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id_2), netuid, block_number, nonce, work.clone(), hotkey_account_id_2, coldkey_account_id);
@@ -63,12 +64,13 @@ fn test_registration_ok() {
 	new_test_ext().execute_with(|| {
 		let block_number: u64 = 0;
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 129123813);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667; // Neighbour of the beast, har har
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		// Subscribe and check extrinsic output
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id));
@@ -103,6 +105,7 @@ fn test_registration_too_many_registrations_per_block() {
 	new_test_ext().execute_with(|| {
 		
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		ParatensorModule::set_max_registratations_per_block( 10 );
 
 		let block_number: u64 = 0;
@@ -120,7 +123,7 @@ fn test_registration_too_many_registrations_per_block() {
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		// Subscribe and check extrinsic output
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(0), netuid, block_number, nonce0, work0, 0, 0));
@@ -179,12 +182,13 @@ fn test_registration_already_active_hotkey() {
 
 		let block_number: u64 = 0;
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id));
 
@@ -202,12 +206,13 @@ fn test_registration_invalid_seal() {
 	new_test_ext().execute_with(|| {
 		let block_number: u64 = 0;
 		let netuid:u16 =1;
+		let tempo: u16 = 13;
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 1, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidSeal.into()) );
@@ -219,12 +224,13 @@ fn test_registration_invalid_block_number() {
 	new_test_ext().execute_with(|| {
 		let block_number: u64 = 1;
 		let netuid: u16 =1;
+		let tempo: u16 = 13;
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number(netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 		
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidWorkBlock.into()) );
@@ -236,13 +242,14 @@ fn test_registration_invalid_difficulty() {
 	new_test_ext().execute_with(|| {
 		let block_number: u64 = 0;
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 		ParatensorModule::set_difficulty_from_u64( netuid, 18_446_744_073_709_551_615u64 );
 		
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidDifficulty.into()) );
@@ -290,12 +297,13 @@ fn test_registration_pruning() {
 	new_test_ext().execute_with(|| {
 		let netuid: u16 = 1;
 		let block_number: u64 = 0;
+		let tempo: u16 = 13;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 		
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
@@ -331,11 +339,12 @@ fn test_registration_get_neuron_metadata() {
 	new_test_ext().execute_with(|| {
 		let netuid: u16 = 1;
 		let block_number: u64 = 0;
+		let tempo: u16 = 13;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		//

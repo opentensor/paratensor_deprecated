@@ -211,7 +211,7 @@ pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_
 }
 
 #[allow(dead_code)]
-pub fn add_network(netuid: u16, modality: u8){
-	let result = ParatensorModule::do_add_network(<<Test as Config>::Origin>::root(), netuid, modality);
+pub fn add_network(netuid: u16, tempo: u16, modality: u8){
+	let result = ParatensorModule::do_add_network(<<Test as Config>::Origin>::root(), netuid, tempo, modality);
 	assert_ok!(result);
 }

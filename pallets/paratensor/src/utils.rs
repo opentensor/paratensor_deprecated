@@ -107,11 +107,11 @@ impl<T: Config> Pallet<T> {
     pub fn get_adjustment_interval(netuid: u16) -> u16 {
 		AdjustmentInterval::<T>::get(netuid)
 	}
-    pub fn get_blocks_since_last_step( ) -> u64 {
-		BlocksSinceLastStep::<T>::get()
+    pub fn get_blocks_since_last_step(netuid:u16 ) -> u64 {
+		BlocksSinceLastStep::<T>::get(netuid)
 	}
-    pub fn set_blocks_since_last_step( blocks_since_last_step: u64 ) {
-		BlocksSinceLastStep::<T>::set( blocks_since_last_step );
+    pub fn set_blocks_since_last_step( netuid: u16, blocks_since_last_step: u64 ) {
+		BlocksSinceLastStep::<T>::insert( netuid, blocks_since_last_step );
 	}
     pub fn get_blocks_per_step(netuid: u16 ) -> u16 {
 		BlocksPerStep::<T>::get(netuid)
@@ -180,6 +180,9 @@ impl<T: Config> Pallet<T> {
     pub fn set_last_update_for_neuron(netuid: u16, neuron_uid: u16, update: u64){
         LastUpdate::<T>::insert(netuid, neuron_uid, update);
     }	
+    pub fn get_tempo(netuid:u16) -> u16{
+        Tempo::<T>::get(netuid)
+    }
     
     /// =========================
 	/// ==== Global Accounts ====
@@ -301,8 +304,8 @@ impl<T: Config> Pallet<T> {
         Priority::<T>::insert(netuid, neuron_uid, priority);
     }
 
-    pub fn get_emission_ratio(netuid: u16) -> u16 {
-        EmissionRatio::<T>::get(netuid)
+    pub fn get_emission_ratio(netuid: u16) -> u64 {
+        EmissionValues::<T>::get(netuid)
     }
 
     pub fn get_neuron_metadata(neuron_id: u16) -> NeuronMetadataOf {

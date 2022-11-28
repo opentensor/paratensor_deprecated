@@ -46,13 +46,14 @@ fn test_serving_ok() {
 	new_test_ext().execute_with(|| {
         let hotkey_account_id = 1;
         let netuid: u16 = 1;
-		let version : u32 = 2;
+        let tempo: u16 = 13;
+	let version : u32 = 2;
         let ip: u128 = 1676056785;
         let port: u16 = 128;
         let ip_type: u8 = 4;
         let modality: u8 = 0;
         //
-        add_network(netuid, modality);
+        add_network(netuid, tempo, modality);
         register_ok_neuron( netuid, hotkey_account_id, 66, 0);
         //
         assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, modality));
@@ -118,13 +119,14 @@ fn test_serving_set_metadata() {
 	new_test_ext().execute_with(|| {
         let hotkey_account_id = 1;
         let netuid: u16 = 1;
-		let version : u32 = 2;
+        let tempo: u16 = 13;
+	let version : u32 = 2;
         let ip: u128 = 1676056785;
         let port: u16 = 128;
         let ip_type: u8 = 4;
         let modality: u8 = 0;
         //
-        add_network(netuid, modality);
+        add_network(netuid, tempo, modality);
         register_ok_neuron( netuid, hotkey_account_id, 66, 0);
         //
         assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, modality));
