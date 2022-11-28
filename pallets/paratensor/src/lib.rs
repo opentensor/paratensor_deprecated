@@ -29,9 +29,11 @@ mod serving;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::{DispatchResult, StorageMap};
-use frame_support::{pallet_prelude::*, Identity};
-	use frame_system::pallet_prelude::*;
+	//use std::alloc::System;
+
+use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, ValueQuery};
+	use frame_support::{pallet_prelude::*, Identity, IterableStorageMap};
+	use frame_system::{pallet_prelude::*};
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
@@ -61,7 +63,7 @@ use frame_support::{pallet_prelude::*, Identity};
 
 		/// Initial Emission Ratio
 		#[pallet::constant]
-		type InitialEmissionRatio: Get<u16>;
+		type InitialEmissionValue: Get<u16>;
 
 		/// Initial max weight limit.
 		#[pallet::constant]
@@ -181,17 +183,39 @@ use frame_support::{pallet_prelude::*, Identity};
 	#[pallet::storage]
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
 
+	/// --- StorageItem Global Block Emission
+	#[pallet::type_value]
+	pub fn DefaultBlockEmission<T: Config>() -> u64 {1000000000}
+	#[pallet::storage]
+	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
+
+	/// ---- Total number of Existing Networks
+	#[pallet::storage]
+	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
+
+	/// --- SingleMap Network UID -> if network is added
+	#[pallet::type_value]
+	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
+	#[pallet::storage]
+	pub(super) type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;
+
+	/// --- SingleMap Network UID -> Pending Emission
+	#[pallet::type_value]
+	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
+	#[pallet::storage]
+	pub(super) type PendingEmission<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
+
 	/// ---- StorageItem Hotkey --> Global Stake
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::storage]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
-	/// ---- SingleMap Network UID --> EmissionRatio
+	/// ---- SingleMap Network UID --> EmissionValues
 	#[pallet::type_value]
-	pub fn DefaultEmissionRatio<T: Config>() ->  u16 { 0}
+	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0}
 	#[pallet::storage]
-	pub(super) type EmissionRatio<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultEmissionRatio<T>>;
+	pub(super) type EmissionValues<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
 
 	/// ---- StorageItem Global Max Registration Per Block
 	#[pallet::type_value] 
@@ -219,7 +243,7 @@ use frame_support::{pallet_prelude::*, Identity};
 	#[pallet::type_value] 
 	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
 	#[pallet::storage]
-	pub type BlocksSinceLastStep<T> = StorageValue<_, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
+	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
 
 	#[pallet::storage]
 	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
@@ -609,6 +633,9 @@ use frame_support::{pallet_prelude::*, Identity};
 
 		/// --- Event created when the axon server information is added to the network.
 		AxonServed(u16),
+
+		/// --- Event created when emission ratios fr all networks is set
+		EmissionValuesSet(),
 	}
 	
 	/// ================
@@ -719,6 +746,15 @@ use frame_support::{pallet_prelude::*, Identity};
 
 		/// ---- Thrown when the caller attempts to set a storage value outside of its allowed range.
 		StorageValueOutOfRange,
+
+		// --- Thrown when tempo has not set
+		TempoHasNotSet,
+
+		// --- Thrown when number or recieved emission rates does not match number of networks
+		EmissionValuesDoesNotMatchNetworks,
+
+		// --- Thrown when emission ratios are not valid (did not sum up to 10^9)
+		InvalidEmissionValues,
 	}
 
 	/// ================
@@ -732,10 +768,28 @@ use frame_support::{pallet_prelude::*, Identity};
 		/// 	* 'n': (T::BlockNumber):
 		/// 		- The number of the block we are initializing.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
-			// Only run the block step every `blocks_per_step`.
-			/* TO DO SAM: we should calculate blocks per step for each network based on tempo
-			and run it for different blocks per steps for different networks. */
-			return 0;
+			/*TO DO:
+			1. calculate pending emission for each network
+			2. check if tempo % current_block ==0 for any network, then call epoch with pending emission for this network
+			3. if tempo% current_block == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
+				we do not need to run epoch for the network */
+				let current_block_number = Self::get_current_block_as_u64();
+
+				/* Emissions per networks : net 1 ---> 100,000 ; net 2 --> 3000,000 ; .... ==> sum = 10^9 rao */
+				for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ //we gonna distribute 10^9 rao
+					let pending_emission = EmissionValues::<T>::get(netuid_i);
+					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
+				}
+				for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+
+					if tempo_i as u64 % current_block_number == 0 { 
+						let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
+						//
+						// RUN EPOCH for this network
+						Self::epoch(netuid_i, net_emission, true);
+					} 
+				}
+			return 0; 
 		}
 	}
 
@@ -991,18 +1045,10 @@ use frame_support::{pallet_prelude::*, Identity};
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_emission_ratio (
-			_origin: OriginFor<T>,
-			_netuid: u16,
-			_subnet_emission_ratio: u16
+			origin: OriginFor<T>,
+			emission_rates: Vec<(u16, u64)>
 		) -> DispatchResult{
-			ensure_root( _origin )?;
-				if Self::calculate_emission_ratio_sum() + _subnet_emission_ratio > 1 { 
-						 //we should return error /*To DO */
-				}
-				else{
-					EmissionRatio::<T>::insert(_netuid, _subnet_emission_ratio);
-				}
-			Ok(())
+			Self::do_set_emission_ratios( origin,  emission_rates)
 		}
 
 		/// ---- Sudo set this network's bonds moving average.
@@ -1397,6 +1443,38 @@ use frame_support::{pallet_prelude::*, Identity};
 			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
 			Ok(())
 		}
+		/*TO DO: impl reset_bonds in epoch,  
+		sudo_set_validator_exclude_quantile function  */ 
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_reset_bonds (
+			origin: OriginFor<T>,
+			netuid: u16
+		)-> DispatchResult {
+			ensure_root( origin )?;
+			Self::reset_bonds(netuid);
+			Self::deposit_event( Event::ResetBonds(netuid) );
+			Ok(())
+		}
+		// --- SUDO functions to manage NETWORKS ---
+		//
+		 #[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_add_network (
+			origin: OriginFor<T>,
+			netuid: u16,
+			tempo: u16,
+			modality: u8
+		)-> DispatchResult {
+			Self::do_add_network(origin, netuid, tempo, modality)
+		}
+
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_remove_network (
+			origin: OriginFor<T>,
+			netuid: u16
+		) -> DispatchResult {
+			Self::do_remove_network(origin, netuid)
+		} 
 
 		/// ---- Sudo set validator_exclude_quantile.
 		/// Args:

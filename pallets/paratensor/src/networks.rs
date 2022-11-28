@@ -1,13 +1,17 @@
 use super::*;
+use frame_support::assert_ok;
+//use frame_support::pallet_prelude::StorageMap;
 use frame_support::{sp_std::vec};
 use sp_std::vec::Vec;
 use crate::system::ensure_root;
 use frame_support::storage::IterableStorageMap;
 use frame_support::storage::IterableStorageDoubleMap;
+use frame_support::{pallet_prelude::StorageMap, Identity};
+use sp_std::if_std;
 
 
 impl<T: Config> Pallet<T> { 
-    pub fn do_add_network(origin: T::Origin, netuid: u16, modality: u8) -> dispatch::DispatchResult{
+    pub fn do_add_network(origin: T::Origin, netuid: u16, tempo: u16, modality: u8) -> dispatch::DispatchResult{
         /*TO DO:
         1. check if caller is sudo account
         2. check if network does not exist
@@ -27,13 +31,17 @@ impl<T: Config> Pallet<T> {
         //4. Add network
         SubnetworkN::<T>::insert(netuid, 0); //initial size for each network is 0
         NetworkModality::<T>::insert(netuid, modality);
+        Tempo::<T>::insert(netuid, tempo);
+        //
+        TotalNetworks::<T>::mutate(|val| *val += 1);
+        NetworksAdded::<T>::insert(netuid, true);
 
         // 5. Add default value for all other parameters
         if !MinAllowedWeights::<T>::contains_key(netuid)
             { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid));}
         
-        if !EmissionRatio::<T>::contains_key(netuid)
-            { EmissionRatio::<T>::insert(netuid, EmissionRatio::<T>::get(netuid));}   
+        if !EmissionValues::<T>::contains_key(netuid)
+            { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
 
         if !MaxWeightsLimit::<T>::contains_key(netuid)
             { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
@@ -104,6 +112,8 @@ impl<T: Config> Pallet<T> {
         // 3. remove network and mdality
         SubnetworkN::<T>::remove(netuid);
         NetworkModality::<T>::remove(netuid);
+        TotalNetworks::<T>::mutate(|val| *val -= 1);
+        NetworksAdded::<T>::insert(netuid, false);
 
         // 4. update all other storage
         Self::remove_subnet_for_all_hotkeys(netuid);
@@ -148,7 +158,66 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    pub fn do_set_emission_ratios( origin: T::Origin, emission_ratios: Vec<(u16,u64)>) -> dispatch::DispatchResult{
+        /*TO DO:
+        1. check if caller is sudo account
+        2. check if we receive emission rate for all existing networks (not more, not less)
+        3. check if sum of emission rates is equal to 1.
+        5. add emission ratios  */
+        //
+        // 1. if caller is sudo account
+        ensure_root( origin )?;
+
+        // 2. check if we have received emission rate for all existing networks and not more
+        ensure!(Self::if_emission_ratios_match(&emission_ratios), Error::<T>::EmissionValuesDoesNotMatchNetworks);
+
+        // 3. check if sum of emission rates is equal to 1.
+        ensure!(Self::if_sum_emission_ratios(&emission_ratios), Error::<T>::InvalidEmissionValues);
+
+        // 4. Add emission ratios for each network
+        Self::add_emission_ratios(&emission_ratios);
+
+        Self::deposit_event(Event::EmissionValuesSet());
+        Ok(())
+    }
+
     // helper functions
+    pub fn add_emission_ratios(emission_ratios: &Vec<(u16, u64)>){
+        
+        for (netuid_i, emission_i) in emission_ratios.iter(){
+            EmissionValues::<T>::insert(netuid_i, emission_i);
+        }
+    }
+
+    pub fn if_sum_emission_ratios(emission_ratios: &Vec<(u16, u64)>) -> bool{
+        let mut emission_ratios_sum: u64 = 0;
+        
+        for (netuid_i, emission_i) in emission_ratios.iter(){ 
+            emission_ratios_sum = emission_ratios_sum + emission_i;
+        } 
+        if emission_ratios_sum == BlockEmission::<T>::get() {return true;}
+        else {return false;}
+    } 
+
+    pub fn if_emission_ratios_match(emission_ratios: &Vec<(u16, u64)>) -> bool{ 
+        
+        let totalNets = TotalNetworks::<T>::get();
+        let mut nets: Vec<u16> = vec![];
+
+        for (netuid_j, _) in emission_ratios.iter() {nets.push(*netuid_j);} 
+
+        if nets.len() as u16 != totalNets {return false;}
+        
+        for (uid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16 >>::iter() {
+            if !nets.contains(&uid_i) {return false;}  
+
+        }
+        for (i, val) in nets.iter().enumerate(){
+            if NetworksAdded::<T>::get(val) == false {return false;}
+        }
+        return true;
+    }
+
     pub fn if_subnet_exist(netuid: u16) -> bool{
         return  SubnetworkN::<T>::contains_key(netuid);
     }
@@ -161,8 +230,6 @@ impl<T: Config> Pallet<T> {
     pub fn remove_subnet_for_all_hotkeys(netuid: u16){
 
         let mut vec_new_hotkey_subnets : Vec<u16>;
-        //let mut hotkey_to_be_updated: Option<T::AccountId> = None;
-        //let hotkey_to_be_updated: Vec<T::AccountId> = vec![];
 
         for (hotkey_i, vec)  in <Subnets<T> as IterableStorageMap<T::AccountId, Vec<u16>>>::iter() {
             vec_new_hotkey_subnets = vec.clone();

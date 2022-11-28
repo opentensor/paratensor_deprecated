@@ -1,8 +1,11 @@
 mod mock;
 use mock::*;
+use pallet_paratensor::{Error};
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
 use frame_support::{assert_ok};
+use sp_runtime::DispatchError;
 use frame_system::Config;
+use sp_core::U256;
 use frame_support::{sp_std::vec};
 
 /*TO DO SAM: write test for LatuUpdate after it is set */
@@ -13,8 +16,9 @@ fn test_add_network_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
         let modality = 0;
+        let tempo: u16 = 13;
 
-		let call = Call::ParatensorModule(ParatensorCall::sudo_add_network{netuid, modality});
+		let call = Call::ParatensorModule(ParatensorCall::sudo_add_network{netuid, tempo, modality});
 
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
@@ -29,12 +33,28 @@ fn test_add_network() {
 	new_test_ext().execute_with(|| {
 
         let modality = 0;
+        let tempo: u16 = 13;
         //
-		add_network(10, modality);
+		add_network(10, tempo, modality);
         assert_eq!(ParatensorModule::get_number_of_subnets(), 1);
         //
-        add_network( 20, modality);
+        add_network( 20, tempo, modality);
         assert_eq!(ParatensorModule::get_number_of_subnets(), 2);
+
+	});
+}
+
+#[test]
+fn test_add_network_check_tempo() {
+	new_test_ext().execute_with(|| {
+
+        let modality = 0; //Err(Error::<Test>::NonAssociatedColdKey.into()))
+        let tempo: u16 = 13;
+        //
+        assert_eq!(ParatensorModule::get_tempo(1), 0);
+
+		add_network(1, tempo, modality);
+        assert_eq!(ParatensorModule::get_tempo(1), 13);
 
 	});
 }
@@ -47,8 +67,9 @@ fn test_remove_priority_for_network() {
         let netuid: u16 = 1;
         let weights_keys: Vec<u16> = vec![];
 		let weight_values: Vec<u16> = vec![];
+        let tempo: u16 = 13;
 
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
         //
         register_ok_neuron( 1, 55, 66, 0);
         let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
@@ -69,8 +90,9 @@ fn test_clear_min_allowed_weight_for_network() {
 
         let netuid: u16 = 1;
         let min_allowed_weight = 2;
+        let tempo: u16 = 13;
 
-        add_network(netuid, 0);
+        add_network(netuid, tempo, 0);
         //
 		register_ok_neuron( 1, 55, 66, 0);
         //
@@ -89,7 +111,10 @@ fn test_remove_uid_for_network() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
-        add_network(netuid, 0);
+        let mut result = 00;
+        let tempo: u16 = 13;
+
+        add_network(netuid, tempo, 0);
         //
 		register_ok_neuron( 1, 55, 66, 0);
         let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
@@ -101,7 +126,7 @@ fn test_remove_uid_for_network() {
         //
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         //
-        let result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
+        result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
         assert_eq!(result, 00);
 
 	});
@@ -113,8 +138,9 @@ fn test_remove_difficulty_for_network() {
 
         let netuid: u16 = 1;
         let difficulty: u64 = 10;
+        let tempo: u16 = 13;
 
-        add_network(netuid, 0);
+        add_network(netuid, tempo, 0);
         //
 		register_ok_neuron( 1, 55, 66, 0);
         //
@@ -134,8 +160,9 @@ fn test_remove_network_for_all_hotkeys() {
 
         let netuid: u16 = 1;
         let test: Vec<u16>= vec![];
+        let tempo: u16 = 13;
 
-        add_network(netuid, 0);
+        add_network(netuid, tempo, 0);
         //
 		register_ok_neuron( 1, 55, 66, 0);
         register_ok_neuron( 1, 77, 88, 65536);
@@ -157,8 +184,9 @@ fn test_network_set_default_value_for_other_parameters() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
+        let tempo: u16 = 13;
 
-        add_network(netuid, 0);
+        add_network(netuid, tempo, 0);
         //
         assert_eq!(ParatensorModule::get_min_allowed_weights(netuid), 0);
         assert_eq!(ParatensorModule::get_emission_ratio(netuid), 0);
@@ -167,5 +195,71 @@ fn test_network_set_default_value_for_other_parameters() {
         assert_eq!(ParatensorModule::get_difficulty_as_u64(netuid), 10000);
 		assert_eq!(ParatensorModule::get_immunity_period(netuid), 2);
         
+	});
+}
+// --- Set Emission Ratios Tests
+#[test]
+fn test_network_set_emission_ratios_dispatch_info_ok() {
+	new_test_ext().execute_with(|| {
+        let emission_rates: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
+
+		let call = Call::ParatensorModule(ParatensorCall::sudo_set_emission_ratio{emission_rates});
+
+		assert_eq!(call.get_dispatch_info(), DispatchInfo {
+			weight: 0,
+			class: DispatchClass::Normal,
+			pays_fee: Pays::No
+		});
+	});
+}
+
+#[test]
+fn test_network_set_emission_ratios_ok() {
+	new_test_ext().execute_with(|| {
+
+        let emission_rateio: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
+
+        add_network(1, 13, 0);
+        add_network(2, 8, 0);
+        //
+        assert_ok!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio));
+	});
+}
+
+#[test]
+fn test_network_set_emission_ratios_fail_summation() {
+	new_test_ext().execute_with(|| {
+
+        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
+
+        add_network(1, 13, 0);
+        add_network(2, 8, 0);
+        //
+        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::InvalidEmissionRatios.into()) );
+	});
+}
+
+#[test]
+fn test_network_set_emission_ratios_fail_nets() {
+	new_test_ext().execute_with(|| {
+
+        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
+
+        add_network(1, 13, 0);
+        //
+        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionRatiosDoesNotMatchNetworks.into()) );
+	});
+}
+
+#[test]
+fn test_network_set_emission_ratios_fail_net() {
+	new_test_ext().execute_with(|| {
+
+        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
+
+        add_network(1, 13, 0);
+        add_network(3, 3, 0);
+        //
+        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionRatiosDoesNotMatchNetworks.into()) );
 	});
 }

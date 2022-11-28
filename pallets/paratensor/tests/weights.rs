@@ -39,6 +39,7 @@ fn set_weights_ok_no_weights() {
 		let hotkey_account_id:u64 = 55; // Arbitrary number
 		let initial_stake = 10000;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 
 		let weights_keys : Vec<u16> = vec![];
 		let weight_values : Vec<u16> = vec![];
@@ -48,7 +49,7 @@ fn set_weights_ok_no_weights() {
 		let expect_total_stake:u64 = 10000; // The total stake should remain the same
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		// Let's subscribe a new neuron to the chain
 		register_ok_neuron( netuid, hotkey_account_id, 66, 0);
@@ -113,8 +114,9 @@ fn test_weights_err_weights_vec_not_equal_size() {
 	new_test_ext().execute_with(|| {
         let hotkey_account_id:u64 = 55;
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 
     	register_ok_neuron(1, hotkey_account_id, 66, 0);
 
@@ -132,8 +134,9 @@ fn test_weights_err_has_duplicate_ids() {
 	new_test_ext().execute_with(|| {
     	
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 
 		register_ok_neuron( 1, 666, 77, 0);
 
@@ -202,8 +205,9 @@ fn test_set_weights_err_invalid_uid() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( 1, 55, 66, 0);
 		let weight_keys : Vec<u16> = vec![9999]; // Does not exist
@@ -221,8 +225,9 @@ fn test_set_weight_not_enough_values() {
 	new_test_ext().execute_with(|| {
         
 		let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron(1, 1, 2, 100000);
 		register_ok_neuron(1, 3, 4, 300000);

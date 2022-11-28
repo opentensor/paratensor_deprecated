@@ -29,10 +29,11 @@ fn test_add_stake_ok_no_emission() {
 		let hotkey_account_id = 533453;
 		let coldkey_account_id = 55453;
         let netuid : u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		// Subscribe hotkey
 		register_ok_neuron( netuid, hotkey_account_id, coldkey_account_id, start_nonce);
@@ -100,10 +101,11 @@ fn test_add_stake_err_neuron_does_not_belong_to_coldkey() {
 		let hotkey_id = 54544;
 		let other_cold_key = 99498;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce : u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -119,10 +121,11 @@ fn test_add_stake_err_not_enough_belance() {
 		let coldkey_id = 544;
 		let hotkey_id = 54544;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -161,10 +164,11 @@ fn test_remove_stake_ok_no_emission() {
 		let hotkey_account_id = 4968585;
 		let amount = 10000;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		// Let's spin up a neuron
 		register_ok_neuron( netuid, hotkey_account_id, coldkey_account_id, start_nonce);
@@ -217,10 +221,11 @@ fn test_remove_stake_err_hotkey_does_not_belong_to_coldkey() {
 		let hotkey_id = 54544;
 		let other_cold_key = 99498;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -237,10 +242,11 @@ fn test_remove_stake_no_enough_stake() {
 		let hotkey_id = 54544;
 		let amount = 10000;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -293,10 +299,11 @@ fn test_add_stake_to_hotkey_account_ok() {
 		let coldkey_id = 5443433;
 		let amount: u64 = 10000;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -323,10 +330,11 @@ fn test_remove_stake_from_hotkey_account() {
 		let coldkey_id = 5443433;
 		let amount: u64 = 10000;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -356,10 +364,11 @@ fn test_remove_stake_from_hotkey_account_registered_in_various_networks() {
 		let amount: u64 = 10000;
         let netuid: u16 = 1;
 		let netuid_ex = 2;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 		//
-		add_network(netuid, 0);
-		add_network(netuid_ex, 0);
+		add_network(netuid, tempo, 0);
+		add_network(netuid_ex, tempo, 0);
 		//
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		register_ok_neuron( netuid_ex, hotkey_id, coldkey_id, 48141209);
@@ -492,10 +501,11 @@ fn test_hotkey_belongs_to_coldkey_ok() {
         let hotkey_id = 4434334;
 		let coldkey_id = 34333;
         let netuid: u16 = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		assert_eq!(ParatensorModule::get_coldkey_for_hotkey(&hotkey_id), coldkey_id);
@@ -537,10 +547,11 @@ fn test_has_enough_stake_yes() {
 		let coldkey_id = 87989;
 		let intial_amount = 10000;
         let netuid = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
@@ -558,10 +569,11 @@ fn test_has_enough_stake_no() {
 		let coldkey_id = 87989;
 		let intial_amount = 0;
         let netuid = 1;
+		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
 
 		//add network
-		add_network(netuid, 0);
+		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, intial_amount);
