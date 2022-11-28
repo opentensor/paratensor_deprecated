@@ -147,6 +147,12 @@ impl<T: Config> Pallet<T> {
     pub fn get_activity_cutoff(netuid: u16) -> u16{
         ActivityCutoff::<T>::get(netuid)
     }
+    pub fn get_kappa(netuid: u16) -> u16{
+        Kappa::<T>::get(netuid)
+    }
+    pub fn get_rho(netuid: u16) -> u16{
+        Rho::<T>::get(netuid)
+    }
     pub fn get_max_allowed_max_min_ratio(netuid: u16) -> u16{
         MaxAllowedMaxMinRatio::<T>::get(netuid)
     }

@@ -30,7 +30,7 @@ mod serving;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::{DispatchResult, StorageMap};
-use frame_support::{pallet_prelude::*, Identity};
+	use frame_support::{pallet_prelude::*, Identity};
 	use frame_system::pallet_prelude::*;
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;

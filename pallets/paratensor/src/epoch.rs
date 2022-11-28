@@ -49,8 +49,8 @@ impl<T: Config> Pallet<T> {
 
         // Compute consensus.
         let one: I32F32 = I32F32::from_num(1.0); 
-        let rho: I32F32 = Self::get_rho( netuid );
-        let kappa: I32F32 = Self::get_kappa( netuid );
+        let rho: I32F32 = Self::get_float_rho( netuid );
+        let kappa: I32F32 = Self::get_float_kappa( netuid );
         let exp_trust: Vec<I32F32> = trust.iter().map( |t|  exp( -rho * (t - kappa) ).expect("") ).collect();
         let consensus: Vec<I32F32> = exp_trust.iter().map( |t|  one /(one + t) ).collect();
         if debug { if_std! { println!( "C:\n{:?}\n", consensus.clone() );}}
@@ -119,8 +119,8 @@ impl<T: Config> Pallet<T> {
     pub fn set_emission( netuid:u16, neuron_uid:u16, emission:u64) { Emission::<T>::insert( netuid, neuron_uid, emission ) }
     pub fn set_bonds( netuid:u16, neuron_uid:u16, bonds:Vec<(u16,u16)>) { Bonds::<T>::insert( netuid, neuron_uid, bonds ) }
 
-    pub fn get_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Rho::<T>::get( netuid ) )  }
-    pub fn get_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Kappa::<T>::get( netuid ) ) / I32F32::from_num( u16::MAX ) }
+    pub fn get_float_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_rho( netuid ) )  }
+    pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
     pub fn get_rank( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
