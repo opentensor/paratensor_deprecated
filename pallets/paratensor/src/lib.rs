@@ -224,12 +224,6 @@ use frame_support::{pallet_prelude::*, Identity};
 	#[pallet::storage]
 	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
 
-	/// ---- SingleMap Network UID --> Rho
-	#[pallet::type_value]
-	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
-	#[pallet::storage]
-	pub type Rho<T> = StorageValue<_, u16, ValueQuery, DefaultRho<T> >;
-
 	/// ---- SingleMap Network UID --> validator Exclude Quantile
 	#[pallet::type_value]
 	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
@@ -336,6 +330,12 @@ use frame_support::{pallet_prelude::*, Identity};
 	pub fn DefaultDifficulty<T: Config>() -> u64 {T::InitialDifficulty::get()}
 	#[pallet::storage]
 	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
+
+	/// ---- SingleMap Network UID --> Rho
+	#[pallet::type_value]
+	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
+	#[pallet::storage]
+	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
 
 	/// --- SingleMap Network UID ---> Kappa
 	#[pallet::type_value]
@@ -1126,7 +1126,6 @@ use frame_support::{pallet_prelude::*, Identity};
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
-		///     TODO( Saeideh ): This needs to be added.
 		/// 	* `netuid` (u16):
 		/// 		- The network id to set rho.
 		///
@@ -1136,11 +1135,12 @@ use frame_support::{pallet_prelude::*, Identity};
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_rho ( 
 			origin:OriginFor<T>, 
+			netuid: u16,
 			rho: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
-			Rho::<T>::put(rho);
-			Self::deposit_event( Event::RhoSet( rho) );
+			Rho::<T>::insert(netuid, rho);
+			Self::deposit_event( Event::RhoSet( rho ) );
 			Ok(())
 		}
 

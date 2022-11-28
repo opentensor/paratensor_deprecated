@@ -141,17 +141,11 @@ impl<T: Config> Pallet<T> {
     pub fn set_min_allowed_weights( netuid: u16, min_allowed_weights: u16 ) {
 		MinAllowedWeights::<T>::insert(netuid, min_allowed_weights )
 	}
-    pub fn get_rho() -> u16 {
-        Rho::<T>::get()
-    }
     pub fn  get_bonds_moving_average(netuid: u16) -> u64 {
         BondsMovingAverage::<T>::get(netuid)
     }
     pub fn get_activity_cutoff(netuid: u16) -> u16{
         ActivityCutoff::<T>::get(netuid)
-    }
-    pub fn get_kappa(netuid: u16) -> u16{
-        Kappa::<T>::get(netuid)
     }
     pub fn get_max_allowed_max_min_ratio(netuid: u16) -> u16{
         MaxAllowedMaxMinRatio::<T>::get(netuid)

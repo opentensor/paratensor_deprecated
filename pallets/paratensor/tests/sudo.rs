@@ -7,9 +7,10 @@ use frame_support::sp_runtime::DispatchError;
 #[test]
 fn test_sudo_set_rho() {
 	new_test_ext().execute_with(|| {
+        let netuid: u16 = 10;
         let rho: u16 = 11;
-		assert_ok!(ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), rho));
-        assert_eq!(ParatensorModule::get_rho(), rho);
+		assert_ok!(ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid, rho));
+        assert_eq!(ParatensorModule::get_rho(netuid), rho);
     });
 }
 
