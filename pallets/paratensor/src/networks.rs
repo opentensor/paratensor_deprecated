@@ -1,14 +1,9 @@
 use super::*;
-use frame_support::assert_ok;
-//use frame_support::pallet_prelude::StorageMap;
 use frame_support::{sp_std::vec};
 use sp_std::vec::Vec;
 use crate::system::ensure_root;
 use frame_support::storage::IterableStorageMap;
 use frame_support::storage::IterableStorageDoubleMap;
-use frame_support::{pallet_prelude::StorageMap, Identity};
-use sp_std::if_std;
-
 
 impl<T: Config> Pallet<T> { 
     pub fn do_add_network(origin: T::Origin, netuid: u16, tempo: u16, modality: u8) -> dispatch::DispatchResult{
@@ -37,6 +32,7 @@ impl<T: Config> Pallet<T> {
         NetworksAdded::<T>::insert(netuid, true);
 
         // 5. Add default value for all other parameters
+        // TODO(SAD): make this a function.
         if !MinAllowedWeights::<T>::contains_key(netuid)
             { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid));}
         
@@ -192,7 +188,7 @@ impl<T: Config> Pallet<T> {
     pub fn if_sum_emission_ratios(emission_ratios: &Vec<(u16, u64)>) -> bool{
         let mut emission_ratios_sum: u64 = 0;
         
-        for (netuid_i, emission_i) in emission_ratios.iter(){ 
+        for (_, emission_i) in emission_ratios.iter(){ 
             emission_ratios_sum = emission_ratios_sum + emission_i;
         } 
         if emission_ratios_sum == BlockEmission::<T>::get() {return true;}
@@ -201,18 +197,18 @@ impl<T: Config> Pallet<T> {
 
     pub fn if_emission_ratios_match(emission_ratios: &Vec<(u16, u64)>) -> bool{ 
         
-        let totalNets = TotalNetworks::<T>::get();
+        let tota_nets = TotalNetworks::<T>::get();
         let mut nets: Vec<u16> = vec![];
 
         for (netuid_j, _) in emission_ratios.iter() {nets.push(*netuid_j);} 
 
-        if nets.len() as u16 != totalNets {return false;}
+        if nets.len() as u16 != tota_nets {return false;}
         
         for (uid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16 >>::iter() {
             if !nets.contains(&uid_i) {return false;}  
 
         }
-        for (i, val) in nets.iter().enumerate(){
+        for (_, val) in nets.iter().enumerate(){
             if NetworksAdded::<T>::get(val) == false {return false;}
         }
         return true;

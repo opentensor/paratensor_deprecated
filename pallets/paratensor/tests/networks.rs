@@ -2,10 +2,7 @@ mod mock;
 use mock::*;
 use pallet_paratensor::{Error};
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
-use frame_support::{assert_ok};
-use sp_runtime::DispatchError;
 use frame_system::Config;
-use sp_core::U256;
 use frame_support::{sp_std::vec};
 
 /*TO DO SAM: write test for LatuUpdate after it is set */
