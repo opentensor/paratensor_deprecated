@@ -28,7 +28,8 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
         // Acess network bonds row normalized.
-        let bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
+        let mut bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
+        inplace_row_normalize( &mut bonds );
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute ranks.
@@ -273,6 +274,16 @@ pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
     if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
     for i in 0..x.len() {
         x[i] = x[i]/x_sum;
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
+    for i in 0..x.len() {
+        let row_sum: I32F32 = x[i].iter().sum();
+        if row_sum > I32F32::from_num( 0.0 as f32 ) {
+            x[i].iter_mut().for_each(|x_ij| *x_ij /= row_sum);
+        }
     }
 }
 
