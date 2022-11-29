@@ -211,7 +211,7 @@ impl<T: Config> Pallet<T> {
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16 ) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
                     bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
                 }
             }
@@ -224,7 +224,7 @@ impl<T: Config> Pallet<T> {
         let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
                     bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
                 }
             }
