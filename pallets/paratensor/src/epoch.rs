@@ -145,7 +145,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_active_stake( netuid:u16 ) -> Vec<I32F32> {
         let block: u64 = Self::get_current_block_as_u64();
-        let activity_cutoff: u16 = Self::get_activity_cutoff( netuid );
+        let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
         let mut stake: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ]; 
         for neuron_uid in 0..n {
@@ -153,7 +153,7 @@ impl<T: Config> Pallet<T> {
                 let hotkey: T::AccountId = Keys::<T>::get( netuid, neuron_uid as u16 );
                 if Stake::<T>::contains_key( hotkey.clone() ) {
                     let last_update: u64 = Self::get_last_update( netuid, neuron_uid as u16 );
-                    if block - last_update < activity_cutoff as u64 {
+                    if block - last_update < activity_cutoff {
                         stake[neuron_uid as usize] = I32F32::from_num( Stake::<T>::get( hotkey ) );
                     } // else stake=0 for inactive uid
                 }
