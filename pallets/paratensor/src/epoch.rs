@@ -192,7 +192,7 @@ impl<T: Config> Pallet<T> {
             let last_update: u64 = LastUpdate::<T>::get( netuid, uid_i as u16 );
             for (uid_j, weight_ij) in weights_i.iter() {
                 let block_at_registration: u64 = BlockAtRegistration::<T>::get( *uid_j as u16 );
-                if last_update < block_at_registration || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
+                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *weight_ij );
                 }
             }
