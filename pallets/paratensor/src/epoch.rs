@@ -27,16 +27,6 @@ impl<T: Config> Pallet<T> {
         let weights: Vec<Vec<I32F32>> = Self::get_prunned_weights( netuid );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
-        // Access network bonds column normalized.
-        let mut bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
-        inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
-        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
-
-        // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
-        inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
-        if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
-
         // Compute ranks.
         let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
         inplace_normalize( &mut ranks );
@@ -66,14 +56,24 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut incentive );
         if debug { if_std! { println!( "I:\n{:?}\n", incentive.clone() );}}
 
-        // Compute dividends.
-        let dividends: Vec<I32F32> = matmul( &bonds, &incentive );
-        if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
+        // Access network bonds column normalized.
+        let mut bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
+        inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
+
+        // Compute bonds delta column normalized.
+        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
+        inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
     
         // Compute bonds moving average.
-        let alpha: I32F32 = I32F32::from_num( 0.9 );
-        let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &weights, &bonds, alpha );
+        let alpha: I32F32 = I32F32::from_num( 0.1 );
+        let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
+
+        // Compute dividends.
+        let dividends: Vec<I32F32> = matmul( &ema_bonds, &incentive );
+        if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
 
         // Compute emission scores.
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
@@ -401,6 +401,13 @@ pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32,
 }
 
 #[allow(dead_code)]
+/// Matrix exponential moving average: alpha * a_ij + one_minus_alpha * b_ij
+///
+/// # Arguments
+///
+/// * `a` - new observation
+/// * `b` - old observation
+/// * `alpha` - EMA coefficient, typically small, higher alpha discounts older observations faster
 pub fn mat_ema( a: &Vec<Vec<I32F32>>, b: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
     if a.len() == 0 { return vec![vec![];1] }
     if a[0].len() == 0 { return vec![vec![];1] }
