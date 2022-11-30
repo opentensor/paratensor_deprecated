@@ -192,7 +192,8 @@ impl<T: Config> Pallet<T> {
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
             let last_update: u64 = Self::get_last_update( netuid, uid_i );
             for (uid_j, weight_ij) in weights_i.iter() {
-                if Self::get_block_at_registration( *uid_j ) < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
+                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
+                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *weight_ij );
                 }
             }
@@ -226,8 +227,10 @@ impl<T: Config> Pallet<T> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+            let last_update: u64 = Self::get_last_update( netuid, uid_i );
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
+                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
                 }
             }
@@ -239,8 +242,10 @@ impl<T: Config> Pallet<T> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
         let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
         for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+            let last_update: u64 = Self::get_last_update( netuid, uid_i );
             for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
+                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
+                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
                 }
             }
