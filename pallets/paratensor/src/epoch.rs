@@ -189,8 +189,10 @@ impl<T: Config> Pallet<T> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize;
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ];
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
+            let last_update: u64 = LastUpdate::<T>::get( netuid, uid_i as u16 );
             for (uid_j, weight_ij) in weights_i.iter() {
-                if !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
+                let block_at_registration: u64 = BlockAtRegistration::<T>::get( *uid_j as u16 );
+                if last_update < block_at_registration || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *weight_ij );
                 }
             }
