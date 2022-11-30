@@ -27,9 +27,9 @@ impl<T: Config> Pallet<T> {
         let weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
-        // Acess network bonds row normalized.
+        // Access network bonds column normalized.
         let mut bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
-        inplace_row_normalize( &mut bonds );
+        inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute ranks.
@@ -283,6 +283,26 @@ pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
         let row_sum: I32F32 = x[i].iter().sum();
         if row_sum > I32F32::from_num( 0.0 as f32 ) {
             x[i].iter_mut().for_each(|x_ij| *x_ij /= row_sum);
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
+    if x.len() == 0 { return }
+    if x[0].len() == 0 { return }
+    let cols = x[0].len();
+    let mut col_sum: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); cols ];
+    for i in 0..x.len() {
+        assert_eq!( x[i].len(), cols );
+        for j in 0..cols {
+            col_sum[j] += x[i][j];
+        }
+    }
+    for j in 0..cols {
+        if col_sum[j] == I32F32::from_num( 0.0 as f32 ) { continue }
+        for i in 0..x.len() {
+            x[i][j] /= col_sum[j];
         }
     }
 }
