@@ -123,6 +123,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_float_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_rho( netuid ) )  }
     pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
     pub fn get_last_update( netuid:u16, neuron_uid: u16 ) -> u64 { LastUpdate::<T>::get( netuid, neuron_uid ) }
+    pub fn get_block_at_registration( neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get( neuron_uid ) }
     pub fn get_rank( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
@@ -189,10 +190,9 @@ impl<T: Config> Pallet<T> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize;
         let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ];
         for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-            let last_update: u64 = LastUpdate::<T>::get( netuid, uid_i as u16 );
+            let last_update: u64 = Self::get_last_update( netuid, uid_i );
             for (uid_j, weight_ij) in weights_i.iter() {
-                let block_at_registration: u64 = BlockAtRegistration::<T>::get( *uid_j as u16 );
-                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
+                if Self::get_block_at_registration( *uid_j ) < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
                     weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *weight_ij );
                 }
             }
