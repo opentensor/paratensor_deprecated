@@ -32,6 +32,11 @@ impl<T: Config> Pallet<T> {
         inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
+        // Compute bonds delta column normalized.
+        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
+        inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
+
         // Compute ranks.
         let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
         inplace_normalize( &mut ranks );
@@ -325,6 +330,20 @@ pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
             x[i][j] /= col_sum[j];
         }
     }
+}
+
+#[allow(dead_code)]
+/// matrix-vector hadamard product
+pub fn hadamard( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<Vec<I32F32>> {
+    if w.len() == 0 { return vec![ vec![] ] }
+    if w[0].len() == 0 { return vec![ vec![] ] }
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num( 0.0 ); x.len() ]; w[0].len() ];
+    for (i, w_row) in w.iter().enumerate() {
+        for (j, x_i) in x.iter().enumerate() {
+            result [ i ][ j ] = x_i * w_row [ j ]
+        }
+    }
+    result
 }
 
 #[allow(dead_code)]
