@@ -18,8 +18,12 @@ impl<T: Config> Pallet<T> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
 
-        // Access network active stake as normalized vector.
-        let mut stake: Vec<I32F32> = Self::get_active_stake( netuid );
+        // Active vector = 1.0 if block - last_update < activity_cutoff.
+        let active: Vec<I32F32> = Self::get_active( netuid );
+        if debug { if_std! { println!( "A:\n{:?}\n", active.clone() );}}
+
+        // Access network stake as normalized vector.
+        let mut stake: Vec<I32F32> = Self::get_stake( netuid );
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
@@ -150,23 +154,20 @@ impl<T: Config> Pallet<T> {
         stake
     }
 
-    pub fn get_active_stake( netuid:u16 ) -> Vec<I32F32> {
+    pub fn get_active( netuid:u16 ) -> Vec<I32F32> {
         let block: u64 = Self::get_current_block_as_u64();
         let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut stake: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ]; 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut active: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ];
         for neuron_uid in 0..n {
             if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                let hotkey: T::AccountId = Keys::<T>::get( netuid, neuron_uid as u16 );
-                if Stake::<T>::contains_key( hotkey.clone() ) {
-                    let last_update: u64 = Self::get_last_update( netuid, neuron_uid as u16 );
-                    if block - last_update < activity_cutoff {
-                        stake[neuron_uid as usize] = I32F32::from_num( Stake::<T>::get( hotkey ) );
-                    } // else stake=0 for inactive uid
+                let last_update: u64 = Self::get_last_update( netuid, neuron_uid as u16 );
+                if block - last_update < activity_cutoff {
+                    active[neuron_uid as usize] = I32F32::from_num( 1.0 );
                 }
             }
         }
-        stake
+        active
     }
 
     pub fn get_weights_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
