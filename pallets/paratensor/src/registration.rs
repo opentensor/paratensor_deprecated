@@ -152,7 +152,7 @@ impl<T: Config> Pallet<T> {
         };
         NeuronsMetaData::<T>::insert(uid_to_set_in_metagraph, neuron_metadata);
         Active::<T>::insert(netuid, uid_to_set_in_metagraph, true); //set neuron active
-        BlockAtRegistration::<T>::insert( uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
+        BlockAtRegistration::<T>::insert( netuid, uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
         Self::add_global_account(&hotkey, &coldkey);
         Self::increment_subnets_for_hotkey(netuid, &hotkey);
         Self::add_subnetwork_account(netuid, uid_to_set_in_metagraph, &hotkey);

@@ -3,6 +3,7 @@ use frame_system::Config;
 mod mock;
 use mock::*;
 use frame_support::sp_runtime::DispatchError;
+use substrate_fixed::types::I32F32;
 
 #[test]
 fn test_sudo_set_rho() {
@@ -85,10 +86,13 @@ fn test_sudo_set_activity_cutoff() {
 #[test]
 fn test_sudo_set_kappa() {
 	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let kappa: u16 = 11;
+        let netuid: u16 = 1;
+        let kappa: u16 = 5;
+        
 		assert_ok!(ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::root(), netuid, kappa));
-        assert_eq!(ParatensorModule::get_kappa(netuid), kappa);
+
+        let value  =  ( ParatensorModule::get_kappa(netuid)  *  I32F32::from_num( u16::MAX )).to_num::<u16>() + 1;
+        assert_eq!(value , kappa); 
     });
 }
 

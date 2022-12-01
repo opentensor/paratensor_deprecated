@@ -230,14 +230,6 @@ pub mod pallet {
 	#[pallet::getter(fn usedwork)]
     pub(super) type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 
-	/// ---- StorageItem Global Default Block Registration
-	#[pallet::type_value] 
-	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
-
-	#[pallet::storage]
-	#[pallet::getter(fn block_at_registration)]
-    pub(super) type BlockAtRegistration<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
-
 	#[pallet::type_value] 
 	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
 	#[pallet::storage]
@@ -434,6 +426,14 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
 
+	//// ---- DoubleMap Network UID --> Neuron UID --> Block Registration
+	#[pallet::type_value] 
+	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
+	
+	#[pallet::storage]
+	#[pallet::getter(fn block_at_registration)]
+	pub(super) type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
+
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
 	/// =======================================
@@ -444,11 +444,10 @@ pub mod pallet {
 	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
 	/// ---- SingleMap Network UID --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
-	/// TODO(Saeideh): Lets increase the resolution on this item from u8 to u16 
 	#[pallet::type_value] 
-	pub fn DefaultModality<T:Config>() -> u8 { 0 }
+	pub fn DefaultModality<T:Config>() -> u16 { 0 }
 	#[pallet::storage]
-	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u8, ValueQuery, DefaultModality<T>> ;
+	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
 
 	/// ---- DoubleMap Network UID --> Neuron UID --> Hotkey
 	#[pallet::type_value] 
@@ -548,7 +547,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// --- Event created when a new network is added
-		NetworkAdded(u16, u8),
+		NetworkAdded(u16, u16),
 
 		/// --- Event created when a network is removed
 		NetworkRemoved(u16),
@@ -965,7 +964,7 @@ pub mod pallet {
 			ip: u128, 
 			port: u16, 
 			ip_type: u8, 
-			modality: u8 
+			modality: u16 
 		) -> DispatchResult {
 			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, modality ) 
 		}
@@ -1169,7 +1168,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// TODO( Saeideh ): This needs to be network specific.
 		/// ---- Sudo set rho.
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -1515,7 +1513,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			netuid: u16,
 			tempo: u16,
-			modality: u8
+			modality: u16
 		)-> DispatchResult {
 			Self::do_add_network(origin, netuid, tempo, modality)
 		}

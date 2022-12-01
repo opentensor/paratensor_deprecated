@@ -67,7 +67,40 @@ fn test_add_stake_ok_no_emission() {
 #[test]
 fn test_dividends_with_run_to_block() {
 	new_test_ext().execute_with(|| {
-        /*TO DO */
+		let neuron_src_hotkey_id = 1;
+		let neuron_dest_hotkey_id = 2;
+		let coldkey_account_id = 667;
+		let netuid: u16 = 1;
+
+		let initial_stake:u64 = 5000;
+
+		//add network
+		add_network(netuid, 13, 0);
+
+		// Subscribe neuron, this will set a self weight
+		ParatensorModule::set_max_registratations_per_block( 3 );
+		ParatensorModule::set_max_allowed_uids(1, 5);
+		
+		register_ok_neuron( netuid, 0, coldkey_account_id, 2112321);
+		register_ok_neuron(netuid, neuron_src_hotkey_id, coldkey_account_id, 192213123);
+		register_ok_neuron(netuid, neuron_dest_hotkey_id, coldkey_account_id, 12323);
+
+		// Add some stake to the hotkey account, so we can test for emission before the transfer takes place
+		ParatensorModule::add_stake_to_neuron_hotkey_account(&neuron_src_hotkey_id, initial_stake);
+
+		// Check if the initial stake has arrived
+		assert_eq!( ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_src_hotkey_id), initial_stake );
+
+		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 3 );
+
+		// Run a couple of blocks to check if emission works
+		run_to_block( 2 );
+
+		// Check if the stake is equal to the inital stake + transfer
+		assert_eq!(ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_src_hotkey_id), initial_stake);
+
+		// Check if the stake is equal to the inital stake + transfer
+		assert_eq!(ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_dest_hotkey_id), 0);
     });
 }
 
@@ -83,14 +116,16 @@ fn test_add_stake_err_signature() {
 }
 
 #[test]
-fn test_add_stake_err_not_active() {
+fn test_add_stake_not_registered_key_pair() {
 	new_test_ext().execute_with(|| {
 		let coldkey_account_id = 435445; // Not active id
 		let hotkey_account_id = 54544;
 		let amount = 1337;
 
-		let result = ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount);
-		assert_eq!(result, Err(Error::<Test>::NotRegistered.into()));
+		// Put the balance on the account
+		ParatensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 1800);
+		
+		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount));
 	});
 }
 
@@ -199,18 +234,6 @@ fn test_remove_stake_err_signature() {
 
 		let result = ParatensorModule::remove_stake(<<Test as Config>::Origin>::none(), hotkey_account_id, amount);
 		assert_eq!(result, DispatchError::BadOrigin.into());
-	});
-}
-
-#[test]
-fn test_remove_stake_err_not_active() {
-	new_test_ext().execute_with(|| {
-        let coldkey_account_id = 435445;
-		let hotkey_account_id = 54544; // Not active id
-		let amount = 1337;
-
-		let result = ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount);
-		assert_eq!(result, Err(Error::<Test>::NotRegistered.into()));
 	});
 }
 
