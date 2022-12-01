@@ -18,9 +18,17 @@ impl<T: Config> Pallet<T> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
 
+        // Last registered vector.
+        let last_registered: Vec<u64> = Self::get_last_registered( netuid );
+        if debug { if_std! { println!( "Last registered:\n{:?}\n", last_registered.clone() );}}
+
+        // Last updated vector.
+        let last_updated: Vec<u64> = Self::get_last_updated( netuid );
+        if debug { if_std! { println!( "Last updated:\n{:?}\n", last_updated.clone() );}}
+
         // Active vector = 1.0 if block - last_update < activity_cutoff.
         let active: Vec<I32F32> = Self::get_active( netuid );
-        if debug { if_std! { println!( "A:\n{:?}\n", active.clone() );}}
+        if debug { if_std! { println!( "Active:\n{:?}\n", active.clone() );}}
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
@@ -193,19 +201,26 @@ impl<T: Config> Pallet<T> {
         weights
     } 
 
-    pub fn get_prunned_weights( netuid:u16 ) -> Vec<Vec<I32F32>> { 
+    pub fn get_last_registered( netuid:u16 ) -> Vec<u64> { 
         let n: usize = Self::get_subnetwork_n( netuid ) as usize;
-        let mut weights: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ];
-        for ( uid_i, weights_i ) in < Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-            let last_update: u64 = Self::get_last_update( netuid, uid_i );
-            for (uid_j, weight_ij) in weights_i.iter() {
-                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
-                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
-                    weights [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *weight_ij );
-                }
+        let mut last_registered: Vec<u64> = vec![ 0; n ];
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                last_registered[ neuron_uid ] = Self::get_block_at_registration( neuron_uid );
             }
         }
-        weights
+        last_registered
+    }
+
+    pub fn get_last_updated( netuid:u16 ) -> Vec<u64> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut last_updated: Vec<u64> = vec![ 0; n ];
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                last_updated[ neuron_uid ] = Self::get_last_update( netuid, neuron_uid );
+            }
+        }
+        last_updated
     }
 
     pub fn get_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
