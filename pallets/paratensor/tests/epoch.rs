@@ -35,7 +35,7 @@ fn test_1_graph() {
 		assert_eq!( ParatensorModule::get_trust( netuid, uid ), u16::MAX );
 		assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), u16::MAX );
-		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 65535 );
 		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 );
 	});
 }
@@ -100,7 +100,7 @@ fn test_10_graph() {
 			assert_eq!( ParatensorModule::get_trust( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
 			assert_eq!( ParatensorModule::get_consensus( netuid, i as u16 ), 1178 ); // Note 0.0179862098 = (0.0179862098*65535) = floor( 1,178 ) which is 1 / (1 + e^(-10*(0.0999999999-0.5))
 			assert_eq!( ParatensorModule::get_incentive( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 0 ); // 0
+			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
 			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 99999999 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
 		}
 	});
