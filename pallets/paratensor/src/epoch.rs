@@ -101,7 +101,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j
-        let dividends: Vec<I32F32> = matmul( &ema_bonds, &incentive );
+        let dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
         if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
 
         // Compute emission scores.
@@ -362,12 +362,26 @@ pub fn matmul( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> 
     if matrix[0].len() == 0 { return vec![] }
     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
     for i in 0..matrix.len() {
-        // Compute ranks: r_j = SUM(i) w_ij * s_i
-        // Compute trust scores: t_j = SUM(i) w_ij * s_i
-        // [error] Compute dividends: d_i = SUM(j) b_ij * inc_j
-        // result_j = SUM(i) vector_i * matrix_ij
         for j in 0..matrix[i].len() {
+            // Compute ranks: r_j = SUM(i) w_ij * s_i
+            // Compute trust scores: t_j = SUM(i) w_ij * s_i
+            // result_j = SUM(i) vector_i * matrix_ij
             result[j] += vector[i] * matrix[i][j];
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn matmul_transpose( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    if matrix.len() == 0 { return vec![] }
+    if matrix[0].len() == 0 { return vec![] }
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            // Compute dividends: d_j = SUM(i) b_ji * inc_i
+            // result_j = SUM(i) vector_i * matrix_ji
+            result[j] += vector[i] * matrix[j][i];
         }
     }
     result
