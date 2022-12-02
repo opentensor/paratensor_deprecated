@@ -421,7 +421,7 @@ pub fn mat_ema( new: &Vec<Vec<I32F32>>, old: &Vec<Vec<I32F32>>, alpha: I32F32 ) 
     let one: I32F32 = I32F32::from_num( 1.0 );
     let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
     let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; new[0].len() ]; new.len() ]; 
-    assert!(a.len() == old.len());
+    assert!(new.len() == old.len());
     for i in 0..new.len() {
         assert!(new[i].len() == old[i].len());
         for j in 0..new[i].len() {
