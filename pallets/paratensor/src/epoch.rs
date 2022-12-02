@@ -87,7 +87,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard_mv( &weights, &stake ); // ΔB = W◦S
+        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
         inplace_mask_matrix( &updated, &mut bonds_delta );
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
@@ -341,13 +341,13 @@ pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>>
 
 #[allow(dead_code)]
 /// matrix-vector hadamard product
-pub fn hadamard_mv( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<Vec<I32F32>> {
-    if w.len() == 0 { return vec![ vec![] ] }
-    if w[0].len() == 0 { return vec![ vec![] ] }
-    let mut result: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num( 0.0 ); x.len() ]; w[0].len() ];
-    for (i, w_row) in w.iter().enumerate() {
-        for (j, x_i) in x.iter().enumerate() {
-            result [ i ][ j ] = x_i * w_row [ j ]
+pub fn hadamard( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<Vec<I32F32>> {
+    if matrix.len() == 0 { return vec![ vec![] ] }
+    if matrix[0].len() == 0 { return vec![ vec![] ] }
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num( 0.0 ); matrix[0].len() ]; matrix.len() ];
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            result[i][j] = vector[i] * matrix[i][j];
         }
     }
     result
