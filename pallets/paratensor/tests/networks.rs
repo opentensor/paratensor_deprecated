@@ -108,7 +108,7 @@ fn test_remove_uid_for_network() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
-        let mut result = 00;
+        // let mut result = 00;
         let tempo: u16 = 13;
 
         add_network(netuid, tempo, 0);
@@ -123,7 +123,7 @@ fn test_remove_uid_for_network() {
         //
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         //
-        result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
+        let result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
         assert_eq!(result, 00);
 
 	});
