@@ -46,7 +46,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Block at registration:\n{:?}\n", block_at_registration.clone() );}}
 
         // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
-        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered <= updated ).collect() ).collect();
+        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
