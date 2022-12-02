@@ -3,7 +3,7 @@ use frame_system::Config;
 mod mock;
 use mock::*;
 use frame_support::sp_runtime::DispatchError;
-use substrate_fixed::types::I32F32;
+// use substrate_fixed::types::I32F32;
 
 #[test]
 fn test_sudo_set_rho() {
