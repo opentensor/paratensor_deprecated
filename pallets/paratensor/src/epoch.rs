@@ -17,19 +17,22 @@ impl<T: Config> Pallet<T> {
 
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
+        if debug { if_std! { println!( "n:\n{:?}\n", n );}}
 
         // Get current block.
         let current_block: u64 = Self::get_current_block_as_u64();
+        if debug { if_std! { println!( "current_block:\n{:?}\n", current_block );}}
 
         // Get activity cutoff.
         let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
+        if debug { if_std! { println!( "activity_cutoff:\n{:?}\n", activity_cutoff );}}
 
         // Last update vector.
         let last_update: Vec<u64> = Self::get_last_update( netuid );
         if debug { if_std! { println!( "Last update:\n{:?}\n", last_update.clone() );}}
 
         // Active mask.
-        let active: Vec<bool> = last_update.iter().map(| updated | current_block - activity_cutoff <= *updated ).collect();
+        let active: Vec<bool> = last_update.iter().map(| updated | current_block <= *updated + activity_cutoff ).collect();
         if debug { if_std! { println!( "Active:\n{:?}\n", active.clone() );}}
 
         // Access network stake as normalized vector.
