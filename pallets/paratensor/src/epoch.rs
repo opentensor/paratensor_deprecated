@@ -46,7 +46,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Block at registration:\n{:?}\n", block_at_registration.clone() );}}
 
         // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
-        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
+        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered <= updated ).collect() ).collect();
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
@@ -54,7 +54,7 @@ impl<T: Config> Pallet<T> {
         inplace_row_normalize( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
-        // Compute ranks.
+        // Compute ranks: r_j = SUM(i) w_ij * s_i
         let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
         inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R:\n{:?}\n", ranks.clone() );}}
@@ -66,7 +66,7 @@ impl<T: Config> Pallet<T> {
         let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
         if debug { if_std! { println!( "tW:\n{:?}\n", clipped_weights.clone() );}}
 
-        // Compute trust scores.
+        // Compute trust scores: t_j = SUM(i) w_ij * s_i
         let trust: Vec<I32F32> = matmul( &clipped_weights, &stake );
         if debug { if_std! { println!( "T:\n{:?}\n", trust.clone() );}}
 
@@ -100,7 +100,7 @@ impl<T: Config> Pallet<T> {
         let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
-        // Compute dividends.
+        // Compute dividends: d_i = SUM(j) b_ij * inc_j
         let dividends: Vec<I32F32> = matmul( &ema_bonds, &incentive );
         if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
 
@@ -357,13 +357,17 @@ pub fn hadamard( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<Vec<I3
 }
 
 #[allow(dead_code)]
-pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-    if w.len() == 0 { return vec![] }
-    if w[0].len() == 0 { return vec![] }
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    for (i, w_row) in w.iter().enumerate() {
-        for (j, x_i) in x.iter().enumerate() {
-            result [ i ] += x_i * w_row [ j ] 
+pub fn matmul( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    if matrix.len() == 0 { return vec![] }
+    if matrix[0].len() == 0 { return vec![] }
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    for i in 0..matrix.len() {
+        // Compute ranks: r_j = SUM(i) w_ij * s_i
+        // Compute trust scores: t_j = SUM(i) w_ij * s_i
+        // [error] Compute dividends: d_i = SUM(j) b_ij * inc_j
+        // result_j = SUM(i) vector_i * matrix_ij
+        for j in 0..matrix[i].len() {
+            result[j] += vector[i] * matrix[i][j];
         }
     }
     result
