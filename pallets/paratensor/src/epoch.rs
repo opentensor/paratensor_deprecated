@@ -18,26 +18,37 @@ impl<T: Config> Pallet<T> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
 
-        // Last registered vector.
-        let last_registered: Vec<u64> = Self::get_last_registered( netuid );
-        if debug { if_std! { println!( "Last registered:\n{:?}\n", last_registered.clone() );}}
+        // Get current block.
+        let current_block: u64 = Self::get_current_block_as_u64();
 
-        // Last updated vector.
-        let last_updated: Vec<u64> = Self::get_last_updated( netuid );
-        if debug { if_std! { println!( "Last updated:\n{:?}\n", last_updated.clone() );}}
+        // Get activity cutoff.
+        let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
 
-        // Active vector = 1.0 if block - last_update < activity_cutoff.
-        let active: Vec<I32F32> = Self::get_active( netuid );
+        // Last update vector.
+        let last_update: Vec<u64> = Self::get_last_update( netuid );
+        if debug { if_std! { println!( "Last update:\n{:?}\n", last_update.clone() );}}
+
+        // Active mask.
+        let active: Vec<bool> = last_update.iter().map(| updated | current_block - activity_cutoff <= *updated ).collect();
         if debug { if_std! { println!( "Active:\n{:?}\n", active.clone() );}}
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
-        stake = hadamard( &active, &stake );
+        inplace_mask_vector( &active, &mut stake );
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
+        // Block at registration vector (block when each neuron was most recently registered).
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
+        if debug { if_std! { println!( "Block at registration:\n{:?}\n", block_at_registration.clone() );}}
+
+        // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
+        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
+
         // Access network weights row normalized.
-        let weights: Vec<Vec<I32F32>> = Self::get_prunned_weights( netuid );
+        let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
+        inplace_mask_matrix( &updated, &mut weights );
+        inplace_row_normalize( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
         // Compute ranks.
@@ -70,12 +81,14 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "I:\n{:?}\n", incentive.clone() );}}
 
         // Access network bonds column normalized.
-        let mut bonds: Vec<Vec<I32F32>> = Self::get_prunned_bonds_dense( netuid );
+        let mut bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
+        inplace_mask_matrix( &updated, &mut bonds );
         inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<I32F32>> = hadamard_mv( &weights, &stake ); // ΔB = W◦S
+        inplace_mask_matrix( &updated, &mut bonds_delta );
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
     
@@ -140,8 +153,6 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_float_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_rho( netuid ) )  }
     pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
-    pub fn get_last_update( netuid:u16, neuron_uid: u16 ) -> u64 { LastUpdate::<T>::get( netuid, neuron_uid ) }
-    pub fn get_block_at_registration( neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get( neuron_uid ) }
     pub fn get_rank( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
@@ -163,20 +174,26 @@ impl<T: Config> Pallet<T> {
         stake
     }
 
-    pub fn get_active( netuid:u16 ) -> Vec<I32F32> {
-        let block: u64 = Self::get_current_block_as_u64();
-        let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
+    pub fn get_block_at_registration( netuid:u16 ) -> Vec<u64> { 
         let n: usize = Self::get_subnetwork_n( netuid ) as usize;
-        let mut active: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ];
+        let mut block_at_registration: Vec<u64> = vec![ 0; n ];
         for neuron_uid in 0..n {
             if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                let last_update: u64 = Self::get_last_update( netuid, neuron_uid as u16 );
-                if block - last_update < activity_cutoff {
-                    active[neuron_uid as usize] = I32F32::from_num( 1.0 );
-                }
+                block_at_registration[ neuron_uid ] = BlockAtRegistration::<T>::get( neuron_uid as u16 );
             }
         }
-        active
+        block_at_registration
+    }
+
+    pub fn get_last_update( netuid:u16 ) -> Vec<u64> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut last_update: Vec<u64> = vec![ 0; n ];
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                last_update[ neuron_uid ] = LastUpdate::<T>::get( netuid, neuron_uid as u16 );
+            }
+        }
+        last_update
     }
 
     pub fn get_weights_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
@@ -199,28 +216,6 @@ impl<T: Config> Pallet<T> {
             }
         }
         weights
-    } 
-
-    pub fn get_last_registered( netuid:u16 ) -> Vec<u64> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
-        let mut last_registered: Vec<u64> = vec![ 0; n ];
-        for neuron_uid in 0..n {
-            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                last_registered[ neuron_uid ] = Self::get_block_at_registration( neuron_uid );
-            }
-        }
-        last_registered
-    }
-
-    pub fn get_last_updated( netuid:u16 ) -> Vec<u64> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
-        let mut last_updated: Vec<u64> = vec![ 0; n ];
-        for neuron_uid in 0..n {
-            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                last_updated[ neuron_uid ] = Self::get_last_update( netuid, neuron_uid );
-            }
-        }
-        last_updated
     }
 
     pub fn get_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
@@ -243,37 +238,7 @@ impl<T: Config> Pallet<T> {
             }
         }
         bonds
-    } 
-
-    pub fn get_prunned_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-            let last_update: u64 = Self::get_last_update( netuid, uid_i );
-            for (uid_j, bonds_ij) in bonds_i.iter() { 
-                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
-                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
-                    bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
-                }
-            }
-        }
-        bonds
-    } 
-
-    pub fn get_prunned_bonds_dense( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-            let last_update: u64 = Self::get_last_update( netuid, uid_i );
-            for (uid_j, bonds_ij) in bonds_i.iter() { 
-                let block_at_registration: u64 = Self::get_block_at_registration( *uid_j );
-                if block_at_registration < last_update || !NeuronsShouldPruneAtNextEpoch::<T>::contains_key( netuid, *uid_j as u16 ) {
-                    bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
-                }
-            }
-        }
-        bonds
-    } 
+    }
 }
 
 #[allow(dead_code)]
@@ -350,15 +315,28 @@ pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
 }
 
 #[allow(dead_code)]
-/// vector-vector hadamard product
-pub fn hadamard( x: &Vec<I32F32>, y: &Vec<I32F32> ) -> Vec<I32F32> {
-    if x.len() == 0 { return vec![] }
-    assert_eq!( x.len(), y.len() );
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    for i in 0..x.len() {
-        result[i] = x[i] * y[i];
+pub fn inplace_mask_vector( mask: &Vec<bool>, vector: &mut Vec<I32F32> ) {
+    if mask.len() == 0 { return }
+    assert_eq!( mask.len(), vector.len() );
+    for i in 0..mask.len() {
+        if !mask[i] {
+            vector[i] = I32F32::from_num( 0.0 );
+        }
     }
-    result
+}
+
+#[allow(dead_code)]
+pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>> ) {
+    if mask.len() == 0 { return }
+    if mask[0].len() == 0 { return }
+    assert_eq!( mask.len(), matrix.len() );
+    for i in 0..mask.len() {
+        for j in 0..mask[i].len() {
+            if !mask[i][j] {
+                matrix[i][j] = I32F32::from_num( 0.0 );
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
