@@ -412,20 +412,20 @@ pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32,
 ///
 /// # Arguments
 ///
-/// * `a` - new observation
-/// * `b` - old observation
+/// * `new` - new observation
+/// * `old` - old observation
 /// * `alpha` - EMA coefficient, typically small, higher alpha discounts older observations faster
-pub fn mat_ema( a: &Vec<Vec<I32F32>>, b: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
-    if a.len() == 0 { return vec![vec![];1] }
-    if a[0].len() == 0 { return vec![vec![];1] }
+pub fn mat_ema( new: &Vec<Vec<I32F32>>, old: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
+    if new.len() == 0 { return vec![vec![];1] }
+    if new[0].len() == 0 { return vec![vec![];1] }
     let one: I32F32 = I32F32::from_num( 1.0 );
     let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
-    let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; a[0].len() ]; a.len() ]; 
-    assert!(a.len() == b.len());
-    for i in 0..a.len() {
-        assert!(a[i].len() == b[i].len());
-        for j in 0..a[i].len() {
-            result[i][j] = alpha * a[i][j] + one_minus_alpha * b[i][j] 
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; new[0].len() ]; new.len() ]; 
+    assert!(a.len() == old.len());
+    for i in 0..new.len() {
+        assert!(new[i].len() == old[i].len());
+        for j in 0..new[i].len() {
+            result[i][j] = alpha * new[i][j] + one_minus_alpha * old[i][j] 
         }
     }
     result
