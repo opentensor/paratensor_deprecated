@@ -21,8 +21,8 @@ impl<T: Config> Pallet<T> {
         // 1. Check the caller signature
         let hotkey_id = ensure_signed(origin)?;
 
-        // 2. check if network exist - TO DO SAM: uncomnnet when adding network is implemented
-        //ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+        // 2. check if network exist 
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 
         // 3. Check to see that the calling neuron is in the active set.
         ensure!(Self::is_hotkey_registered(netuid, &hotkey_id), Error::<T>::NotRegistered);

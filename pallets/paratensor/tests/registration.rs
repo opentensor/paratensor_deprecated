@@ -143,36 +143,86 @@ fn test_registration_too_many_registrations_per_block() {
 
 #[test]
 fn test_registration_defaults() {
-	new_test_ext().execute_with(|| { /*TO DO: step_block calls on_initialize in the hooks that is not fully implemented yet */
-		/*let netuid: u16 = 1;
+	new_test_ext().execute_with(|| { 
+		let netuid: u16 = 1;
 		//
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(), 2 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(), 100 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 2 );
+		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
+		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 100 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
 		step_block ( 1 );
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(), 2 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(), 100 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 2 );
-		Subtensor::set_adjustment_interval( 2 );
-		Subtensor::set_target_registrations_per_interval( 2 );
-		Subtensor::set_difficulty_from_u64( 2 );
-		Subtensor::set_max_registratations_per_block( 2 );
-		assert_eq!( Subtensor::get_difficulty_as_u64(), 2 );
-		assert_eq!( Subtensor::get_target_registrations_per_interval(), 2 );
-		assert_eq!( Subtensor::get_adjustment_interval(), 2 );
-		assert_eq!( Subtensor::get_max_registratations_per_block(), 2 ); */
+		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
+		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 100 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
+		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 2 ));
+		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 3 ));
+		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 2 ));
+		ParatensorModule::set_max_registratations_per_block( 2 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
+		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 3 );
+		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 2 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 2 ); 
 	});
 }
 
 #[test]
 fn test_registration_difficulty_adjustment() {
-	/*TO DO */
+	new_test_ext().execute_with(|| { /* uncomment when epoch impl and setting difficulty is done. */
+		let netuid: u16 = 1;
+
+		//add network
+		/*add_network(netuid, 12, 0);
+		
+		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
+		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
+		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 2 ));
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
+		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 1 );
+		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 1 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
+
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 0, 1243324);
+		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 0, 2521352);
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(0), netuid, 0, nonce, work, 0, 0));
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(1), netuid, 0, nonce1, work1, 1, 1));
+		
+		assert_eq!( ParatensorModule::get_registrations_this_interval(netuid), 2 );
+		assert_eq!( ParatensorModule::get_registrations_this_block(), 2 );
+
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
+
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
+		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 2, 2413);
+		let (nonce3, work3): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 2, 1252352313);
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(2), netuid, 2, nonce2, work2, 2, 2));
+		//assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(3), netuid, 2, nonce3, work3, 3, 3));
+		
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 20000 );
+		let (nonce4, work4): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 3, 124124);
+		let (nonce5, work5): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 3, 123123124124);
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(4), netuid, 3, nonce4, work4, 4, 4));
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(5), netuid, 3, nonce5, work5, 5, 5));
+
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 40000 );
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 20000 );
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
+		step_block ( 1 );
+		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 ); */
+
+	});
 }
 
 #[test]
-fn test_registration_immunity_period() {
+fn test_registration_immunity_period() { //impl this test when epoch impl and calculating pruning score is done
 	/* TO DO */
 }
 
@@ -246,7 +296,7 @@ fn test_registration_invalid_difficulty() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
-		ParatensorModule::set_difficulty_from_u64( netuid, 18_446_744_073_709_551_615u64 );
+		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 18_446_744_073_709_551_615u64 ));
 		
 		//add network
 		add_network(netuid, tempo, 0);

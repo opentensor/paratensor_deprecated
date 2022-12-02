@@ -6,7 +6,7 @@ use frame_support::storage::IterableStorageMap;
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> { 
-    pub fn do_add_network(origin: T::Origin, netuid: u16, tempo: u16, modality: u8) -> dispatch::DispatchResult{
+    pub fn do_add_network(origin: T::Origin, netuid: u16, tempo: u16, modality: u16) -> dispatch::DispatchResult{
         /*TO DO:
         1. check if caller is sudo account
         2. check if network does not exist
@@ -218,8 +218,8 @@ impl<T: Config> Pallet<T> {
         return  SubnetworkN::<T>::contains_key(netuid);
     }
 
-    pub fn if_modality_is_valid(modality: u8) -> bool{
-        let allowed_values: Vec<u8> = vec![0, 1, 2];
+    pub fn if_modality_is_valid(modality: u16) -> bool{
+        let allowed_values: Vec<u16> = vec![0, 1, 2];
         return allowed_values.contains(&modality);
     } 
 

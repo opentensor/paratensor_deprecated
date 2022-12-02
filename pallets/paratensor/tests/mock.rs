@@ -96,7 +96,7 @@ impl system::Config for Test {
 
 parameter_types! {
 	pub const InitialMinAllowedWeights: u16 = 0;
-	pub const InitialEmissionRatio: u16 = 0;
+	pub const InitialEmissionValue: u16 = 0;
 	pub const InitialMaxWeightsLimit: u16 = u16::MAX;
 	pub const InitialMaxAllowedMaxMinRatio: u16 = 0;
 	pub BlockWeights: limits::BlockWeights = limits::BlockWeights::simple_max(1024);
@@ -139,7 +139,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialIssuance = InitialIssuance;
 
 	type InitialMinAllowedWeights = InitialMinAllowedWeights;
-	type InitialEmissionRatio = InitialEmissionRatio;
+	type InitialEmissionValue  = InitialEmissionValue;
 	type InitialMaxWeightsLimit = InitialMaxWeightsLimit;
 	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
 	type InitialBlocksPerStep = InitialBlocksPerStep;
@@ -203,6 +203,17 @@ pub(crate) fn step_block(n: u16) {
 }
 
 #[allow(dead_code)]
+pub(crate) fn run_to_block(n: u64) {
+    while System::block_number() < n {
+		ParatensorModule::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+		ParatensorModule::on_initialize(System::block_number());
+    }
+}
+
+#[allow(dead_code)]
 pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_id: u64, start_nonce: u64) {
 	let block_number: u64 = ParatensorModule::get_current_block_as_u64();
 	let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, start_nonce );
@@ -211,7 +222,7 @@ pub fn register_ok_neuron( netuid: u16, hotkey_account_id: u64, coldkey_account_
 }
 
 #[allow(dead_code)]
-pub fn add_network(netuid: u16, tempo: u16, modality: u8){
+pub fn add_network(netuid: u16, tempo: u16, modality: u16){
 	let result = ParatensorModule::do_add_network(<<Test as Config>::Origin>::root(), netuid, tempo, modality);
 	assert_ok!(result);
 }

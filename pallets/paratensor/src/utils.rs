@@ -123,9 +123,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_last_mechanism_step_block( ) -> u64 {
 		return LastMechansimStepBlock::<T>::get();
 	}
-    pub fn set_difficulty_from_u64( netuid: u16, difficulty: u64 ) {
-		Difficulty::<T>::insert( netuid, difficulty );
-	}
     pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
         PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
     }

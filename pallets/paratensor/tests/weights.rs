@@ -194,8 +194,9 @@ fn test_set_weights_err_not_active() {
 		let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
 		let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
 
+		add_network(1, 13, 0);
+		
 		let result = ParatensorModule::set_weights(Origin::signed(1), 1, weights_keys, weight_values);
-
 		assert_eq!(result, Err(Error::<Test>::NotRegistered.into()));
 	});
 }
