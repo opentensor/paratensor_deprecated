@@ -169,7 +169,7 @@ fn test_registration_defaults() {
 #[test]
 fn test_registration_difficulty_adjustment() {
 	new_test_ext().execute_with(|| { /* uncomment when epoch impl and setting difficulty is done. */
-		let netuid: u16 = 1;
+		// let netuid: u16 = 1;
 
 		//add network
 		/*add_network(netuid, 12, 0);
