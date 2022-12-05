@@ -97,7 +97,8 @@ impl<T: Config> Pallet<T> {
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
-        let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
+        let mut ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
+        inplace_col_normalize( &mut ema_bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j
@@ -138,12 +139,12 @@ impl<T: Config> Pallet<T> {
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
         Stake::<T>::insert( hotkey, stake );
     }
-    pub fn set_weights_for_testing( netuid: u16, uid: u16, weights: Vec<(u16,u16)>) {
-        Weights::<T>::insert(netuid, uid, weights);
-    }
-    pub fn set_bonds_for_testing( netuid: u16, uid: u16, bonds: Vec<(u16,u16)>) {
-        Bonds::<T>::insert(netuid, uid, bonds);
-    }
+    // pub fn set_weights_for_testing( netuid: u16, uid: u16, weights: Vec<(u16,u16)>) {
+    //     Weights::<T>::insert(netuid, uid, weights);
+    // }
+    // pub fn set_bonds_for_testing( netuid: u16, uid: u16, bonds: Vec<(u16,u16)>) {
+    //     Bonds::<T>::insert(netuid, uid, bonds);
+    // }
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
