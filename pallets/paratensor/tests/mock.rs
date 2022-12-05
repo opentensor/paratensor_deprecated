@@ -129,7 +129,7 @@ parameter_types! {
 	pub const InitialAdjustmentInterval: u16 = 100;
 	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
-	pub const InitialPrunningScore : u16 = u16::MAX;
+	pub const InitialPruningScore : u16 = u16::MAX;
 	pub const InitialValidatorExcludeQuantile: u16 = 10;
 
 }
@@ -160,7 +160,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialImmunityPeriod = InitialImmunityPeriod;
 	type InitialActivityCutoff = InitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
-	type InitialPrunningScore = InitialPrunningScore;
+	type InitialPruningScore = InitialPruningScore;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 }

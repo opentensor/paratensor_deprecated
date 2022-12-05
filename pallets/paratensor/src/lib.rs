@@ -70,7 +70,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type InitialMaxAllowedMaxMinRatio: Get<u16>;
 
-		// Tempo for each network that multiplies in blockPerStep and sets a different blocksPerStep for each network
+		// Tempo for each network
 		#[pallet::constant]
 		type InitialTempo: Get<u16>;
 
@@ -142,9 +142,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
 
-		// Initial prunning score for each neuron
+		// Initial pruning score for each neuron
 		#[pallet::constant]
-		type InitialPrunningScore: Get<u16>;	
+		type InitialPruningScore: Get<u16>;	
 		
 		/// Initial validator exclude quantile.
 		#[pallet::constant]
@@ -273,12 +273,6 @@ pub mod pallet {
 	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;
-
-	/// ---- DoubleMap Network UID --> neuron UID --> priority
-	#[pallet::type_value] 
-	pub fn DefaultPriority<T:Config>() -> u16 { 0 }
-	#[pallet::storage]
-    pub(super) type Priority<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16 , ValueQuery, DefaultPriority<T> >;
 
 	/// ---- DoubleMap Network UID --> neuron UID --> last_update
 	#[pallet::type_value] 
@@ -521,17 +515,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
 
-	/// ---- DoubleMap Network UID -->  Neuron UID --> Prunning Score
+	/// ---- DoubleMap Network UID -->  Neuron UID --> Pruning Score
 	#[pallet::type_value] 
-	pub fn DefaultPrunningScore<T: Config>() -> u16 { T::InitialPrunningScore::get() }
+	pub fn DefaultPruningScore<T: Config>() -> u16 { T::InitialPruningScore::get() }
 	#[pallet::storage]
-	pub(super) type PrunningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPrunningScore<T> >;
-
-	/// ---- SingleMap Network UID --> Neuron UID, we use to record uids to prune at next epoch.
-	#[pallet::type_value] 
-	pub fn DefaultShouldPrune<T: Config>() -> bool { false }
-	#[pallet::storage]
-	pub(super) type NeuronsShouldPruneAtNextEpoch<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultShouldPrune<T> >;
+	pub(super) type PruningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPruningScore<T> >;
 	
 	
 	/// ************************************************************
@@ -709,11 +697,9 @@ pub mod pallet {
 		MaxAllowedMaxMinRatioExceeded,
 
 		// --- Error for setting blocksPerStep
-		
-		// --- Error for setting Tempo /* TO DO: more Errors for different hyper parameters should be defined here */
 
 		/// ---- Thrown when registrations this block exceeds allowed number.
-		ToManyRegistrationsThisBlock,
+		TooManyRegistrationsThisBlock,
 
 		/// ---- Thrown when the caller requests registering a neuron which 
 		/// already exists in the active set.
@@ -751,6 +737,9 @@ pub mod pallet {
 
 		// --- Thrown when tempo has not set
 		TempoHasNotSet,
+
+		// --- Thrown when tempo is not valid
+		InvalidTempo,
 
 		// --- Thrown when number or recieved emission rates does not match number of networks
 		EmissionValuesDoesNotMatchNetworks,
@@ -1533,14 +1522,5 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::do_remove_network(origin, netuid)
 		} 
-
-	}
-	/// ---- Paratensor helper functions.
-	impl<T: Config> Pallet<T> {
-	/// ---- returns the sum of emission ratios for defined subnetworks
-		pub fn calculate_emission_ratio_sum() -> u16 {
-			let sum : u16 = 0; /*TO DO */
-			sum
-		}
 	}	
 }

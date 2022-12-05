@@ -11,8 +11,9 @@ impl<T: Config> Pallet<T> {
         1. check if caller is sudo account
         2. check if network does not exist
         3. check if modality is valid
-        4. add network and modality 
-        5. add defualt value for all other parameters to the storage*/
+        4. check if tempo is valid
+        5. add network and modality 
+        6. add defualt value for all other parameters to the storage*/
 
         // 1. if caller is sudo account
         ensure_root( origin )?;
@@ -23,66 +24,19 @@ impl<T: Config> Pallet<T> {
         // 3. if modality is valid
         ensure!(Self::if_modality_is_valid(modality), Error::<T>::InvalidModality);
 
-        //4. Add network
+        // 4. if tempo is valid
+        ensure!(Self::if_tempo_is_valid(tempo), Error::<T>::InvalidTempo);
+
+        //5. Add network
         SubnetworkN::<T>::insert(netuid, 0); //initial size for each network is 0
-        NetworkModality::<T>::insert(netuid, modality);
-        Tempo::<T>::insert(netuid, tempo);
-        //
         TotalNetworks::<T>::mutate(|val| *val += 1);
         NetworksAdded::<T>::insert(netuid, true);
+        //
+        Tempo::<T>::insert(netuid, tempo);
+        NetworkModality::<T>::insert(netuid, modality);
 
         // 5. Add default value for all other parameters
-        // TODO(SAD): make this a function.
-        if !MinAllowedWeights::<T>::contains_key(netuid)
-            { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid));}
-        
-        if !EmissionValues::<T>::contains_key(netuid)
-            { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
-
-        if !MaxWeightsLimit::<T>::contains_key(netuid)
-            { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
-
-        if !MaxAllowedMaxMinRatio::<T>::contains_key(netuid)
-            { MaxAllowedMaxMinRatio::<T>::insert(netuid, MaxAllowedMaxMinRatio::<T>::get(netuid));}
-
-        if !Tempo::<T>::contains_key(netuid)
-            { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
-
-        if !Difficulty::<T>::contains_key(netuid)
-            { Difficulty::<T>::insert(netuid, Difficulty::<T>::get(netuid));}
-
-        if !Kappa::<T>::contains_key(netuid)
-            { Kappa::<T>::insert(netuid, Kappa::<T>::get(netuid));}
-
-        if !MaxAllowedUids::<T>::contains_key(netuid)
-            { MaxAllowedUids::<T>::insert(netuid, MaxAllowedUids::<T>::get(netuid));}
-
-        if !ValidatorBatchSize::<T>::contains_key(netuid)
-            { ValidatorBatchSize::<T>::insert(netuid, ValidatorBatchSize::<T>::get(netuid));}
-
-        if !ValidatorSequenceLength::<T>::contains_key(netuid)
-            { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
-
-        if !ValidatorEpochLen::<T>::contains_key(netuid)
-            { ValidatorEpochLen::<T>::insert(netuid, ValidatorEpochLen::<T>::get(netuid));}
-
-        if !ValidatorEpochsPerReset::<T>::contains_key(netuid)
-            { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
-
-        if !IncentivePruningDenominator::<T>::contains_key(netuid)
-            { IncentivePruningDenominator::<T>::insert(netuid, IncentivePruningDenominator::<T>::get(netuid));}
-
-        if !StakePruningMin::<T>::contains_key(netuid)
-            { StakePruningMin::<T>::insert(netuid, StakePruningMin::<T>::get(netuid));}
-
-        if !ImmunityPeriod::<T>::contains_key(netuid)
-            { ImmunityPeriod::<T>::insert(netuid, ImmunityPeriod::<T>::get(netuid));}
-
-        if !ActivityCutoff::<T>::contains_key(netuid)
-            { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
-
-        if !RegistrationsThisInterval::<T>::contains_key(netuid)
-            { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
+        Self::set_default_values_for_all_parameters(netuid);
         
         // ---- Emit the event.
         Self::deposit_event(Event::NetworkAdded(netuid, modality));
@@ -113,7 +67,6 @@ impl<T: Config> Pallet<T> {
 
         // 4. update all other storage
         Self::remove_subnet_for_all_hotkeys(netuid);
-        Self::remove_priority_for_subnet(netuid);
         Self::clear_last_update_for_subnet(netuid);
         Self::clear_min_allowed_weight_for_subnet(netuid);
         Self::clear_max_weight_limit_for_subnet(netuid);
@@ -126,12 +79,11 @@ impl<T: Config> Pallet<T> {
         Self::clear_validator_seq_length_for_subnet(netuid);
         Self::clear_validator_epoch_length_for_subnet(netuid);
         Self::clear_validator_epoch_per_reset_for_subnet(netuid);
-        Self::clear_incentive_prunning_denom_for_subnet(netuid);
-        Self::clear_stake_prunning_denom_for_subnet(netuid);
-        Self::clear_stake_prunning_min_for_subnet(netuid);
+        Self::clear_incentive_pruning_denom_for_subnet(netuid);
+        Self::clear_stake_pruning_denom_for_subnet(netuid);
+        Self::clear_stake_pruning_min_for_subnet(netuid);
         Self::clear_immunity_period_for_subnet(netuid);
         Self::clear_activity_cutoff_for_subnet(netuid);
-        Self::clear_neurons_to_prune_for_subnet(netuid);
         Self::clear_reg_this_interval_for_subnet(netuid);
         //
         Self::remove_uids_for_subnet(netuid);
@@ -145,7 +97,7 @@ impl<T: Config> Pallet<T> {
         Self::remove_consensus_for_subnet(netuid);
         Self::remove_dividends_for_subnet(netuid);
         Self::remove_emission_for_subnet(netuid);
-        Self::remove_prunning_score_for_subnet(netuid); 
+        Self::remove_pruning_score_for_subnet(netuid); 
         Self::remove_all_stakes_for_subnet(netuid);
 
         // --- Emit the event and return ok.
@@ -267,12 +219,57 @@ impl<T: Config> Pallet<T> {
         } */
     }
 
-    pub fn remove_priority_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Priority<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { Priority::<T>::remove_prefix(netuid, None); }
+    pub fn set_default_values_for_all_parameters(netuid: u16){
+        if !MinAllowedWeights::<T>::contains_key(netuid)
+            { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid));}
+        
+        if !EmissionValues::<T>::contains_key(netuid)
+            { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
+
+        if !MaxWeightsLimit::<T>::contains_key(netuid)
+            { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
+
+        if !MaxAllowedMaxMinRatio::<T>::contains_key(netuid)
+            { MaxAllowedMaxMinRatio::<T>::insert(netuid, MaxAllowedMaxMinRatio::<T>::get(netuid));}
+
+        if !Tempo::<T>::contains_key(netuid)
+            { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
+
+        if !Difficulty::<T>::contains_key(netuid)
+            { Difficulty::<T>::insert(netuid, Difficulty::<T>::get(netuid));}
+
+        if !Kappa::<T>::contains_key(netuid)
+            { Kappa::<T>::insert(netuid, Kappa::<T>::get(netuid));}
+
+        if !MaxAllowedUids::<T>::contains_key(netuid)
+            { MaxAllowedUids::<T>::insert(netuid, MaxAllowedUids::<T>::get(netuid));}
+
+        if !ValidatorBatchSize::<T>::contains_key(netuid)
+            { ValidatorBatchSize::<T>::insert(netuid, ValidatorBatchSize::<T>::get(netuid));}
+
+        if !ValidatorSequenceLength::<T>::contains_key(netuid)
+            { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
+
+        if !ValidatorEpochLen::<T>::contains_key(netuid)
+            { ValidatorEpochLen::<T>::insert(netuid, ValidatorEpochLen::<T>::get(netuid));}
+
+        if !ValidatorEpochsPerReset::<T>::contains_key(netuid)
+            { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
+
+        if !IncentivePruningDenominator::<T>::contains_key(netuid)
+            { IncentivePruningDenominator::<T>::insert(netuid, IncentivePruningDenominator::<T>::get(netuid));}
+
+        if !StakePruningMin::<T>::contains_key(netuid)
+            { StakePruningMin::<T>::insert(netuid, StakePruningMin::<T>::get(netuid));}
+
+        if !ImmunityPeriod::<T>::contains_key(netuid)
+            { ImmunityPeriod::<T>::insert(netuid, ImmunityPeriod::<T>::get(netuid));}
+
+        if !ActivityCutoff::<T>::contains_key(netuid)
+            { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
+
+        if !RegistrationsThisInterval::<T>::contains_key(netuid)
+            { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
     }
 
     pub fn clear_last_update_for_subnet(netuid: u16){
@@ -340,17 +337,17 @@ impl<T: Config> Pallet<T> {
             {ValidatorEpochsPerReset::<T>::remove(netuid);}
     }
 
-    pub fn clear_incentive_prunning_denom_for_subnet(netuid: u16){
+    pub fn clear_incentive_pruning_denom_for_subnet(netuid: u16){
         if IncentivePruningDenominator::<T>::contains_key(netuid)
             {IncentivePruningDenominator::<T>::remove(netuid);}
     }
 
-    pub fn clear_stake_prunning_denom_for_subnet(netuid: u16){
+    pub fn clear_stake_pruning_denom_for_subnet(netuid: u16){
         if StakePruningDenominator::<T>::contains_key(netuid)
             {StakePruningDenominator::<T>::remove(netuid);}
     }
 
-    pub fn clear_stake_prunning_min_for_subnet(netuid: u16){
+    pub fn clear_stake_pruning_min_for_subnet(netuid: u16){
         if StakePruningMin::<T>::contains_key(netuid)
             {StakePruningMin::<T>::remove(netuid);}
     }
@@ -363,10 +360,6 @@ impl<T: Config> Pallet<T> {
     pub fn clear_activity_cutoff_for_subnet(netuid: u16){
         if ActivityCutoff::<T>::contains_key(netuid)
             {ActivityCutoff::<T>::remove(netuid);}
-    }
-
-    pub fn clear_neurons_to_prune_for_subnet(netuid: u16){
-        NeuronsShouldPruneAtNextEpoch::<T>::remove_prefix(netuid, None);
     }
 
     pub fn clear_reg_this_interval_for_subnet(netuid: u16){
@@ -462,12 +455,12 @@ impl<T: Config> Pallet<T> {
         if exist {Emission::<T>::remove_prefix(netuid, None);}
     }
 
-    pub fn remove_prunning_score_for_subnet(netuid: u16){
+    pub fn remove_pruning_score_for_subnet(netuid: u16){
         let mut exist = false;
-        for (_uid_i, _) in <PrunningScores<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
+        for (_uid_i, _) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
             exist = true;
         }
-        if exist {PrunningScores::<T>::remove_prefix(netuid, None);}
+        if exist {PruningScores::<T>::remove_prefix(netuid, None);}
         
     }
     

@@ -480,7 +480,7 @@ parameter_types! {
 	pub const ParatensorInitialActivityCutoff: u16 = 5000;
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
 	pub const ParatensorInitialStakePruningMin: u16 = 0;
-	pub const ParatensorInitialPrunningScore : u16 = u16::MAX;
+	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
 	pub const InitialValidatorExcludeQuantile: u8 = 10; // 0.1
 	
@@ -512,7 +512,7 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
 	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
-	type InitialPrunningScore = ParatensorInitialPrunningScore;
+	type InitialPruningScore = ParatensorInitialPruningScore;
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 }
 

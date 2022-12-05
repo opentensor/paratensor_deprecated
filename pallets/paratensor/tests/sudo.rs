@@ -26,13 +26,6 @@ fn test_sudo_set_blocks_per_step() {
 }
 
 #[test]
-fn test_sudo_set_emission_ratio() {
-	new_test_ext().execute_with(|| {
-        /*TO DO */
-    });
-}
-
-#[test]
 fn test_sudo_set_bonds_moving_average () {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 10;
@@ -91,7 +84,7 @@ fn test_sudo_set_kappa() {
         
 		assert_ok!(ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::root(), netuid, kappa));
 
-        let value  =  ( ParatensorModule::get_kappa(netuid)  *  I32F32::from_num( u16::MAX )).to_num::<u16>() + 1;
+        let value  =  ( ParatensorModule::get_float_kappa(netuid)  *  I32F32::from_num( u16::MAX )).to_num::<u16>() + 1;
         assert_eq!(value , kappa); 
     });
 }

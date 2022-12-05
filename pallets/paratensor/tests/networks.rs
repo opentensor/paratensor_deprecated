@@ -4,6 +4,7 @@ use pallet_paratensor::{Error};
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
 use frame_system::Config;
 use frame_support::{sp_std::vec};
+use frame_support::{assert_ok};
 
 /*TO DO SAM: write test for LatuUpdate after it is set */
 
@@ -56,31 +57,6 @@ fn test_add_network_check_tempo() {
 	});
 }
 
-// --- remove network tests ---
-#[test]
-fn test_remove_priority_for_network() {
-	new_test_ext().execute_with(|| {
-
-        let netuid: u16 = 1;
-        let weights_keys: Vec<u16> = vec![];
-		let weight_values: Vec<u16> = vec![];
-        let tempo: u16 = 13;
-
-		add_network(netuid, tempo, 0);
-        //
-        register_ok_neuron( 1, 55, 66, 0);
-        let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
-        //
-        ParatensorModule::set_priority_for_neuron(netuid, neuron_id, 1);
-        assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_id), 1);
-        //
-        assert_ok!(ParatensorModule::set_weights(Origin::signed(55), netuid, weights_keys, weight_values));
-        //
-        assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_id), 0);
-
-	});
-}
-
 #[test]
 fn test_clear_min_allowed_weight_for_network() {
 	new_test_ext().execute_with(|| {
@@ -108,12 +84,12 @@ fn test_remove_uid_for_network() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
-        let mut result = 00;
+        let result;
         let tempo: u16 = 13;
 
         add_network(netuid, tempo, 0);
         //
-		register_ok_neuron( 1, 55, 66, 0);
+	register_ok_neuron( 1, 55, 66, 0);
         let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
         assert_eq!(neuron_id, 0);
         //
@@ -124,7 +100,7 @@ fn test_remove_uid_for_network() {
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         //
         result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
-        assert_eq!(result, 00);
+        assert_eq!(result, 0);
 
 	});
 }

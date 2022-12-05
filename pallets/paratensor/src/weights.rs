@@ -54,7 +54,6 @@ impl<T: Config> Pallet<T> {
         }
         Weights::<T>::insert(netuid, neuron_uid, zipped_weights);
         Keys::<T>::insert(netuid, neuron_uid, hotkey_id); //set neuron active
-        Self::set_priority_for_neuron(netuid, neuron_uid, 0);// Priority is drained.
         LastUpdate::<T>::insert(netuid, neuron_uid, Self::get_current_block_as_u64());
 
          // ---- Emit the staking event.

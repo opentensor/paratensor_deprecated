@@ -6,8 +6,8 @@ impl<T: Config> Pallet<T> {
      * do_add_stake() - main function called from parent module
      ***********************************************************/
      /* TO DO:
-     1. heck the transaction is signed by the caller and retrieve the T::AccountId coldkey. 
-     2. Add key pair
+     1. check the transaction is signed by the caller and retrieve the T::AccountId coldkey. 
+     2. Add key pair if it is not in the list of keys
      3. check that the hotkey is linked to the calling cold key, otherwise throw a NonAssociatedColdKey error.
      4. check that the calling coldkey contains enough funds to create the staking transaction.
      5. transfer stake from coldkey to hotkey
@@ -33,7 +33,7 @@ impl<T: Config> Pallet<T> {
  
          // --- 2. Add key pair. There would some key pairs that are not registered in any network and
          // they only want to stake (for DAO)
-         // This function check if the keypair does not exist, add it to the storage
+         // This function check if the keypair does not exist, add it to the list of keypairs.
          Self::add_global_account(&hotkey, &coldkey); 
  
          //  --- 3. We check that the hotkey is linked to the calling cold key, 
