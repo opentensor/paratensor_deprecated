@@ -50,7 +50,8 @@ impl<T: Config> Pallet<T> {
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
-        inplace_mask_matrix( &updated, &mut weights );
+        inplace_diag_mask( &mut weights ); // remove self-weight by masking diagonal
+        inplace_mask_matrix( &updated, &mut weights ); // remove weights referring to deregistered neurons
         inplace_row_normalize( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
@@ -340,6 +341,16 @@ pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>>
                 matrix[i][j] = I32F32::from_num( 0.0 );
             }
         }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
+    if matrix.len() == 0 { return }
+    if matrix[0].len() == 0 { return }
+    assert_eq!( matrix.len(), matrix[0].len() );
+    for i in 0..matrix.len() {
+        matrix[i][i] = I32F32::from_num( 0.0 );
     }
 }
 

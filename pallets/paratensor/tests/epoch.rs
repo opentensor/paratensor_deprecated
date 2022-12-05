@@ -2,6 +2,7 @@ use crate::{mock::*};
 #[cfg(feature = "no_std")]
 use ndarray::{ndarray::Array1, ndarray::Array2, ndarray::arr1};
 use frame_support::{assert_ok};
+use std::time::{Instant};
 mod mock;
 
 #[test]
@@ -34,12 +35,12 @@ fn test_1_graph() {
 		// ParatensorModule::set_bonds_for_testing( netuid, uid, vec![ ( 0, u16::MAX )]); // rather, bonds are calculated in epoch
 		ParatensorModule::epoch( 0, 1_000_000_000, true );
 		assert_eq!( ParatensorModule::get_stake_for_hotkey( &hotkey ), stake_amount );
-		assert_eq!( ParatensorModule::get_rank( netuid, uid ), u16::MAX );
-		assert_eq!( ParatensorModule::get_trust( netuid, uid ), u16::MAX );
-		assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
-		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), u16::MAX );
-		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 65535 );
-		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 );
+		assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
+		assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+		assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
+		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 0 );  // all self-weight masked out (TODO: decide emission for this case)
 	});
 }
 
@@ -97,12 +98,74 @@ fn test_10_graph() {
 		// Check return values.
 		for i in 0..n {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(i as u64) ), 1 );
-			assert_eq!( ParatensorModule::get_rank( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-			assert_eq!( ParatensorModule::get_trust( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-			assert_eq!( ParatensorModule::get_consensus( netuid, i as u16 ), 1178 ); // Note 0.0179862098 = (0.0179862098*65535) = floor( 1,178 ) which is 1 / (1 + e^(-10*(0.0999999999-0.5))
-			assert_eq!( ParatensorModule::get_incentive( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 99999999 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
+			assert_eq!( ParatensorModule::get_rank( netuid, i as u16 ), 0 );
+			assert_eq!( ParatensorModule::get_trust( netuid, i as u16 ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, i as u16 ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, i as u16 ), 0 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 0 );
+		}
+	});
+}
+
+#[test]
+// Test an epoch on a graph with two items.
+fn test_4096_graph() {
+	new_test_ext().execute_with(|| {
+		let n: u16 = 4096;
+		let validators: u16 = 200;
+		let servers = n - validators;
+		let netuid: u16 = 0;
+        println!( "test_{n:?}_graph ({validators:?} validators)" );
+		ParatensorModule::set_max_allowed_uids( netuid, n );
+		for uid in 0..n {
+			let stake: u128 = if uid < validators { 1 } else { 0 };
+			ParatensorModule::add_balance_to_coldkey_account( &(uid as u64), stake );
+			ParatensorModule::set_stake_for_testing( &(uid as u64), stake as u64 );
+			ParatensorModule::add_subnetwork_account( netuid, uid, &(uid as u64) );
+		   	ParatensorModule::increment_subnetwork_n( netuid );
+		}
+		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), n );
+		run_to_block( 1 ); // run to next block to ensure weights are set on nodes after their registration block
+		for uid in 0..validators { // validators
+			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid as u64), netuid, (validators..n).collect(), vec![ u16::MAX / n; servers as usize ]));
+		}
+		for uid in validators..n { // servers
+			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid as u64), netuid, vec![ uid as u16 ], vec![ u16::MAX ])); // server self-weight
+		}
+		// Run the epoch.
+		let start = Instant::now();
+		ParatensorModule::epoch( netuid, 1_000_000_000, false );
+		let duration = start.elapsed();
+		println!("Time elapsed in epoch() is: {:?}", duration);
+
+		for (uid, node) in vec![ (0, "validator"), (validators, "server") ] {
+			println!( "\n{node}" );
+			println!( "stake: {:?}", ParatensorModule::get_stake_for_hotkey( &(uid as u64) ));
+			println!( "rank: {:?}", ParatensorModule::get_rank( netuid, uid ));
+			println!( "trust: {:?}", ParatensorModule::get_trust( netuid, uid ));
+			println!( "consensus: {:?}", ParatensorModule::get_consensus( netuid, uid ));
+			println!( "incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ));
+			println!( "dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ));
+			println!( "emission: {:?}", ParatensorModule::get_emission( netuid, uid ));
+		}
+		for uid in 0..validators { // validators
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 );
+		}
+		for uid in validators..n { // servers
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 16 );
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 16 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 );
 		}
 	});
 }
