@@ -138,7 +138,6 @@ fn test_4096_graph() {
 		ParatensorModule::epoch( netuid, 1_000_000_000, false );
 		let duration = start.elapsed();
 		println!("Time elapsed in epoch() is: {:?}", duration);
-
 		for (uid, node) in vec![ (0, "validator"), (validators, "server") ] {
 			println!( "\n{node}" );
 			println!( "stake: {:?}", ParatensorModule::get_stake_for_hotkey( &(uid as u64) ));
@@ -155,17 +154,17 @@ fn test_4096_graph() {
 			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
-			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 );
-			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 ); // Note D = floor(1 / 200 * 65_535) = 327
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 ); // Note E = 0.5 / 200 * 1_000_000_000 = 2_500_000 (discrepancy)
 		}
 		for uid in validators..n { // servers
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
-			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 16 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 16 ); // Note R = floor(1 / (4096 - 200) * 65_535) = 16
 			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
-			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 16 );
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 16 ); // Note I = floor(1 / (4096 - 200) * 65_535) = 16
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
-			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 ); // Note E = floor(0.5 / (4096 - 200) * 1_000_000_000) = 128336
 		}
 	});
 }
