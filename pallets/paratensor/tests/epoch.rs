@@ -109,7 +109,7 @@ fn test_10_graph() {
 }
 
 #[test]
-// Test an epoch on a graph with two items.
+/// Test an epoch on a graph with 4096 nodes, of which the first 200 are validators setting non-self weights, and the rest servers setting only self-weights.
 fn test_4096_graph() {
 	new_test_ext().execute_with(|| {
 		let n: u16 = 4096;
@@ -119,7 +119,8 @@ fn test_4096_graph() {
         println!( "test_{n:?}_graph ({validators:?} validators)" );
 		ParatensorModule::set_max_allowed_uids( netuid, n );
 		for uid in 0..n {
-			let stake: u128 = if uid < validators { 1 } else { 0 };
+			let stake: u128 = if uid < validators { 1 } else { 0 }; // only validators receive stake
+			// let stake: u128 = 1; // alternative test: all nodes receive stake, should be same outcome, except stake
 			ParatensorModule::add_balance_to_coldkey_account( &(uid as u64), stake );
 			ParatensorModule::set_stake_for_testing( &(uid as u64), stake as u64 );
 			ParatensorModule::add_subnetwork_account( netuid, uid, &(uid as u64) );
