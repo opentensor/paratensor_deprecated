@@ -117,7 +117,7 @@ fn init_run_epochs(netuid: u16, n: u16, validators: u16, servers: u16, epochs: u
 		ParatensorModule::add_balance_to_coldkey_account( &(uid as u64), stake );
 		ParatensorModule::set_stake_for_testing( &(uid as u64), stake as u64 );
 		ParatensorModule::add_subnetwork_account( netuid, uid, &(uid as u64) );
-		   ParatensorModule::increment_subnetwork_n( netuid );
+		ParatensorModule::increment_subnetwork_n( netuid );
 	}
 	assert_eq!( ParatensorModule::get_subnetwork_n(netuid), n );
 	run_to_block( 1 ); // run to next block to ensure weights are set on nodes after their registration block
