@@ -156,7 +156,7 @@ fn test_512_graph() {
 		let n: u16 = 512;
 		let validators: u16 = 64;
 		let servers = n - validators;
-		let epochs: u16 = 1000;
+		let epochs: u16 = 100;
 		println!( "test_{n:?}_graph ({validators:?} validators)" );
 		init_run_epochs(netuid, n, validators, servers, epochs);
 		let bonds = ParatensorModule::get_bonds( netuid );
