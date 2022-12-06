@@ -12,7 +12,6 @@ impl<T: Config> Pallet<T> {
         1. DONE calculate pruning scores
         2. DONE (const) update all other nodes consensus parameters including bonds and weights 
         3. update weights and bonds for node that is identified to be pruned in registration process
-        3. DONE set priority
         4. reset Bonds */
 
         // Get subnetwork size.
@@ -113,10 +112,10 @@ impl<T: Config> Pallet<T> {
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
         if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
 
-        // Compute prunnind scores.
-        let mut prunning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        inplace_normalize( &mut prunning );
-        if debug { if_std! { println!( "P:\n{:?}\n", prunning.clone() );}}
+        // Compute prunind scores.
+        let mut pruning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
+        inplace_normalize( &mut pruning );
+        if debug { if_std! { println!( "P:\n{:?}\n", pruning.clone() );}}
 
         // Sync parameter updates.
         for i in 0..n {
@@ -125,13 +124,10 @@ impl<T: Config> Pallet<T> {
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_prunning( netuid, i, fixed_proportion_to_u16( prunning[i as usize] ) );
+            Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
             //Self::set_bonds( netuid, i, Self::vec_fixed_proportions_to_u16( ema_bonds[i as usize] ) );
         }  
-
-        // Remove peers to prune.
-        Self::clear_neurons_to_prune_for_subnet(netuid);
 
         emission
     }
@@ -152,7 +148,7 @@ impl<T: Config> Pallet<T> {
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
     pub fn set_incentive( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
     pub fn set_dividend( netuid:u16, neuron_uid:u16, dividend:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividend ) }
-    pub fn set_prunning( netuid:u16, neuron_uid:u16, prunning:u16) { PrunningScores::<T>::insert( netuid, neuron_uid, prunning ) }
+    pub fn set_pruning( netuid:u16, neuron_uid:u16, pruning:u16) { PruningScores::<T>::insert( netuid, neuron_uid, pruning ) }
     pub fn set_emission( netuid:u16, neuron_uid:u16, emission:u64) { Emission::<T>::insert( netuid, neuron_uid, emission ) }
     pub fn set_bonds( netuid:u16, neuron_uid:u16, bonds:Vec<(u16,u16)>) { Bonds::<T>::insert( netuid, neuron_uid, bonds ) }
 

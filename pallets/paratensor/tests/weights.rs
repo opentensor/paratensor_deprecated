@@ -9,7 +9,6 @@ use sp_runtime::DispatchError;
   pub fn set_weights() tests
 *****************************/
 
-/*TO DO SAM: write a test to add network and check if network exist */
 // This does not produce the expected result
 #[test]
 fn test_set_weights_dispatch_info_ok() {
@@ -60,52 +59,11 @@ fn set_weights_ok_no_weights() {
         let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
 
 		// Dispatch a signed extrinsic, setting weights.
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys, weight_values));
 		assert_eq!(ParatensorModule::get_weights_for_neuron(netuid, neuron_uid), vec![0]);
 		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid, neuron_uid), expect_stake);
 		assert_eq!(ParatensorModule::get_total_stake(), expect_total_stake);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
 
-	});
-}
-
-#[test]
-fn test_priority_increments() { //TO DO SAM: uncomment when step_block fn is implemented
-	new_test_ext().execute_with(|| {
-		/*let hotkey_account_id:u64 = 55; // Arbitrary number
-        let netuid: u16 = 1;
-
-		register_ok_neuron(netuid, hotkey_account_id, 66, 0);
-        let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-
-		ParatensorModule::add_stake_to_neuron_hotkey_account( &hotkey_account_id, 2 );
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
-		assert_ok!(ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, vec![], vec![]));
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 1);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 2);
-		assert_ok!(ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, vec![], vec![]));
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 1);
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_account_id, 32);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 6);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 11);
-		assert_ok!(ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, vec![], vec![]));
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 0);
-
-        step_block (1);
-		assert_eq!(ParatensorModule::get_priority_for_neuron(netuid, neuron_uid), 5); */
 	});
 }
 

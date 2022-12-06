@@ -137,7 +137,7 @@ fn test_registration_too_many_registrations_per_block() {
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(8), netuid, block_number, nonce8, work8, 8, 8));
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(9), netuid, block_number, nonce9, work9, 9, 9));
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(10), netuid, block_number, nonce10, work10, 10, 10);
-		assert_eq!( result, Err(Error::<Test>::ToManyRegistrationsThisBlock.into()) );
+		assert_eq!( result, Err(Error::<Test>::TooManyRegistrationsThisBlock.into()) );
 	});
 }
 
@@ -169,10 +169,10 @@ fn test_registration_defaults() {
 #[test]
 fn test_registration_difficulty_adjustment() {
 	new_test_ext().execute_with(|| { /* uncomment when epoch impl and setting difficulty is done. */
-		// let netuid: u16 = 1;
+		/*let netuid: u16 = 1;
 
 		//add network
-		/*add_network(netuid, 12, 0);
+		add_network(netuid, 12, 0);
 		
 		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
 		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
@@ -334,9 +334,9 @@ fn test_registration_get_next_uid() {
 #[test]
 fn test_registration_get_uid_to_prune() {
 	new_test_ext().execute_with(|| {
-		ParatensorModule::set_prunning_score(1,1,100);
-		ParatensorModule::set_prunning_score(1,2,110);
-		ParatensorModule::set_prunning_score(1,3,120);
+		ParatensorModule::set_pruning_score(1,1,100);
+		ParatensorModule::set_pruning_score(1,2,110);
+		ParatensorModule::set_pruning_score(1,3,120);
 		//
 		assert_eq!(ParatensorModule::get_neuron_to_prune(1), 1);
 	});
@@ -357,14 +357,14 @@ fn test_registration_pruning() {
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-		ParatensorModule::set_prunning_score(netuid, neuron_uid, 2);
+		ParatensorModule::set_pruning_score(netuid, neuron_uid, 2);
 		//
 		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 11231312312);
 		let hotkey_account_id1 = 2;
 		let coldkey_account_id1 = 668;
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id1), netuid, block_number, nonce1, work1, hotkey_account_id1, coldkey_account_id1));
 		let neuron_uid1 = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id1);
-		ParatensorModule::set_prunning_score(netuid, neuron_uid1, 3);
+		ParatensorModule::set_pruning_score(netuid, neuron_uid1, 3);
 		//
 		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 212312414);
 		let hotkey_account_id2 = 3;
@@ -403,5 +403,23 @@ fn test_registration_get_neuron_metadata() {
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);
+	});
+}
+
+#[test]
+fn test_registration_add_network_size() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+		let block_number: u64 = 0;
+		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
+		let hotkey_account_id = 1;
+		let coldkey_account_id = 667;
+
+		add_network(netuid, 13, 0);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 0);
+
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
+
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 1);
 	});
 }

@@ -123,8 +123,8 @@ impl<T: Config> Pallet<T> {
     pub fn get_last_mechanism_step_block( ) -> u64 {
 		return LastMechansimStepBlock::<T>::get();
 	}
-    pub fn set_prunning_score(netuid:u16, neuron_uid: u16, prunning_score: u16){
-        PrunningScores::<T>::insert(netuid, neuron_uid, prunning_score);
+    pub fn set_pruning_score(netuid:u16, neuron_uid: u16, pruning_score: u16){
+        PruningScores::<T>::insert(netuid, neuron_uid, pruning_score);
     }
     pub fn get_min_allowed_weights(netuid:u16 ) -> u16 {
 		return MinAllowedWeights::<T>::get(netuid);
@@ -283,10 +283,6 @@ impl<T: Config> Pallet<T> {
         return  Keys::<T>::contains_key(netuid, uid);
     }
 
-    pub fn get_priority_for_neuron(netuid:u16, neuron_uid: u16) -> u16 {
-        Priority::<T>::get(netuid, neuron_uid)
-    }
-
     pub fn get_weights_for_neuron(netuid: u16, neuron_uid: u16) -> Vec<u16>  {
             
         let mut w : Vec<u16> = vec![ 0; Self::get_subnetwork_n(netuid) as usize ];
@@ -297,16 +293,16 @@ impl<T: Config> Pallet<T> {
 		return w;
     } 
 
-    pub fn set_priority_for_neuron(netuid:u16, neuron_uid: u16, priority: u16){
-        Priority::<T>::insert(netuid, neuron_uid, priority);
-    }
-
     pub fn get_emission_ratio(netuid: u16) -> u64 {
         EmissionValues::<T>::get(netuid)
     }
 
     pub fn get_neuron_metadata(neuron_id: u16) -> NeuronMetadataOf {
         return NeuronsMetaData::<T>::get(neuron_id).unwrap();
+    }
+
+    pub fn if_tempo_is_valid(tempo: u16) -> bool {
+        tempo < u16::MAX
     }
 
     /// ==============================
@@ -355,7 +351,7 @@ impl<T: Config> Pallet<T> {
     }
     //
     pub fn remove_pruning_score_from_subnet(netuid:u16, neuron_uid: u16){
-        PrunningScores::<T>::remove(netuid, neuron_uid);
+        PruningScores::<T>::remove(netuid, neuron_uid);
     }
     //
     pub fn remove_bonds_from_subnet(netuid:u16, neuron_uid: u16){

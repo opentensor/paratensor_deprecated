@@ -35,7 +35,7 @@ fn test_add_stake_ok_no_emission() {
 		//add network
 		add_network(netuid, tempo, 0);
 		
-		// Subscribe hotkey
+		// Register neuron
 		register_ok_neuron( netuid, hotkey_account_id, coldkey_account_id, start_nonce);
 
 		// Give it some $$$ in his coldkey balance
@@ -77,7 +77,7 @@ fn test_dividends_with_run_to_block() {
 		//add network
 		add_network(netuid, 13, 0);
 
-		// Subscribe neuron, this will set a self weight
+		// Register neuron, this will set a self weight
 		ParatensorModule::set_max_registratations_per_block( 3 );
 		ParatensorModule::set_max_allowed_uids(1, 5);
 		
@@ -91,6 +91,7 @@ fn test_dividends_with_run_to_block() {
 		// Check if the initial stake has arrived
 		assert_eq!( ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_src_hotkey_id), initial_stake );
 
+		// Check if all three neurons are registered
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 3 );
 
 		// Run a couple of blocks to check if emission works
@@ -116,7 +117,7 @@ fn test_add_stake_err_signature() {
 }
 
 #[test]
-fn test_add_stake_not_registered_key_pair() {
+fn test_add_stake_not_registered_key_pair() { //it must pass since we are not checking if the hotkey is registered for DAO purposes
 	new_test_ext().execute_with(|| {
 		let coldkey_account_id = 435445; // Not active id
 		let hotkey_account_id = 54544;
