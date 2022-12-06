@@ -1,6 +1,9 @@
 [profile.release]
 panic = "unwind"
 
+[profile.test]
+opt-level = 3
+
 [workspace]
 members = [
 	"node",
