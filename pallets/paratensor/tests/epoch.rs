@@ -1,6 +1,7 @@
 use crate::{mock::*};
 #[cfg(feature = "no_std")]
 use ndarray::{ndarray::Array1, ndarray::Array2, ndarray::arr1};
+use substrate_fixed::types::I32F32;
 use frame_support::{assert_ok};
 use std::time::{Instant};
 mod mock;
@@ -139,6 +140,7 @@ fn test_4096_graph() {
 		ParatensorModule::epoch( netuid, 1_000_000_000, false );
 		let duration = start.elapsed();
 		println!("Time elapsed in epoch() is: {:?}", duration);
+		let bonds = ParatensorModule::get_bonds( netuid );
 		for (uid, node) in vec![ (0, "validator"), (validators, "server") ] {
 			println!( "\n{node}" );
 			println!( "stake: {:?}", ParatensorModule::get_stake_for_hotkey( &(uid as u64) ));
@@ -148,6 +150,7 @@ fn test_4096_graph() {
 			println!( "incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ));
 			println!( "dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ));
 			println!( "emission: {:?}", ParatensorModule::get_emission( netuid, uid ));
+			println!( "bonds: {:?} (on validator), {:?} (on server)", bonds[uid as usize][0], bonds[uid as usize][validators as usize]);
 		}
 		for uid in 0..validators { // validators
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
@@ -157,6 +160,8 @@ fn test_4096_graph() {
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 ); // Note D = floor(1 / 200 * 65_535) = 327
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 ); // Note E = 0.5 / 200 * 1_000_000_000 = 2_500_000 (discrepancy)
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], I32F32::from_num( 327.0/65_535.0) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
 		}
 		for uid in validators..n { // servers
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
@@ -166,6 +171,8 @@ fn test_4096_graph() {
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 16 ); // Note I = floor(1 / (4096 - 200) * 65_535) = 16
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 ); // Note E = floor(0.5 / (4096 - 200) * 1_000_000_000) = 128336
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], 0.0 );
 		}
 	});
 }

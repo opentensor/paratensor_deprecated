@@ -126,7 +126,7 @@ impl<T: Config> Pallet<T> {
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
-            //Self::set_bonds( netuid, i, Self::vec_fixed_proportions_to_u16( ema_bonds[i as usize] ) );
+            Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
         }  
 
         emission
@@ -136,12 +136,6 @@ impl<T: Config> Pallet<T> {
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
         Stake::<T>::insert( hotkey, stake );
     }
-    // pub fn set_weights_for_testing( netuid: u16, uid: u16, weights: Vec<(u16,u16)>) {
-    //     Weights::<T>::insert(netuid, uid, weights);
-    // }
-    // pub fn set_bonds_for_testing( netuid: u16, uid: u16, bonds: Vec<(u16,u16)>) {
-    //     Bonds::<T>::insert(netuid, uid, bonds);
-    // }
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
