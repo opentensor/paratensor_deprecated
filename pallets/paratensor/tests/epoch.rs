@@ -109,7 +109,7 @@ fn test_10_graph() {
 	});
 }
 
-fn init_run_epochs(netuid: u16, n: u16, validators: u16, servers: u16, epochs: u16) {
+fn init_run_epochs(netuid: u16, n: u16, validators: u16, servers: u16, epochs: u16, sparse: bool) {
 	ParatensorModule::set_max_allowed_uids( netuid, n );
 	for uid in 0..n {
 		let stake: u128 = if uid < validators { 1 } else { 0 }; // only validators receive stake
@@ -130,7 +130,12 @@ fn init_run_epochs(netuid: u16, n: u16, validators: u16, servers: u16, epochs: u
 	// Run the epochs.
 	let start = Instant::now();
 	for _ in 0..epochs {
-		ParatensorModule::epoch( netuid, 1_000_000_000, false );
+		if sparse {
+			ParatensorModule::epoch_sparse( netuid, 1_000_000_000, false );
+		}
+		else {
+			ParatensorModule::epoch( netuid, 1_000_000_000, false );
+		}
 	}
 	let duration = start.elapsed();
 	println!("Time elapsed in epoch() is: {:?}", duration);
@@ -158,7 +163,7 @@ fn test_512_graph() {
 		let servers = n - validators;
 		let epochs: u16 = 100;
 		println!( "test_{n:?}_graph ({validators:?} validators)" );
-		init_run_epochs(netuid, n, validators, servers, epochs);
+		init_run_epochs(netuid, n, validators, servers, epochs, false);
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in 0..validators { // validators
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
@@ -195,7 +200,44 @@ fn test_4096_graph() {
 		let servers = n - validators;
 		let epochs: u16 = 1;
 		println!( "test_{n:?}_graph ({validators:?} validators)" );
-		init_run_epochs(netuid, n, validators, servers, epochs);
+		init_run_epochs(netuid, n, validators, servers, epochs, false);
+		let bonds = ParatensorModule::get_bonds( netuid );
+		for uid in 0..validators { // validators
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 ); // Note D = floor(1 / 200 * 65_535) = 327
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 ); // Note E = 0.5 / 200 * 1_000_000_000 = 2_500_000 (discrepancy)
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], I32F32::from_num( 327.0/65_535.0) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
+		}
+		for uid in validators..n { // servers
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 16 ); // Note R = floor(1 / (4096 - 200) * 65_535) = 16
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 16 ); // Note I = floor(1 / (4096 - 200) * 65_535) = 16
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 ); // Note E = floor(0.5 / (4096 - 200) * 1_000_000_000) = 128336
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], 0.0 );
+		}
+	});
+}
+
+#[test]
+/// Test an epoch_sparse on a graph with 4096 nodes, of which the first 200 are validators setting non-self weights, and the rest servers setting only self-weights.
+fn test_4096_graph_sparse() {
+	new_test_ext().execute_with(|| {
+		let netuid: u16 = 0;
+		let n: u16 = 4096;
+		let validators: u16 = 200;
+		let servers = n - validators;
+		let epochs: u16 = 1;
+		println!( "test_{n:?}_graph ({validators:?} validators)" );
+		init_run_epochs(netuid, n, validators, servers, epochs, true);
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in 0..validators { // validators
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
