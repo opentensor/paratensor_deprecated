@@ -469,7 +469,6 @@ parameter_types! {
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
-	pub const ParatensorInitialBlocksPerStep: u16 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
 	pub const ParatensorInitialAdjustmentInterval: u16 = 100;
@@ -501,7 +500,6 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialValidatorSequenceLen = ParatensorInitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = ParatensorInitialValidatorEpochsPerReset;
-	type InitialBlocksPerStep = ParatensorInitialBlocksPerStep;
 	type InitialTempo = ParatensorInitialTempo;
 	type InitialDifficulty = ParatensorInitialDifficulty;
 	type InitialAdjustmentInterval = ParatensorInitialAdjustmentInterval;

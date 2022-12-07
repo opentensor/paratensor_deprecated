@@ -174,9 +174,9 @@ fn test_network_set_default_value_for_other_parameters() {
 #[test]
 fn test_network_set_emission_ratios_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
-        let emission_rates: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
+        let emission_values: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
 
-		let call = Call::ParatensorModule(ParatensorCall::sudo_set_emission_ratio{emission_rates});
+		let call = Call::ParatensorModule(ParatensorCall::sudo_set_emission_values{emission_values});
 
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
@@ -195,7 +195,7 @@ fn test_network_set_emission_ratios_ok() {
         add_network(1, 13, 0);
         add_network(2, 8, 0);
         //
-        assert_ok!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio));
+        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio));
 	});
 }
 
@@ -208,7 +208,7 @@ fn test_network_set_emission_ratios_fail_summation() {
         add_network(1, 13, 0);
         add_network(2, 8, 0);
         //
-        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::InvalidEmissionValues.into()) );
+        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::InvalidEmissionValues.into()) );
 	});
 }
 
@@ -220,7 +220,7 @@ fn test_network_set_emission_ratios_fail_nets() {
 
         add_network(1, 13, 0);
         //
-        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
+        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
 	});
 }
 
@@ -233,6 +233,6 @@ fn test_network_set_emission_ratios_fail_net() {
         add_network(1, 13, 0);
         add_network(3, 3, 0);
         //
-        assert_eq!(ParatensorModule::sudo_set_emission_ratio(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
+        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
 	});
 }

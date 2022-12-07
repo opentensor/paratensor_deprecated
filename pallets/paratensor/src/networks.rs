@@ -50,8 +50,7 @@ impl<T: Config> Pallet<T> {
         1. check if caller is sudo account
         2. check if network exist
         3. remove network and modality
-        4. update all other storage
-         */
+        4. update all other storage*/
 
         // 1. if caller is sudo account
         ensure_root( origin )?;
@@ -106,53 +105,53 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    pub fn do_set_emission_ratios( origin: T::Origin, emission_ratios: Vec<(u16,u64)>) -> dispatch::DispatchResult{
+    pub fn do_set_emission_values( origin: T::Origin, emission_values: Vec<(u16,u64)>) -> dispatch::DispatchResult{
         /*TO DO:
         1. check if caller is sudo account
         2. check if we receive emission rate for all existing networks (not more, not less)
         3. check if sum of emission rates is equal to 1.
-        5. add emission ratios  */
+        5. add emission values  */
         //
         // 1. if caller is sudo account
         ensure_root( origin )?;
 
-        // 2. check if we have received emission rate for all existing networks and not more
-        ensure!(Self::if_emission_ratios_match(&emission_ratios), Error::<T>::EmissionValuesDoesNotMatchNetworks);
+        // 2. check if we have received emission values for all existing networks and not more
+        ensure!(Self::if_emission_values_match(&emission_values), Error::<T>::EmissionValuesDoesNotMatchNetworks);
 
         // 3. check if sum of emission rates is equal to 1.
-        ensure!(Self::if_sum_emission_ratios(&emission_ratios), Error::<T>::InvalidEmissionValues);
+        ensure!(Self::if_sum_emission_values(&emission_values), Error::<T>::InvalidEmissionValues);
 
-        // 4. Add emission ratios for each network
-        Self::add_emission_ratios(&emission_ratios);
+        // 4. Add emission values for each network
+        Self::add_emission_values(&emission_values);
 
         Self::deposit_event(Event::EmissionValuesSet());
         Ok(())
     }
 
     // helper functions
-    pub fn add_emission_ratios(emission_ratios: &Vec<(u16, u64)>){
+    pub fn add_emission_values(emission_values: &Vec<(u16, u64)>){
         
-        for (netuid_i, emission_i) in emission_ratios.iter(){
+        for (netuid_i, emission_i) in emission_values.iter(){
             EmissionValues::<T>::insert(netuid_i, emission_i);
         }
     }
 
-    pub fn if_sum_emission_ratios(emission_ratios: &Vec<(u16, u64)>) -> bool{
-        let mut emission_ratios_sum: u64 = 0;
+    pub fn if_sum_emission_values(emission_values: &Vec<(u16, u64)>) -> bool{
+        let mut emission_values_sum: u64 = 0;
         
-        for (_, emission_i) in emission_ratios.iter(){ 
-            emission_ratios_sum = emission_ratios_sum + emission_i;
+        for (_, emission_i) in emission_values.iter(){ 
+            emission_values_sum = emission_values_sum + emission_i;
         } 
-        if emission_ratios_sum == BlockEmission::<T>::get() {return true;}
+        if emission_values_sum == BlockEmission::<T>::get() {return true;}
         else {return false;}
     } 
 
-    pub fn if_emission_ratios_match(emission_ratios: &Vec<(u16, u64)>) -> bool{ 
+    pub fn if_emission_values_match(emission_values: &Vec<(u16, u64)>) -> bool{ 
         
         let tota_nets = TotalNetworks::<T>::get();
         let mut nets: Vec<u16> = vec![];
 
-        for (netuid_j, _) in emission_ratios.iter() {nets.push(*netuid_j);} 
+        for (netuid_j, _) in emission_values.iter() {nets.push(*netuid_j);} 
 
         if nets.len() as u16 != tota_nets {return false;}
         
@@ -189,17 +188,11 @@ impl<T: Config> Pallet<T> {
             }
             Subnets::<T>::insert(hotkey_i, vec_new_hotkey_subnets)
         }
-        /*match hotkey_to_be_updated {
-            None => (),
-            Some(hotkey) => Subnets::<T>::insert(hotkey, vec_new_hotkey_subnets),
-        } */
         /* check if the hotkey is deregistred from all networks, 
         if so, then we need to transfer stake from hotkey to cold key */
-        //let mut hotkey_to_remove_from_Subnet: Option<T::AccountId> = None;
         for (hotkey_i, _)  in <Subnets<T> as IterableStorageMap<T::AccountId, Vec<u16>>>::iter() {
             let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_i); // a list of subnets that hotkey is registered on.
             if vec_subnets_for_pruning_hotkey.len() == 0 { 
-                //hotkey_to_remove_from_Subnet = Some(hotkey_i.clone()); 
                 // we need to remove all stakes since this hotkey is not staked in any other networks
                     // These funds are deposited back into the coldkey account so that no funds are destroyed. 
                     //
@@ -212,11 +205,6 @@ impl<T: Config> Pallet<T> {
                     Subnets::<T>::remove(hotkey_i);
             }
         }
-        
-        /*match hotkey_to_remove_from_Subnet {
-            None => (),
-            Some(hotkey) => Subnets::<T>::remove(hotkey),
-        } */
     }
 
     pub fn set_default_values_for_all_parameters(netuid: u16){
