@@ -263,3 +263,40 @@ fn test_4096_graph_sparse() {
 		}
 	});
 }
+
+#[test]
+/// Test an epoch_sparse on a graph with 16384 nodes, of which the first 512 are validators setting non-self weights, and the rest servers setting only self-weights.
+fn test_16384_graph_sparse() {
+	new_test_ext().execute_with(|| {
+		let netuid: u16 = 0;
+		let n: u16 = 16384;
+		let validators: u16 = 512;
+		let servers = n - validators;
+		let epochs: u16 = 1;
+		println!( "test_{n:?}_graph ({validators:?} validators)" );
+		init_run_epochs(netuid, n, validators, servers, epochs, true);
+		let bonds = ParatensorModule::get_bonds( netuid );
+		for uid in 0..validators { // validators
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 127 ); // Note D = floor(1 / 512 * 65_535) = 127
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 976085 ); // Note E = 0.5 / 512 * 1_000_000_000 = 976_562 (discrepancy)
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], I32F32::from_num( 127.0/65_535.0) ); // Note B_ij = floor(1 / 512 * 65_535) / 65_535 = 127 / 65_535
+		}
+		for uid in validators..n { // servers
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 4 ); // Note R = floor(1 / (16384 - 512) * 65_535) = 4
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 4 ); // Note I = floor(1 / (16384 - 512) * 65_535) = 4
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 31517 ); // Note E = floor(0.5 / (16384 - 512) * 1_000_000_000) = 31502 (discrepancy)
+			assert_eq!( bonds[uid as usize][0], 0.0 );
+			assert_eq!( bonds[uid as usize][validators as usize], 0.0 );
+		}
+	});
+}
