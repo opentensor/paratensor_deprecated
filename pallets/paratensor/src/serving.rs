@@ -25,11 +25,8 @@ impl<T: Config> Pallet<T> {
     /// 
     /// 	* 'ip_type' (u8):
     /// 		- The endpoint ip version as a u8, 4 or 6.
-    /// 
-    /// 	* 'modality' (u8):
-    /// 		- The endpoint modality. TODO: The modality should be known by the network.
     ///
-    pub fn do_serve_axon( origin: T::Origin, netuid: u16, version: u32, ip: u128, port: u16, ip_type: u8, modality: u16 ) -> dispatch::DispatchResult {
+    pub fn do_serve_axon( origin: T::Origin, netuid: u16, version: u32, ip: u128, port: u16, ip_type: u8) -> dispatch::DispatchResult {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
 
@@ -38,7 +35,6 @@ impl<T: Config> Pallet<T> {
 
         // --- 3. We make validy checks on the passed data.
         ensure!( Self::is_hotkey_registered(netuid, &hotkey_id), Error::<T>::NotRegistered );        
-        ensure!( Self::if_modality_is_valid(modality), Error::<T>::InvalidModality );
         ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
@@ -68,11 +64,6 @@ impl<T: Config> Pallet<T> {
     /********************************
      --==[[  Helper functions   ]]==--
     *********************************/
-
-    /*fn is_valid_modality(modality: u8) -> bool {
-        let allowed_values: Vec<u8> = vec![0];
-        return allowed_values.contains(&modality);
-    } */
 
     pub fn is_valid_ip_type(ip_type: u8) -> bool {
         let allowed_values: Vec<u8> = vec![4, 6];

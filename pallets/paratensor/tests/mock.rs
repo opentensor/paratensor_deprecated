@@ -120,7 +120,6 @@ parameter_types! {
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
 
-	pub const InitialBlocksPerStep: u16 = 1;
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
 	pub const MinimumDifficulty: u64 = 10000;
@@ -142,7 +141,6 @@ impl pallet_paratensor::Config for Test {
 	type InitialEmissionValue  = InitialEmissionValue;
 	type InitialMaxWeightsLimit = InitialMaxWeightsLimit;
 	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
-	type InitialBlocksPerStep = InitialBlocksPerStep;
 	type InitialTempo = InitialTempo;
 	type InitialDifficulty = InitialDifficulty;
 	type InitialAdjustmentInterval = InitialAdjustmentInterval;

@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist); 
 
         // 2. Check registration per block.
-        let registrations_this_block: u16 = Self:: get_registrations_this_block();
+        let registrations_this_block: u16 = Self:: get_registrations_this_block(netuid);
         ensure! (registrations_this_block < Self:: get_max_registratations_per_block(), Error::<T>::TooManyRegistrationsThisBlock); // Number of registrations this block exceeded.
 
         // 3. Check that the hotkey has not already been registered.
@@ -139,8 +139,7 @@ impl<T: Config> Pallet<T> {
         // --- Update avg registrations per 1000 block.
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
 
-        // TODO (Saeideh): This needs to be network based.
-        RegistrationsThisBlock::<T>::mutate( |val| *val += 1 );
+        RegistrationsThisBlock::<T>::mutate(netuid,  |val| *val += 1 );
         //
         Self::deposit_event(Event::NeuronRegistered( uid_to_set_in_metagraph ));
         //

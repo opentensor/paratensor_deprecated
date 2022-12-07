@@ -16,8 +16,8 @@ impl<T: Config> Pallet<T> {
         let block_as_u64: u64 = TryInto::try_into( system::Pallet::<T>::block_number() ).ok().expect("blockchain will not exceed 2^64 blocks; QED.");
         block_as_u64
     }
-    pub fn get_registrations_this_block( ) -> u16 {
-        RegistrationsThisBlock::<T>::get()
+    pub fn get_registrations_this_block(netuid:u16 ) -> u16 {
+        RegistrationsThisBlock::<T>::get(netuid)
     }
     pub fn get_max_registratations_per_block( ) -> u16 {
         MaxRegistrationsPerBlock::<T>::get()
@@ -112,9 +112,6 @@ impl<T: Config> Pallet<T> {
 	}
     pub fn set_blocks_since_last_step( netuid: u16, blocks_since_last_step: u64 ) {
 		BlocksSinceLastStep::<T>::insert( netuid, blocks_since_last_step );
-	}
-    pub fn get_blocks_per_step(netuid: u16 ) -> u16 {
-		BlocksPerStep::<T>::get(netuid)
 	}
     // -- Get Block emission.
 	pub fn get_block_emission( ) -> u64 {

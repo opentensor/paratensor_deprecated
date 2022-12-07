@@ -31,8 +31,7 @@ fn test_serving_subscribe_ok_dispatch_info_ok() {
         let ip: u128 = 1676056785;
         let port: u16 = 128;
         let ip_type: u8 = 4;
-        let modality: u16 = 0;
-        let call = Call::ParatensorModule(ParatensorCall::serve_axon { netuid, version, ip, port, ip_type, modality });
+        let call = Call::ParatensorModule(ParatensorCall::serve_axon { netuid, version, ip, port, ip_type });
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Normal,
@@ -56,7 +55,7 @@ fn test_serving_ok() {
         add_network(netuid, tempo, modality);
         register_ok_neuron( netuid, hotkey_account_id, 66, 0);
         //
-        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, modality));
+        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
 	});
 }
 
@@ -129,7 +128,7 @@ fn test_serving_set_metadata() {
         add_network(netuid, tempo, modality);
         register_ok_neuron( netuid, hotkey_account_id, 66, 0);
         //
-        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, modality));
+        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
 
         let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
 		let neuron = ParatensorModule::get_neuron_metadata(neuron_id);

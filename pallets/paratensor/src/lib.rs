@@ -52,9 +52,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type InitialIssuance: Get<u64>;
 
-		#[pallet::constant]
-		type InitialBlocksPerStep: Get<u16>;
-
 		/// --- Hyperparams
 		#[pallet::constant]
 		type InitialMinAllowedWeights: Get<u16>;
@@ -221,9 +218,11 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
-	/// ---- StorageItem Global Registration this Block
+	/// ----  SingleMap Network UID --> Registration this Block
+	#[pallet::type_value]
+	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
 	#[pallet::storage]
-	pub type RegistrationsThisBlock<T> = StorageValue<_, u16, ValueQuery>;
+	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
 
 	/// ---- StorageItem Global Used Work
 	#[pallet::storage]
@@ -248,10 +247,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn uid)]
 	pub(super) type NeuronsMetaData<T:Config> = StorageMap<_, Identity, u16, NeuronMetadataOf, OptionQuery>;
+
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
-
 	/// ---- SingleMap Hotkey --> Global Stake
 	#[pallet::storage]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
@@ -289,12 +288,6 @@ pub mod pallet {
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::storage]
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-
-	/// ---- SingleMap Network UID -->  BlocksPerSteps
-	#[pallet::type_value]
-	pub fn DefaultBlocksPerStep<T: Config>() -> u16 {T::InitialBlocksPerStep::get()}
-	#[pallet::storage]
-	pub type BlocksPerStep<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultBlocksPerStep<T>>; 
 
 	/// ---- SingleMap Network UID -->  Adjustment Interval
 	#[pallet::type_value]
@@ -551,9 +544,6 @@ pub mod pallet {
 		/// ---- Event created when a caller successfully set's their weights on a subnetwork.
 		WeightsSet(u16, u16),
 
-		/// ---- Event created when default blocks per step has been set.
-		BlocksPerStepSet(u16, u16),
-
 		/// ---- Event created when Tempo is set
 		TempoSet(u16),
 
@@ -695,8 +685,6 @@ pub mod pallet {
 		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
 		/// max value is more than MaxAllowedMaxMinRatio.
 		MaxAllowedMaxMinRatioExceeded,
-
-		// --- Error for setting blocksPerStep
 
 		/// ---- Thrown when registrations this block exceeds allowed number.
 		TooManyRegistrationsThisBlock,
@@ -952,10 +940,9 @@ pub mod pallet {
 			version: u32, 
 			ip: u128, 
 			port: u16, 
-			ip_type: u8, 
-			modality: u16 
+			ip_type: u8
 		) -> DispatchResult {
-			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, modality ) 
+			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type ) 
 		}
 		/// ---- Registers a new neuron to the subnetwork. 
 		///
@@ -999,47 +986,22 @@ pub mod pallet {
 			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
 
-		/// ---- SUDO ONLY FUNCTIONS ------
-		/// ---- Sudo set this networks blocks per step.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* 'netuid' (u16):
-		/// 		- The u16 network identifier.
-		///
-		/// 	* 'blocks_per_step' (u16):
-		/// 		- The number of blocks per step for this network.
-		/// 		
-		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn sudo_set_blocks_per_step(
-			origin: OriginFor<T>,
-			netuid: u16,
-			blocks_per_step: u16
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			BlocksPerStep::<T>::insert(netuid, blocks_per_step );
-			Self::deposit_event( Event::BlocksPerStepSet( netuid, blocks_per_step ) );
-			Ok(())
-		}
+		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
 
-		/// ---- Sudo set this networks emission ratio.
+		/// ---- Sudo set this networks emission values.
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
-		/// 	* `netuid` (u16):
-		/// 		- The network uid we are setting emission ratio on.
-		///
-		/// 	* `subnet_emission_ratio` (u16):
-		/// 		- The emission rate for this network.
+		/// 	* `emission_values` (u16, u64):
+		/// 		- A vector of (netuid, emission values) tuples.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn sudo_set_emission_ratio (
+		pub fn sudo_set_emission_values (
 			origin: OriginFor<T>,
-			emission_rates: Vec<(u16, u64)>
+			emission_values: Vec<(u16, u64)>
 		) -> DispatchResult{
-			Self::do_set_emission_ratios( origin,  emission_rates)
+			Self::do_set_emission_values( origin,  emission_values)
 		}
 
 		/// ---- Sudo set this network's bonds moving average.

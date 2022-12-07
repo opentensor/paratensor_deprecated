@@ -410,16 +410,28 @@ fn test_registration_get_neuron_metadata() {
 fn test_registration_add_network_size() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
+		let netuid2: u16 = 2;
 		let block_number: u64 = 0;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
+		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid2, block_number, 11231312312);
+		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid2, block_number, 21813123);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
 
 		add_network(netuid, 13, 0);
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 0);
 
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
+		add_network(netuid2, 13, 0);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 0);
 
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 1);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid), 1);
+
+
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid2, block_number, nonce1, work1, hotkey_account_id, coldkey_account_id));
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(2), netuid2, block_number, nonce2, work2, 2, coldkey_account_id));
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid2), 2);
 	});
 }

@@ -16,16 +16,6 @@ fn test_sudo_set_rho() {
 }
 
 #[test]
-fn test_sudo_set_blocks_per_step() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let blocks_per_step: u16 = 10;
-		assert_ok!(ParatensorModule::sudo_set_blocks_per_step(<<Test as Config>::Origin>::root(), netuid, blocks_per_step));
-        assert_eq!(ParatensorModule::get_blocks_per_step(netuid), blocks_per_step);
-    });
-}
-
-#[test]
 fn test_sudo_set_bonds_moving_average () {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 10;
