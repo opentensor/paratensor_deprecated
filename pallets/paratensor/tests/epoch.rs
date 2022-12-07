@@ -128,6 +128,7 @@ fn init_run_epochs(netuid: u16, n: u16, validators: u16, servers: u16, epochs: u
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(uid as u64), netuid, vec![ uid as u16 ], vec![ u16::MAX ])); // server self-weight
 	}
 	// Run the epochs.
+	println!("Start {epochs} epoch(s)");
 	let start = Instant::now();
 	for _ in 0..epochs {
 		if sparse {
