@@ -112,7 +112,7 @@ impl<T: Config> Pallet<T> {
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
         if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
 
-        // Compute prunind scores.
+        // Compute pruning scores.
         let mut pruning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut pruning );
         if debug { if_std! { println!( "P:\n{:?}\n", pruning.clone() );}}
