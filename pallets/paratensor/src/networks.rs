@@ -51,6 +51,8 @@ impl<T: Config> Pallet<T> {
         2. check if network exist
         3. remove network and modality
         4. update all other storage*/
+        // TODO( Saeideh ): Remove needless todos.
+
 
         // 1. if caller is sudo account
         ensure_root( origin )?;
@@ -65,6 +67,7 @@ impl<T: Config> Pallet<T> {
         NetworksAdded::<T>::insert(netuid, false);
 
         // 4. update all other storage
+        // TODO( Saeideh ): Can we make this a single function call.
         Self::remove_subnet_for_all_hotkeys(netuid);
         Self::clear_last_update_for_subnet(netuid);
         Self::clear_min_allowed_weight_for_subnet(netuid);
@@ -85,6 +88,7 @@ impl<T: Config> Pallet<T> {
         Self::clear_activity_cutoff_for_subnet(netuid);
         Self::clear_reg_this_interval_for_subnet(netuid);
         //
+        // TODO( Saeideh ): NIT: dont add these lonely doubly // lines like the one above.
         Self::remove_uids_for_subnet(netuid);
         Self::remove_keys_for_subnet(netuid);
         Self::remove_weights_for_subnet(netuid);
@@ -102,6 +106,7 @@ impl<T: Config> Pallet<T> {
         // --- Emit the event and return ok.
         Self::deposit_event(Event::NetworkRemoved(netuid ));
         //
+        // TODO( Saeideh ): NIT: dont add these lonely doubly // lines like the one above.
         Ok(())
     }
 
@@ -111,7 +116,7 @@ impl<T: Config> Pallet<T> {
         2. check if we receive emission rate for all existing networks (not more, not less)
         3. check if sum of emission rates is equal to 1.
         5. add emission values  */
-        //
+        // TODO( Saeideh ): These todos are no longer needed.
         // 1. if caller is sudo account
         ensure_root( origin )?;
 

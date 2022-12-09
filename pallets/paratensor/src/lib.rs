@@ -753,6 +753,7 @@ pub mod pallet {
 		/// # Args:
 		/// 	* 'n': (T::BlockNumber):
 		/// 		- The number of the block we are initializing.
+		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
 
 			// 1. Distribute emissions onto the sub-networks as pending emission.
