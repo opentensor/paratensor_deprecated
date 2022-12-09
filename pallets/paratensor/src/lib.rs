@@ -934,7 +934,7 @@ pub mod pallet {
 		/// 		- On subscription of a new neuron to the active set.
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn serve_axon (
+		pub fn serve_axon(
 			origin:OriginFor<T>, 
 			netuid: u16,
 			version: u32, 
@@ -997,7 +997,7 @@ pub mod pallet {
 		/// 		- A vector of (netuid, emission values) tuples.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn sudo_set_emission_values (
+		pub fn sudo_set_emission_values(
 			origin: OriginFor<T>,
 			emission_values: Vec<(u16, u64)>
 		) -> DispatchResult{
@@ -1016,7 +1016,7 @@ pub mod pallet {
 		/// 		- The bonds moving average.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_bonds_moving_average ( 
+		pub fn sudo_set_bonds_moving_average( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			bonds_moving_average: u64 
@@ -1039,7 +1039,7 @@ pub mod pallet {
 		/// 		- The network POW difficulty.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_difficulty ( 
+		pub fn sudo_set_difficulty( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			difficulty: u64 
@@ -1062,7 +1062,7 @@ pub mod pallet {
 		/// 		- The network POW adjustment interval.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_adjustment_interval ( 
+		pub fn sudo_set_adjustment_interval( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			adjustment_interval: u16 
@@ -1085,7 +1085,7 @@ pub mod pallet {
 		/// 		- The network POW target registrations per interval
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_target_registrations_per_interval ( 
+		pub fn sudo_set_target_registrations_per_interval( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			target_registrations_per_interval: u16 
@@ -1108,7 +1108,7 @@ pub mod pallet {
 		/// 		- The network POW target registrations per interval
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_activity_cutoff ( 
+		pub fn sudo_set_activity_cutoff( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			activity_cutoff: u16 
@@ -1131,7 +1131,7 @@ pub mod pallet {
 		/// 		- The network rho value.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_rho ( 
+		pub fn sudo_set_rho( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			rho: u16 
@@ -1154,7 +1154,7 @@ pub mod pallet {
 		/// 		- The network kappa value.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_kappa ( 
+		pub fn sudo_set_kappa( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			kappa: u16 
@@ -1177,7 +1177,7 @@ pub mod pallet {
 		/// 		- The network max_allowed_uids hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_uids ( 
+		pub fn sudo_set_max_allowed_uids( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			max_allowed_uids: u16 
@@ -1201,7 +1201,7 @@ pub mod pallet {
 		/// 		- The network min_allowed_weights  hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_allowed_weights ( 
+		pub fn sudo_set_min_allowed_weights( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			min_allowed_weights: u16 
@@ -1224,7 +1224,7 @@ pub mod pallet {
 		/// 		- The network max_allowed_max_min_ratio hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_max_min_ratio ( 
+		pub fn sudo_set_max_allowed_max_min_ratio( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			max_allowed_max_min_ratio: u16 
@@ -1247,7 +1247,7 @@ pub mod pallet {
 		/// 		- The network validator_batch_size hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_batch_size ( 
+		pub fn sudo_set_validator_batch_size( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_batch_size: u16 
@@ -1270,7 +1270,7 @@ pub mod pallet {
 		/// 		- The network validator_sequence_length hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_sequence_length ( 
+		pub fn sudo_set_validator_sequence_length( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_sequence_length: u16 
@@ -1293,7 +1293,7 @@ pub mod pallet {
 		/// 		- The network validator_epochs_per_reset hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_epochs_per_reset ( 
+		pub fn sudo_set_validator_epochs_per_reset( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_epochs_per_reset : u16 
@@ -1362,7 +1362,7 @@ pub mod pallet {
 		/// 		- The network immunity_period hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_immunity_period ( 
+		pub fn sudo_set_immunity_period( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			immunity_period: u16 
@@ -1385,7 +1385,7 @@ pub mod pallet {
 		/// 		- The network max_weight_limit hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_weight_limit ( 
+		pub fn sudo_set_max_weight_limit( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			max_weight_limit: u16 
@@ -1437,7 +1437,7 @@ pub mod pallet {
 		/// 		- The network to reset bonds on.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_reset_bonds (
+		pub fn sudo_reset_bonds(
 			origin: OriginFor<T>,
 			netuid: u16
 		)-> DispatchResult {
@@ -1460,7 +1460,7 @@ pub mod pallet {
 		/// 		- The network modality identifier.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network (
+		pub fn sudo_add_network(
 			origin: OriginFor<T>,
 			netuid: u16,
 			tempo: u16,
@@ -1478,7 +1478,7 @@ pub mod pallet {
 		/// 		- The network uid to remove.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network (
+		pub fn sudo_remove_network(
 			origin: OriginFor<T>,
 			netuid: u16
 		) -> DispatchResult {
