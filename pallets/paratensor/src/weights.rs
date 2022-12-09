@@ -17,6 +17,7 @@ impl<T: Config> Pallet<T> {
         10. Zip weights.
         11. Update weights
         12. Emit the staking event. */
+        // TODO( Saeideh ): Dont need this.
 
         // 1. Check the caller signature
         let hotkey_id = ensure_signed(origin)?;

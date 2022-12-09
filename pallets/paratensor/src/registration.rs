@@ -42,7 +42,7 @@ impl<T: Config> Pallet<T> {
         //         - create a new entry in the table with the new metadata.
         //         - update appropriate parameters.
         //         -  add new neuron to neurons. hotkeys, and works
-
+        // TODO( Saeideh ): lets remove these todo lists when they are done.
         
         // 1. Check if network exist.
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist); 
@@ -89,6 +89,8 @@ impl<T: Config> Pallet<T> {
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
             //
             /* check if the hotkey is deregistred from all networks */
+            // TODO( Saeideh ): We dont need to unstake a peer if it no longer exists in a network.
+            // TODO( Saeideh ): Lets also build some solid tests for this.
             let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_to_prune); // a list of subnets that hotkey is registered on.
             if vec_subnets_for_pruning_hotkey.len() == 1 { // the pruning hotkey was only registered on this network, so we need to remove it from storages
                 //
@@ -100,6 +102,7 @@ impl<T: Config> Pallet<T> {
             } 
             // remove consensus storage for pruning uid
             // remove weights
+            // TODO( Saeideh ): Move this to a single function like "remove uid from network." otherwise this is ugly IMO.
             Self::remove_weights_from_subnet(netuid, uid_to_prune);
             // remove bonds
             Self::remove_bonds_from_subnet(netuid, uid_to_prune);
@@ -128,9 +131,12 @@ impl<T: Config> Pallet<T> {
             port: 0,
             ip_type: 0,
         };
+
+        // TODO( Saeideh ): lets comment these lines.
         NeuronsMetaData::<T>::insert(uid_to_set_in_metagraph, neuron_metadata);
         Active::<T>::insert(netuid, uid_to_set_in_metagraph, true); //set neuron active
         BlockAtRegistration::<T>::insert( netuid, uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
+
         Self::add_global_account(&hotkey, &coldkey);
         Self::increment_subnets_for_hotkey(netuid, &hotkey);
         Self::add_subnetwork_account(netuid, uid_to_set_in_metagraph, &hotkey);
@@ -141,6 +147,7 @@ impl<T: Config> Pallet<T> {
 
         RegistrationsThisBlock::<T>::mutate(netuid,  |val| *val += 1 );
         //
+        // TODO( Saeideh ): Remove blank comments.
         Self::deposit_event(Event::NeuronRegistered( uid_to_set_in_metagraph ));
         //
         Ok(())
