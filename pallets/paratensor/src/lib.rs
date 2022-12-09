@@ -16,9 +16,9 @@ use frame_support::{dispatch, ensure, traits::{
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-/// ************************************************************
-///	-Paratensor-Imports
-/// ************************************************************
+/// =========================
+///	==== Pallet Imports =====
+/// =========================
 mod registration;
 mod epoch;
 mod utils;
@@ -29,13 +29,16 @@ mod serving;
 
 #[frame_support::pallet]
 pub mod pallet {
+
+	/// ========================
+	/// ==== Pallet Imports ====
+	/// ========================
 	use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, ValueQuery};
 	use frame_support::{pallet_prelude::*, Identity, IterableStorageMap};
 	use frame_system::{pallet_prelude::*};
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
-
 
 	/// ================
 	/// ==== Config ====
@@ -149,8 +152,11 @@ pub mod pallet {
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type NeuronMetadataOf = NeuronMetadata;
 
+	/// =========================
+	/// ==== Endpoint Struct ====
+	/// =========================
+	pub type NeuronMetadataOf = NeuronMetadata;
 	#[derive(Encode, Decode, Default, TypeInfo)]
     pub struct NeuronMetadata {
 
@@ -166,6 +172,7 @@ pub mod pallet {
         /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
         pub ip_type: u8,
 	}
+
 	/// ===============================
 	/// ==== Global Params Storage ====
 	/// ===============================
