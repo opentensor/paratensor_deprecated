@@ -8,12 +8,7 @@ use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
     pub fn epoch( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<I32F32> {
-        /*TO DO (no particular order):
-        1. DONE calculate pruning scores
-        2. DONE (const) update all other nodes consensus parameters including bonds and weights 
-        3. update weights and bonds for node that is identified to be pruned in registration process
-        4. reset Bonds */
-
+  
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
         if debug { if_std! { println!( "n:\n{:?}\n", n );}}

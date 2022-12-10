@@ -130,7 +130,7 @@ impl<T: Config> Pallet<T> {
         return Coldkeys::<T>::get(coldkey) == *hotkey;
     }
 
-     /// Checks if the coldkey account has enough balance to be able to withdraw the specified amount.
+    /// Checks if the coldkey account has enough balance to be able to withdraw the specified amount.
     ///
     pub fn can_remove_balance_from_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) -> bool {
         let current_balance = Self::get_coldkey_balance(coldkey);
@@ -150,7 +150,7 @@ impl<T: Config> Pallet<T> {
         return T::Currency::free_balance(&coldkey);
     }
 
-        /// This removes stake from the hotkey. This should be used together with the function to store the stake
+    /// This removes stake from the hotkey. This should be used together with the function to store the stake
     /// in the hot key account.
     /// The internal mechanics can fail. When this happens, this function returns false, otherwise true
     /// The output of this function MUST be checked before writing the amount to the hotkey account
@@ -192,14 +192,16 @@ impl<T: Config> Pallet<T> {
         Self::increase_total_stake(amount);
 
     }
-     /// Checks if the hotkey account of the specified account has enough stake to be able to withdraw
+
+    /// Checks if the hotkey account of the specified account has enough stake to be able to withdraw
     /// the requested amount.
     ///
     pub fn has_enough_stake(hotkey: &T::AccountId, amount: u64) -> bool {
         let stake = Stake::<T>::get(hotkey);
         return stake >= amount;
     }
-      /// Decreases the amount of stake in a hotkey account by the amount provided
+
+    /// Decreases the amount of stake in a hotkey account by the amount provided
     /// When using this function, it is important to also increase another account by the same value,
     /// as otherwise value gets lost.
     ///

@@ -16,9 +16,9 @@ use frame_support::{dispatch, ensure, traits::{
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-/// ************************************************************
-///	-Paratensor-Imports
-/// ************************************************************
+/// =========================
+///	==== Pallet Imports =====
+/// =========================
 mod registration;
 mod epoch;
 mod utils;
@@ -29,13 +29,16 @@ mod serving;
 
 #[frame_support::pallet]
 pub mod pallet {
+
+	/// ========================
+	/// ==== Pallet Imports ====
+	/// ========================
 	use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, ValueQuery};
 	use frame_support::{pallet_prelude::*, Identity, IterableStorageMap};
 	use frame_system::{pallet_prelude::*};
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
-
 
 	/// ================
 	/// ==== Config ====
@@ -149,8 +152,11 @@ pub mod pallet {
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-	pub type NeuronMetadataOf = NeuronMetadata;
 
+	/// =========================
+	/// ==== Endpoint Struct ====
+	/// =========================
+	pub type NeuronMetadataOf = NeuronMetadata;
 	#[derive(Encode, Decode, Default, TypeInfo)]
     pub struct NeuronMetadata {
 
@@ -166,6 +172,7 @@ pub mod pallet {
         /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
         pub ip_type: u8,
 	}
+
 	/// ===============================
 	/// ==== Global Params Storage ====
 	/// ===============================
@@ -746,28 +753,32 @@ pub mod pallet {
 		/// # Args:
 		/// 	* 'n': (T::BlockNumber):
 		/// 		- The number of the block we are initializing.
+		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
-			/*TO DO:
-			1. calculate pending emission for each network
-			2. check if tempo % current_block ==0 for any network, then call epoch with pending emission for this network
-			3. if tempo% current_block == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
-				we do not need to run epoch for the network */
-				let current_block_number = Self::get_current_block_as_u64();
 
-				/* Emissions per networks : net 1 ---> 100,000 ; net 2 --> 3000,000 ; .... ==> sum = 10^9 rao */
-				for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ //we gonna distribute 10^9 rao
-					let pending_emission = EmissionValues::<T>::get(netuid_i);
-					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
-				}
-				for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+			// 1. Distribute emissions onto the sub-networks as pending emission.
+			// TODO( Saeideh ): Emission Values should be a list which is set all at once and contains values which sum 
+			// To the emission per block, namely, 1_000_000_000.
+			for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ 
+				let pending_emission = EmissionValues::<T>::get(netuid_i);
+				PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
+			}
 
-					if tempo_i as u64 % current_block_number == 0 { 
-						let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
-						//
-						// RUN EPOCH for this network
-						Self::epoch(netuid_i, net_emission, true);
-					} 
-				}
+			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
+			// A network drains it's emission if the tempo % current_block_number == 0.
+			let current_block_number = Self::get_current_block_as_u64();
+			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+				if tempo_i as u64 % current_block_number == 0 { 
+					// We are going to drain this pending emission because the modulo tempo is zero.
+					let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
+					// Distribute the emission through the epoch.
+					Self::epoch(netuid_i, net_emission, true);
+					// TODO( Saeideh ): We need to drain the pending emission at this step.
+					// Like this: PendingEmission::<T>::insert(netuid_i, 0);
+				} 
+			}
+
+			// Block initialize Done.
 			return 0; 
 		}
 	}
@@ -934,7 +945,7 @@ pub mod pallet {
 		/// 		- On subscription of a new neuron to the active set.
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn serve_axon (
+		pub fn serve_axon(
 			origin:OriginFor<T>, 
 			netuid: u16,
 			version: u32, 
@@ -997,7 +1008,7 @@ pub mod pallet {
 		/// 		- A vector of (netuid, emission values) tuples.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
-		pub fn sudo_set_emission_values (
+		pub fn sudo_set_emission_values(
 			origin: OriginFor<T>,
 			emission_values: Vec<(u16, u64)>
 		) -> DispatchResult{
@@ -1016,7 +1027,7 @@ pub mod pallet {
 		/// 		- The bonds moving average.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_bonds_moving_average ( 
+		pub fn sudo_set_bonds_moving_average( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			bonds_moving_average: u64 
@@ -1039,7 +1050,7 @@ pub mod pallet {
 		/// 		- The network POW difficulty.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_difficulty ( 
+		pub fn sudo_set_difficulty( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			difficulty: u64 
@@ -1062,7 +1073,7 @@ pub mod pallet {
 		/// 		- The network POW adjustment interval.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_adjustment_interval ( 
+		pub fn sudo_set_adjustment_interval( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			adjustment_interval: u16 
@@ -1085,7 +1096,7 @@ pub mod pallet {
 		/// 		- The network POW target registrations per interval
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_target_registrations_per_interval ( 
+		pub fn sudo_set_target_registrations_per_interval( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			target_registrations_per_interval: u16 
@@ -1108,7 +1119,7 @@ pub mod pallet {
 		/// 		- The network POW target registrations per interval
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_activity_cutoff ( 
+		pub fn sudo_set_activity_cutoff( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			activity_cutoff: u16 
@@ -1131,7 +1142,7 @@ pub mod pallet {
 		/// 		- The network rho value.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_rho ( 
+		pub fn sudo_set_rho( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			rho: u16 
@@ -1154,7 +1165,7 @@ pub mod pallet {
 		/// 		- The network kappa value.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_kappa ( 
+		pub fn sudo_set_kappa( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			kappa: u16 
@@ -1177,7 +1188,7 @@ pub mod pallet {
 		/// 		- The network max_allowed_uids hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_uids ( 
+		pub fn sudo_set_max_allowed_uids( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			max_allowed_uids: u16 
@@ -1201,7 +1212,7 @@ pub mod pallet {
 		/// 		- The network min_allowed_weights  hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_allowed_weights ( 
+		pub fn sudo_set_min_allowed_weights( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			min_allowed_weights: u16 
@@ -1224,7 +1235,7 @@ pub mod pallet {
 		/// 		- The network max_allowed_max_min_ratio hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_max_min_ratio ( 
+		pub fn sudo_set_max_allowed_max_min_ratio( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			max_allowed_max_min_ratio: u16 
@@ -1247,7 +1258,7 @@ pub mod pallet {
 		/// 		- The network validator_batch_size hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_batch_size ( 
+		pub fn sudo_set_validator_batch_size( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_batch_size: u16 
@@ -1270,7 +1281,7 @@ pub mod pallet {
 		/// 		- The network validator_sequence_length hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_sequence_length ( 
+		pub fn sudo_set_validator_sequence_length( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_sequence_length: u16 
@@ -1293,7 +1304,7 @@ pub mod pallet {
 		/// 		- The network validator_epochs_per_reset hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_epochs_per_reset ( 
+		pub fn sudo_set_validator_epochs_per_reset( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			validator_epochs_per_reset : u16 
@@ -1362,7 +1373,7 @@ pub mod pallet {
 		/// 		- The network immunity_period hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_immunity_period ( 
+		pub fn sudo_set_immunity_period( 
 			origin:OriginFor<T>, 
 			netuid: u16,
 			immunity_period: u16 
@@ -1385,7 +1396,7 @@ pub mod pallet {
 		/// 		- The network max_weight_limit hyper-parameter.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_weight_limit ( 
+		pub fn sudo_set_max_weight_limit( 
 			origin:OriginFor<T>,
 			netuid: u16, 
 			max_weight_limit: u16 
@@ -1437,7 +1448,7 @@ pub mod pallet {
 		/// 		- The network to reset bonds on.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_reset_bonds (
+		pub fn sudo_reset_bonds(
 			origin: OriginFor<T>,
 			netuid: u16
 		)-> DispatchResult {
@@ -1460,7 +1471,7 @@ pub mod pallet {
 		/// 		- The network modality identifier.
 		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network (
+		pub fn sudo_add_network(
 			origin: OriginFor<T>,
 			netuid: u16,
 			tempo: u16,
@@ -1478,7 +1489,7 @@ pub mod pallet {
 		/// 		- The network uid to remove.
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network (
+		pub fn sudo_remove_network(
 			origin: OriginFor<T>,
 			netuid: u16
 		) -> DispatchResult {
