@@ -61,7 +61,6 @@ impl<T: Config> Pallet<T> {
          Ok(())
      }
     
-    
     /// This function removes stake from a hotkey account and puts into a coldkey account.
     /// This function should be called through an extrinsic signed with the coldkeypair's private
     /// key. It takes a hotkey account id and an ammount as parameters.
@@ -190,7 +189,6 @@ impl<T: Config> Pallet<T> {
         Self::add_stake_for_subnet(hotkey, amount);
 
         Self::increase_total_stake(amount);
-
     }
 
     /// Checks if the hotkey account of the specified account has enough stake to be able to withdraw
@@ -222,8 +220,8 @@ impl<T: Config> Pallet<T> {
         //
         Self::remove_stake_for_subnet(hotkey);
     }
-     /// Increases the amount of stake of the entire stake pool by the supplied amount
-    ///
+    
+    /// Increases the amount of stake of the entire stake pool by the supplied amount
     pub fn increase_total_stake( increment: u64) {
 
         let total_stake: u64 = TotalStake::<T>::get();

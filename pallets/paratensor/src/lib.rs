@@ -26,6 +26,7 @@ mod staking;
 mod weights;
 mod networks;
 mod serving;
+mod dao;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -261,6 +262,22 @@ pub mod pallet {
 	/// ---- SingleMap Hotkey --> Global Stake
 	#[pallet::storage]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
+
+	/// ---- DoubleMap Daokey --> Coldkey --> DaoStake
+	#[pallet::type_value]
+	pub fn DefaultDaoStake<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	pub(super) type DaoStake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultDaoStake<T> >;
+
+	/// ---- DoubleMap Daokey --> Coldkey --> DaoStake
+	#[pallet::type_value]
+	pub fn DefaultDaoFundTake<T: Config>() -> u64 { u64::MAX/5 } // 20%
+	#[pallet::storage]
+	pub(super) type DaoFundTake<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultDaoFundTake<T> >;
+	
+	/// --- StorageMap Daokey --> TotalDaoStake
+	#[pallet::storage]
+	pub(super) type TotalDaoStake<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultDaoStake<T> >;
 
 	/// ---- SingleMap Hotkey --> Coldkey
 	#[pallet::type_value] 
@@ -543,6 +560,14 @@ pub mod pallet {
 		/// --- Event created when stake has been transfered from 
 		/// the a coldkey account onto the hotkey staking account.
 		StakeAdded(T::AccountId, u64),
+
+		/// --- Event created when stake has been transfered from 
+		/// the a coldkey account into the dao staking account.
+		DaoStakeAdded( T::AccountId, T::AccountId, u64 ),
+
+		/// --- Event created when stake has been transfered from 
+		/// the a dao staking account into the associated coldkey.
+		DaoStakeRemoved( T::AccountId, T::AccountId, u64 ),
 
 		/// --- Event created when stake has been removed from 
 		/// the hotkey staking account onto the coldkey account.
@@ -916,6 +941,69 @@ pub mod pallet {
 			ammount_unstaked: u64
 		) -> DispatchResult {
 			Self::do_remove_stake(origin, hotkey, ammount_unstaked)
+		}
+
+		/// --- Adds stake to the dao contract. The call is made from the
+		/// coldkey account and the funds are stored under this account.
+		///
+		/// # Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, a coldkey signature.
+		///
+		/// 	* 'daokey' (T::AccountId):
+		/// 		- The daokey address.
+		///
+		/// 	* 'ammount_staked' (u64):
+		/// 		- The ammount to transfer from the balances account of the cold key
+		/// 		into associated dao stake account.
+		///
+		/// # Event:
+		/// 	* 'DaoStakeAdded':
+		/// 		- On the successful staking of funds.
+		///
+		/// # Raises:
+		/// 	* 'InsufficientBalance':
+		/// 		- When the amount to stake exceeds the amount of balance in the
+		/// 		associated colkey account.
+		///
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn add_dao_stake(
+			origin: OriginFor<T>, 
+			daokey: T::AccountId, 
+			ammount_staked: u64
+		) -> DispatchResult {
+			Self::do_add_dao_stake( origin, daokey, ammount_staked )
+		}
+
+		/// --- Remove stake from the dao contract. The call is made from the
+		/// coldkey with funds in the dao contract.
+		///
+		/// # Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, a coldkey signature associated with the hotkey account.
+		///
+		/// 	* 'daokey' (T::AccountId):
+		/// 		- The daokey address.
+		///
+		/// 	* 'ammount_staked' (u64):
+		/// 		- The ammount to transfer from the dao contract account to the coldkey.
+		///
+		/// # Event:
+		/// 	* 'DaoStakeRemoved':
+		/// 		- On the successful unstaking of funds.
+		///
+		/// # Raises:
+		/// 	* 'InsufficientBalance':
+		/// 		- When the amount to unstake exceeds the amount of balance in the
+		/// 		associated colkey account.
+		///
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn remove_dao_stake(
+			origin: OriginFor<T>, 
+			daokey: T::AccountId, 
+			ammount_unstaked: u64
+		) -> DispatchResult {
+			Self::do_remove_dao_stake( origin, daokey, ammount_unstaked )
 		}
 
 		/// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
