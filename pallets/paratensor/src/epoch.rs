@@ -26,12 +26,12 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Last update:\n{:?}\n", last_update.clone() );}}
 
         // Active mask.
-        let active: Vec<bool> = last_update.iter().map(| updated | current_block <= *updated + activity_cutoff ).collect();
-        if debug { if_std! { println!( "Active:\n{:?}\n", active.clone() );}}
+        let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
+        if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
-        inplace_mask_vector( &active, &mut stake );
+        inplace_mask_vector( &inactive, &mut stake );
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
@@ -39,13 +39,17 @@ impl<T: Config> Pallet<T> {
         let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
         if debug { if_std! { println!( "Block at registration:\n{:?}\n", block_at_registration.clone() );}}
 
-        // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
-        let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
+        // Outdated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
+        let outdated: Vec<Vec<bool>> = last_update.iter().map(| updated | block_at_registration.iter().map(| registered | updated <= registered ).collect() ).collect();
+        if debug { if_std! { println!( "Outdated:\n{:?}\n", outdated.clone() );}}
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
         inplace_diag_mask( &mut weights ); // remove self-weight by masking diagonal
-        inplace_mask_matrix( &updated, &mut weights ); // remove weights referring to deregistered neurons
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
+        inplace_mask_matrix( &outdated, &mut weights ); // mask outdated weights: remove weights referring to deregistered neurons
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
         inplace_row_normalize( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
@@ -80,13 +84,12 @@ impl<T: Config> Pallet<T> {
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
-        inplace_mask_matrix( &updated, &mut bonds );
+        inplace_mask_matrix( &outdated, &mut bonds );  // mask outdated bonds
         inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
-        inplace_mask_matrix( &updated, &mut bonds_delta );
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
     
@@ -144,13 +147,13 @@ impl<T: Config> Pallet<T> {
         let last_update: Vec<u64> = Self::get_last_update( netuid );
         if debug { if_std! { println!( "Last update:\n{:?}\n", last_update.clone() );}}
 
-        // Active mask.
-        let active: Vec<bool> = last_update.iter().map(| updated | current_block <= *updated + activity_cutoff ).collect();
-        if debug { if_std! { println!( "Active:\n{:?}\n", active.clone() );}}
+        // Inactive mask.
+        let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
+        if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
-        inplace_mask_vector( &active, &mut stake );
+        inplace_mask_vector( &inactive, &mut stake ); // mask inactive stake
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
@@ -163,10 +166,13 @@ impl<T: Config> Pallet<T> {
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
-        diag_mask_sparse( &weights ); // remove self-weight by masking diagonal
-        weights = vec_mask_sparse_matrix( &weights, &block_at_registration, &last_update, &| registered, updated | updated <= registered ); // remove weights referring to deregistered neurons
-        inplace_row_normalize_sparse( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
+        diag_mask_sparse( &weights ); // remove self-weight by masking diagonal
+        if debug { if_std! { println!( "Wd:\n{:?}\n", weights.clone() );}}
+        weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove weights referring to deregistered neurons
+        if debug { if_std! { println!( "Wm:\n{:?}\n", weights.clone() );}}
+        inplace_row_normalize_sparse( &mut weights );
+        if debug { if_std! { println!( "Wn:\n{:?}\n", weights.clone() );}}
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
         let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &stake );
@@ -199,15 +205,17 @@ impl<T: Config> Pallet<T> {
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse( netuid );
-        bonds = vec_mask_sparse_matrix( &bonds, &block_at_registration, &last_update, &| registered, updated | updated <= registered ); // remove bonds referring to deregistered neurons
+        bonds = vec_mask_sparse_matrix( &bonds, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove bonds referring to deregistered neurons
         inplace_col_normalize_sparse( &mut bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &stake ); // ΔB = W◦S
-        bonds_delta = vec_mask_sparse_matrix( &bonds_delta, &block_at_registration, &last_update, &| registered, updated | updated <= registered ); // remove bonds referring to deregistered neurons
-        inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
+        bonds_delta = vec_mask_sparse_matrix( &bonds_delta, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove bonds referring to deregistered neurons
+        if debug { if_std! { println!( "ΔBm:\n{:?}\n", bonds_delta.clone() );}}
+        inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "ΔBn:\n{:?}\n", bonds_delta.clone() );}}
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
@@ -450,24 +458,26 @@ pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
 }
 
 #[allow(dead_code)]
+// Apply mask to vector, mask=true will mask out set to 0
 pub fn inplace_mask_vector( mask: &Vec<bool>, vector: &mut Vec<I32F32> ) {
     if mask.len() == 0 { return }
     assert_eq!( mask.len(), vector.len() );
     for i in 0..mask.len() {
-        if !mask[i] {
+        if mask[i] {
             vector[i] = I32F32::from_num( 0.0 );
         }
     }
 }
 
 #[allow(dead_code)]
+// Apply mask to matrix, mask=true will mask out set to 0
 pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>> ) {
     if mask.len() == 0 { return }
     if mask[0].len() == 0 { return }
     assert_eq!( mask.len(), matrix.len() );
     for i in 0..mask.len() {
         for j in 0..mask[i].len() {
-            if !mask[i][j] {
+            if mask[i][j] {
                 matrix[i][j] = I32F32::from_num( 0.0 );
             }
         }
@@ -767,6 +777,9 @@ mod tests {
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(-9),  I32F32::from_num(-9),  I32F32::from_num(-9)], epsilon );
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ], vec![ I32F32::from_num(2.0); 3], vec![ I32F32::from_num(3.0);3 ] ]; 
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(12),  I32F32::from_num(12),  I32F32::from_num(12)], epsilon );
+        let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1), I32F32::from_num(2), I32F32::from_num(3) ]; 3 ]; 
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(12),  I32F32::from_num(18)], epsilon );
     }
