@@ -50,7 +50,7 @@ impl<T: Config> Pallet<T> {
 		let uid = SubnetworkN::<T>::get(netuid);
 		assert!(uid < MaxAllowedUids::<T>::get(netuid));  // The system should fail if this is ever reached.
         assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
-		SubnetworkN::<T>::insert(netuid, uid + 1); 
+		// SubnetworkN::<T>::insert(netuid, uid + 1); 
 		uid
 	}
 
@@ -222,7 +222,7 @@ impl<T: Config> Pallet<T> {
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
-        //Self::increment_subnetwork_n( netuid );
+        Self::increment_subnetwork_n( netuid );
     }
     pub fn remove_subnetwork_account( netuid:u16, uid: u16 ) { 
         let hotkey = Keys::<T>::get( netuid, uid );
