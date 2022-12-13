@@ -85,7 +85,11 @@ fn test_sudo_set_max_allowed_uid() {
         let netuid: u16 = 10;
         let max_allowed_uids: u16 = 10;
 		assert_ok!(ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, max_allowed_uids));
-        assert_eq!(ParatensorModule::get_max_allowed_uids(netuid), max_allowed_uids);
+        
+        match ParatensorModule::get_max_allowed_uids(netuid) {
+                Ok(k) => assert_eq!(k, max_allowed_uids),
+                Err(e) => panic!(),
+            } 
     });
 }
 

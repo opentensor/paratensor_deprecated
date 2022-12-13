@@ -39,8 +39,11 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
         // --- 4. We get the uid associated with this hotkey account.
-        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, &hotkey_id);
-
+        let neuron_uid ;
+        match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
         // --- 5. We get the neuron assoicated with this hotkey.
         let mut neuron = Self::get_neuron_metadata(neuron_uid);
 
@@ -51,13 +54,10 @@ impl<T: Config> Pallet<T> {
         neuron.ip_type = ip_type;
         NeuronsMetaData::<T>::insert(neuron_uid, neuron);
 
-        // --- 7. We set the last update for this neuron.
-        Self::set_last_update_for_neuron(netuid, neuron_uid, Self::get_current_block_as_u64());
-
-        // --- 8. We deposit the neuron updated event.
+        // --- 7. We deposit the neuron updated event.
         Self::deposit_event(Event::AxonServed(neuron_uid));
         
-        // --- 9. Return is successful dispatch. 
+        // --- 8. Return is successful dispatch. 
         Ok(())
     }
 

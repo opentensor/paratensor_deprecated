@@ -129,12 +129,16 @@ fn test_serving_set_metadata() {
         register_ok_neuron( netuid, hotkey_account_id, 66, 0);
         //
         assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
-
-        let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-		let neuron = ParatensorModule::get_neuron_metadata(neuron_id);
-		assert_eq!(neuron.ip, 1676056785);
-		assert_eq!(neuron.version, 2);
-		assert_eq!(neuron.port, 128);
+        //
+        let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+	let neuron = ParatensorModule::get_neuron_metadata(neuron_uid);
+	assert_eq!(neuron.ip, 1676056785);
+	assert_eq!(neuron.version, 2);
+	assert_eq!(neuron.port, 128);
         assert_eq!(neuron.ip_type, 4);
 	});
 }

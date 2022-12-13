@@ -28,7 +28,11 @@ impl<T: Config> Pallet<T> {
         // 3. Check to see that the calling neuron is in the active set.
         ensure!(Self::is_hotkey_registered(netuid, &hotkey_id), Error::<T>::NotRegistered);
         //
-        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, &hotkey_id);
+        let neuron_uid ;
+        match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
 
         // 4. Check that the length of uid list and value list are equal for this network.
         ensure!(Self::uids_match_values(&uids, &values), Error::<T>::WeightVecNotEqualSize);

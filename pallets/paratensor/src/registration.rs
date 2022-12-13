@@ -73,7 +73,14 @@ impl<T: Config> Pallet<T> {
         
         // 8. Check to see if the uid limit has been reached.
         let uid_to_set_in_metagraph: u16; // To be filled, we either are pruning or setting with get_next_uid.
-        let max_allowed_uids: u16 = Self::get_max_allowed_uids(netuid); // Get uid limit.
+        
+        let max_allowed_uids: u16; // Get uid limit.
+        let k = Self::get_max_allowed_uids(netuid);
+        match k {
+                Ok(k) => max_allowed_uids = k,
+                Err(e) => (return Err(e)),
+            } 
+        //
         let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
         let current_block: u64 = Self::get_current_block_as_u64();
         //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
@@ -88,6 +95,8 @@ impl<T: Config> Pallet<T> {
             uid_to_set_in_metagraph = uid_to_prune; 
             let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
             //
+            Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph); //UIds, Keys
+            //
             /* check if the hotkey is deregistred from all networks */
             // TODO( Saeideh ): We dont need to unstake a peer if it no longer exists in a network.
             // TODO( Saeideh ): Lets also build some solid tests for this.
@@ -95,11 +104,10 @@ impl<T: Config> Pallet<T> {
             if vec_subnets_for_pruning_hotkey.len() == 1 { // the pruning hotkey was only registered on this network, so we need to remove it from storages
                 //
                 if vec_subnets_for_pruning_hotkey[0] == netuid {
-                    Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph); //UIds, Keys
                     Self::remove_global_account(&hotkey); //Hotkeys, Coldkeys
-                    Subnets::<T>::remove(&hotkey_to_prune);
                 } 
             } 
+            Subnets::<T>::remove(&hotkey_to_prune);
             // remove consensus storage for pruning uid
             // remove weights
             // TODO( Saeideh ): Move this to a single function like "remove uid from network." otherwise this is ugly IMO.
@@ -277,7 +285,11 @@ impl<T: Config> Pallet<T> {
     pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
         
         let stake = Stake::<T>::get(&hotkey);
-        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, &hotkey);
+        let neuron_uid ;
+        match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
         //
         S::<T>::insert(netuid, neuron_uid, stake);
     }

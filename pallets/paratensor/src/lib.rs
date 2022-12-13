@@ -755,14 +755,23 @@ pub mod pallet {
 		/// 		- The number of the block we are initializing.
 		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
+			/*TO DO:
+			1. calculate pending emission for each network
+			2. check if tempo % current_block ==0 for any network, then call epoch with pending emission for this network
+			3. if tempo% current_block == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
+				we do not need to run epoch for the network 
+			4. Reset RegistrationsThisBlock and RegistrationsThisBlock for all networks. */
+			let current_block_number = Self::get_current_block_as_u64();
 
-			// 1. Distribute emissions onto the sub-networks as pending emission.
-			// TODO( Saeideh ): Emission Values should be a list which is set all at once and contains values which sum 
-			// To the emission per block, namely, 1_000_000_000.
-			for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ 
-				let pending_emission = EmissionValues::<T>::get(netuid_i);
-				PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
-			}
+				/* Emissions per networks : net 1 ---> 100,000 ; net 2 --> 3000,000 ; .... ==> sum = 10^9 rao */
+				for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ //we gonna distribute 10^9 rao
+					let pending_emission = EmissionValues::<T>::get(netuid_i);
+					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
+					//
+					RegistrationsThisBlock::<T>::insert(netuid_i, 0);
+					RegistrationsThisInterval::<T>::insert(netuid_i, 0);
+				}
+				for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
 
 			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
 			// A network drains it's emission if the tempo % current_block_number == 0.
