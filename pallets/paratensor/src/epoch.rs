@@ -112,7 +112,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
 
         // Set pruning scores.
-        let mut pruning: Vec<I32F32> = emission.clone();
+        let pruning: Vec<I32F32> = emission.clone();
         if debug { if_std! { println!( "P:\n{:?}\n", pruning.clone() );}}
 
         // Sync parameter updates.
@@ -238,7 +238,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "E: {:?}", emission.clone() );}}
 
         // Set pruning scores.
-        let mut pruning: Vec<I32F32> = emission.clone();
+        let pruning: Vec<I32F32> = emission.clone();
         if debug { if_std! { println!( "P: {:?}", pruning.clone() );}}
 
         // Sync parameter updates.
