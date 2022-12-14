@@ -16,7 +16,7 @@ fn test_nill_epoch_paratensor() {
 // Test an epoch on a graph with a single item.
 fn test_1_graph() {
 	new_test_ext().execute_with(|| {
-        println!( "test_1_graph:" );
+       println!( "test_1_graph:" );
 		let netuid: u16 = 0;
 		let coldkey: u64 = 0;
 		let hotkey: u64 = 0;
@@ -36,7 +36,7 @@ fn test_1_graph() {
 		assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), u16::MAX );
 		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
-		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 );
+		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 ); 
 	});
 }
 
@@ -44,7 +44,7 @@ fn test_1_graph() {
 // Test an epoch on a graph with two items.
 fn test_10_graph() {
 	new_test_ext().execute_with(|| {
-        println!( "test_10_graph" );
+       println!( "test_10_graph" );
 		// Function for adding a nodes to the graph.
 		pub fn add_node( 
 				netuid: u16,
@@ -72,7 +72,7 @@ fn test_10_graph() {
 		   	ParatensorModule::increment_subnetwork_n( netuid );
 		   	ParatensorModule::set_weights_for_testing( netuid, uid, weights);
 			ParatensorModule::set_bonds_for_testing( netuid, uid, bonds);
-			assert_eq!( ParatensorModule::get_subnetwork_n(netuid) - 1 , uid );
+			assert_eq!( ParatensorModule::get_subnetwork_n(netuid) - 1 , uid ); 
 		}
 		// Build the graph with 10 items 
 		// each with 1 stake and self weights.
@@ -102,6 +102,6 @@ fn test_10_graph() {
 			assert_eq!( ParatensorModule::get_incentive( netuid, i as u16 ), 6553 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
 			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 0 ); // 0
 			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 99999999 ); // Note 0.0999999999 = (0.0999999999*65535) = floor( 6553 )
-		}
+		} 
 	});
 }

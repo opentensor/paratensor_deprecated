@@ -171,7 +171,7 @@ fn test_network_set_default_value_for_other_parameters() {
         add_network(netuid, tempo, 0);
         //
         assert_eq!(ParatensorModule::get_min_allowed_weights(netuid), 0);
-        assert_eq!(ParatensorModule::get_emission_ratio(netuid), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid), 0);
         assert_eq!(ParatensorModule::get_max_weight_limit(netuid), u16::MAX);
         //maxAllowedMaxMinRatio
         assert_eq!(ParatensorModule::get_difficulty_as_u64(netuid), 10000);

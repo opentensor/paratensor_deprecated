@@ -182,6 +182,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_tempo(netuid:u16) -> u16{
         Tempo::<T>::get(netuid)
     }
+    pub fn get_pendingEmission(netuid:u16) -> u64{
+        PendingEmission::<T>::get(netuid)
+    }
     
     /// =========================
 	/// ==== Global Accounts ====
@@ -307,7 +310,7 @@ impl<T: Config> Pallet<T> {
 		return w;
     } 
 
-    pub fn get_emission_ratio(netuid: u16) -> u64 {
+    pub fn get_emission_value(netuid: u16) -> u64 {
         EmissionValues::<T>::get(netuid)
     }
 

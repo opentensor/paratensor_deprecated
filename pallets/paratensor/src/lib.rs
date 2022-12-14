@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-pub use pallet::*;
+pub use pallet::*; 
+
 use frame_system::{
 	self as system,
 	ensure_signed
@@ -25,7 +26,7 @@ mod utils;
 mod staking;
 mod weights;
 mod networks;
-mod serving;
+mod serving; 
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -746,7 +747,7 @@ pub mod pallet {
 	/// ================
 	/// ==== Hooks =====
 	/// ================
-	#[pallet::hooks]
+	#[pallet::hooks] 
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { 
 		/// ---- Called on the initialization of this pallet. (the order of on_finalize calls is determined in the runtime)
 		///
@@ -761,32 +762,31 @@ pub mod pallet {
 			3. if tempo% current_block == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
 				we do not need to run epoch for the network 
 			4. Reset RegistrationsThisBlock and RegistrationsThisBlock for all networks. */
-			let current_block_number = Self::get_current_block_as_u64();
+			let current_block_number = Self::get_current_block_as_u64();  
 
 				/* Emissions per networks : net 1 ---> 100,000 ; net 2 --> 3000,000 ; .... ==> sum = 10^9 rao */
 				for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ //we gonna distribute 10^9 rao
+					if PendingEmission::<T>::contains_key(netuid_i) == false {
+						PendingEmission::<T>::insert(netuid_i, 0);
+					}
 					let pending_emission = EmissionValues::<T>::get(netuid_i);
 					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
 					//
 					RegistrationsThisBlock::<T>::insert(netuid_i, 0);
 					RegistrationsThisInterval::<T>::insert(netuid_i, 0);
 				}
-				for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-
 			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
 			// A network drains it's emission if the tempo % current_block_number == 0.
-			let current_block_number = Self::get_current_block_as_u64();
 			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-				if tempo_i as u64 % current_block_number == 0 { 
+				if (current_block_number + 1) % (tempo_i as u64) == 0 {
 					// We are going to drain this pending emission because the modulo tempo is zero.
 					let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
 					// Distribute the emission through the epoch.
 					Self::epoch(netuid_i, net_emission, true);
-					// TODO( Saeideh ): We need to drain the pending emission at this step.
-					// Like this: PendingEmission::<T>::insert(netuid_i, 0);
+					// drain the pending emission at this step.
+					PendingEmission::<T>::mutate(netuid_i, |val| *val *= 0);
 				} 
 			}
-
 			// Block initialize Done.
 			return 0; 
 		}
