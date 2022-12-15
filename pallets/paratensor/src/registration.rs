@@ -78,7 +78,7 @@ impl<T: Config> Pallet<T> {
         let k = Self::get_max_allowed_uids(netuid);
         match k {
                 Ok(k) => max_allowed_uids = k,
-                Err(e) => (return Err(e)),
+                Err(e) => return Err(e),
             } 
         //
         let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.

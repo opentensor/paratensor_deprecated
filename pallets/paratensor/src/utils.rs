@@ -182,7 +182,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_tempo(netuid:u16) -> u16{
         Tempo::<T>::get(netuid)
     }
-    pub fn get_pendingEmission(netuid:u16) -> u64{
+    pub fn get_pending_emission(netuid:u16) -> u64{
         PendingEmission::<T>::get(netuid)
     }
     
@@ -230,7 +230,7 @@ impl<T: Config> Pallet<T> {
         let k = Self::get_max_allowed_uids(netuid);
         match k {
                 Ok(k) => if n < k { SubnetworkN::<T>::insert(netuid, n + 1);},
-                Err(e) => (),
+                Err(_e) => (),
             }   
     }
     //
