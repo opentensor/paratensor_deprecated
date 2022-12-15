@@ -11,21 +11,50 @@ impl<T: Config> Pallet<T> {
   
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
+        if debug { if_std! { println!( "n:\n{:?}\n", n );}}
+
+        // Get current block.
+        let current_block: u64 = Self::get_current_block_as_u64();
+        if debug { if_std! { println!( "current_block:\n{:?}\n", current_block );}}
+
+        // Get activity cutoff.
+        let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
+        if debug { if_std! { println!( "activity_cutoff:\n{:?}\n", activity_cutoff );}}
+
+        // Last update vector.
+        // TODO: remove Active::<T> storage if LastUpdate::<T> is used instead
+        let last_update: Vec<u64> = Self::get_last_update( netuid );
+        if debug { if_std! { println!( "Last update:\n{:?}\n", last_update.clone() );}}
+
+        // Active mask.
+        let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
+        if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
         let mut stake: Vec<I32F32> = Self::get_stake( netuid );
+        inplace_mask_vector( &inactive, &mut stake );
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
 
+        // Block at registration vector (block when each neuron was most recently registered).
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
+        if debug { if_std! { println!( "Block at registration:\n{:?}\n", block_at_registration.clone() );}}
+
+        // Outdated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
+        let outdated: Vec<Vec<bool>> = last_update.iter().map(| updated | block_at_registration.iter().map(| registered | updated <= registered ).collect() ).collect();
+        if debug { if_std! { println!( "Outdated:\n{:?}\n", outdated.clone() );}}
+
         // Access network weights row normalized.
-        let weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
+        let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
+        inplace_diag_mask( &mut weights ); // remove self-weight by masking diagonal
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
+        inplace_mask_matrix( &outdated, &mut weights ); // mask outdated weights: remove weights referring to deregistered neurons
+        if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
+        inplace_row_normalize( &mut weights );
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
-        // Acess network bonds row normalized.
-        let bonds: Vec<Vec<I32F32>> = Self::get_pruned_bonds_dense( netuid );
-        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
-
-        // Compute ranks.
+        // Compute ranks: r_j = SUM(i) w_ij * s_i
         let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
         inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R:\n{:?}\n", ranks.clone() );}}
@@ -37,7 +66,7 @@ impl<T: Config> Pallet<T> {
         let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
         if debug { if_std! { println!( "tW:\n{:?}\n", clipped_weights.clone() );}}
 
-        // Compute trust scores.
+        // Compute trust scores: t_j = SUM(i) w_ij * s_i
         let trust: Vec<I32F32> = matmul( &clipped_weights, &stake );
         if debug { if_std! { println!( "T:\n{:?}\n", trust.clone() );}}
 
@@ -54,26 +83,48 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut incentive );
         if debug { if_std! { println!( "I:\n{:?}\n", incentive.clone() );}}
 
-        // Compute dividends.
-        let dividends: Vec<I32F32> = matmul( &bonds, &incentive );
-        if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
+        // Access network bonds column normalized.
+        let mut bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
+        inplace_mask_matrix( &outdated, &mut bonds );  // mask outdated bonds
+        inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
+
+        // Compute bonds delta column normalized.
+        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
+        inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
     
         // Compute bonds moving average.
-        let alpha: I32F32 = I32F32::from_num( 0.9 );
-        let ema_bonds: Vec<Vec<I32F32>> = mat_ema( &weights, &bonds, alpha );
+        let alpha: I32F32 = I32F32::from_num( 0.1 );
+        let mut ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
+        inplace_col_normalize( &mut ema_bonds ); // sum_i b_ij = 1
         if debug { if_std! { println!( "emaB:\n{:?}\n", ema_bonds.clone() );}}
+
+        // Compute dividends: d_i = SUM(j) b_ij * inc_j
+        let dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
+        if debug { if_std! { println!( "D:\n{:?}\n", dividends.clone() );}}
 
         // Compute emission scores.
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
+        // If emission is zero, replace emission with normalized stake.
+        if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
+            if is_zero( &stake ) { // no active stake
+                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                inplace_normalize( &mut unmasked_stake );
+                normalized_emission = unmasked_stake;
+            }
+            else {
+                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+            }
+        }
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
-        if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
+        if debug { if_std! { println!( "E: {:?}", emission.clone() );}}
 
-        // Compute prunind scores.
-        let mut pruning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        inplace_normalize( &mut pruning );
-        if debug { if_std! { println!( "P:\n{:?}\n", pruning.clone() );}}
+        // Set pruning scores.
+        let pruning: Vec<I32F32> = normalized_emission.clone();
+        if debug { if_std! { println!( "P: {:?}", pruning.clone() );}}
 
         // Sync parameter updates.
         for i in 0..n {
@@ -84,7 +135,144 @@ impl<T: Config> Pallet<T> {
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
-            //Self::set_bonds( netuid, i, Self::vec_fixed_proportions_to_u16( ema_bonds[i as usize] ) );
+            Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
+        }  
+
+        emission
+    }
+
+    pub fn epoch_sparse( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<I32F32> {
+        // Get subnetwork size.
+        let n: u16 = Self::get_subnetwork_n( netuid );
+        if debug { if_std! { println!( "n: {:?}", n );}}
+
+        // Get current block.
+        let current_block: u64 = Self::get_current_block_as_u64();
+        if debug { if_std! { println!( "current_block: {:?}", current_block );}}
+
+        // Get activity cutoff.
+        let activity_cutoff: u64 = Self::get_activity_cutoff( netuid ) as u64;
+        if debug { if_std! { println!( "activity_cutoff: {:?}", activity_cutoff );}}
+
+        // Last update vector.
+        // TODO: remove Active::<T> storage if LastUpdate::<T> is used instead
+        let last_update: Vec<u64> = Self::get_last_update( netuid );
+        if debug { if_std! { println!( "Last update: {:?}", last_update.clone() );}}
+
+        // Inactive mask.
+        let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
+        if debug { if_std! { println!( "Inactive: {:?}", inactive.clone() );}}
+
+        // Access network stake as normalized vector.
+        let mut stake: Vec<I32F32> = Self::get_stake( netuid );
+        if debug { if_std! { println!( "S: {:?}", stake.clone() );}}
+        inplace_mask_vector( &inactive, &mut stake ); // mask inactive stake
+        if debug { if_std! { println!( "S (mask): {:?}", stake.clone() );}}
+        inplace_normalize( &mut stake );
+        if debug { if_std! { println!( "S (mask+norm): {:?}", stake.clone() );}}
+
+        // Block at registration vector (block when each neuron was most recently registered).
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
+        if debug { if_std! { println!( "Block at registration: {:?}", block_at_registration.clone() );}}
+
+        // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
+        // let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
+
+        // Access network weights row normalized.
+        let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
+        if debug { if_std! { println!( "W: {:?}", weights.clone() );}}
+        weights = diag_mask_sparse( &weights ); // remove self-weight by masking diagonal
+        if debug { if_std! { println!( "W (diagmask): {:?}", weights.clone() );}}
+        weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove weights referring to deregistered neurons
+        if debug { if_std! { println!( "W (diag+outdatemask): {:?}", weights.clone() );}}
+        inplace_row_normalize_sparse( &mut weights );
+        if debug { if_std! { println!( "W (mask+norm): {:?}", weights.clone() );}}
+
+        // Compute ranks: r_j = SUM(i) w_ij * s_i
+        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &stake );
+        inplace_normalize( &mut ranks );
+        if debug { if_std! { println!( "R: {:?}", ranks.clone() );}}
+
+        // Compute thresholded weights.
+        let upper: I32F32 = I32F32::from_num( 1.0 );
+        let lower: I32F32 = I32F32::from_num( 0.0 );
+        let threshold: I32F32 = I32F32::from_num( 0.01 );
+        let clipped_weights: Vec<Vec<(u16, I32F32)>> = sparse_clip( &weights, threshold, upper, lower );
+        if debug { if_std! { println!( "W (threshold): {:?}", clipped_weights.clone() );}}
+
+        // Compute trust scores: t_j = SUM(i) w_ij * s_i
+        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &stake );
+        if debug { if_std! { println!( "T: {:?}", trust.clone() );}}
+
+        // Compute consensus.
+        let one: I32F32 = I32F32::from_num(1.0); 
+        let rho: I32F32 = Self::get_float_rho( netuid );
+        let kappa: I32F32 = Self::get_float_kappa( netuid );
+        let exp_trust: Vec<I32F32> = trust.iter().map( |t|  exp( -rho * (t - kappa) ).expect("") ).collect();
+        let consensus: Vec<I32F32> = exp_trust.iter().map( |t|  one /(one + t) ).collect();
+        if debug { if_std! { println!( "C: {:?}", consensus.clone() );}}
+
+        // Compute incentive.
+        let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus.clone() ).map( |(ri, ci)| ri * ci ).collect();
+        inplace_normalize( &mut incentive );
+        if debug { if_std! { println!( "I: {:?}", incentive.clone() );}}
+
+        // Access network bonds column normalized.
+        let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse( netuid );
+        if debug { if_std! { println!( "B: {:?}", bonds.clone() );}}  
+        bonds = vec_mask_sparse_matrix( &bonds, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove bonds referring to deregistered neurons
+        if debug { if_std! { println!( "B (outdatedmask): {:?}", bonds.clone() );}}  
+        inplace_col_normalize_sparse( &mut bonds ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "B (mask+norm): {:?}", bonds.clone() );}}        
+
+        // Compute bonds delta column normalized.
+        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &stake ); // ΔB = W◦S (outdated W masked)
+        if debug { if_std! { println!( "ΔB: {:?}", bonds_delta.clone() );}}
+        inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "ΔB (norm): {:?}", bonds_delta.clone() );}}
+    
+        // Compute bonds moving average.
+        let alpha: I32F32 = I32F32::from_num( 0.1 );
+        let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = sparse_mat_ema( &bonds_delta, &bonds, alpha );
+        inplace_col_normalize_sparse( &mut ema_bonds ); // sum_i b_ij = 1
+        if debug { if_std! { println!( "emaB: {:?}", ema_bonds.clone() );}}
+
+        // Compute dividends: d_i = SUM(j) b_ij * inc_j
+        let dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
+        if debug { if_std! { println!( "D: {:?}", dividends.clone() );}}
+
+        // Compute emission scores.
+        let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
+        let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
+        inplace_normalize( &mut normalized_emission );
+        // If emission is zero, replace emission with normalized stake.
+        if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
+            if is_zero( &stake ) { // no active stake
+                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                inplace_normalize( &mut unmasked_stake );
+                normalized_emission = unmasked_stake;
+            }
+            else {
+                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+            }
+        }
+        let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
+        if debug { if_std! { println!( "E: {:?}", emission.clone() );}}
+
+        // Set pruning scores.
+        let pruning: Vec<I32F32> = normalized_emission.clone();
+        if debug { if_std! { println!( "P: {:?}", pruning.clone() );}}
+
+        // Sync parameter updates.
+        for i in 0..n {
+            Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
+            Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
+            Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
+            Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
+            Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
+            Self::set_bonds( netuid, i, ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect())
         }  
 
         emission
@@ -93,12 +281,6 @@ impl<T: Config> Pallet<T> {
     // Testing function.
     pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
         Stake::<T>::insert( hotkey, stake );
-    }
-    pub fn set_weights_for_testing( netuid: u16, uid: u16, weights: Vec<(u16,u16)>) {
-        Weights::<T>::insert(netuid, uid, weights);
-    }
-    pub fn set_bonds_for_testing( netuid: u16, uid: u16, bonds: Vec<(u16,u16)>) {
-        Bonds::<T>::insert(netuid, uid, bonds);
     }
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
@@ -133,6 +315,28 @@ impl<T: Config> Pallet<T> {
         stake
     }
 
+    pub fn get_block_at_registration( netuid:u16 ) -> Vec<u64> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut block_at_registration: Vec<u64> = vec![ 0; n ];
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                block_at_registration[ neuron_uid ] = BlockAtRegistration::<T>::get( netuid, neuron_uid as u16 );
+            }
+        }
+        block_at_registration
+    }
+
+    pub fn get_last_update( netuid:u16 ) -> Vec<u64> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut last_update: Vec<u64> = vec![ 0; n ];
+        for neuron_uid in 0..n {
+            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
+                last_update[ neuron_uid ] = LastUpdate::<T>::get( netuid, neuron_uid as u16 );
+            }
+        }
+        last_update
+    }
+
     pub fn get_weights_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
         let mut weights: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
@@ -153,7 +357,7 @@ impl<T: Config> Pallet<T> {
             }
         }
         weights
-    } 
+    }
 
     pub fn get_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
@@ -175,33 +379,7 @@ impl<T: Config> Pallet<T> {
             }
         }
         bonds
-    } 
-
-    pub fn get_pruned_bonds_sparse( netuid:u16 ) -> Vec<Vec<(u16, I32F32)>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-            /* for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16 ) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
-                    bonds [ uid_i as usize ].push( ( *uid_j, u16_proportion_to_fixed( *bonds_ij ) ));
-                } 
-            } */
-        }
-        bonds
-    } 
-
-    pub fn get_pruned_bonds_dense( netuid:u16 ) -> Vec<Vec<I32F32>> { 
-        let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut bonds: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(0.0); n ]; n ]; 
-        for ( uid_i, bonds_i ) in < Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)> >>::iter_prefix( netuid ) {
-           /*  for (uid_j, bonds_ij) in bonds_i.iter() { 
-                if NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, uid_i as u16) || NeuronsShouldPruneAtNextEpoch::<T>::get( netuid, *uid_j as u16) { 
-                    bonds [ uid_i as usize ] [ *uid_j as usize ] = u16_proportion_to_fixed( *bonds_ij );
-                }
-            } */
-        }
-        bonds
-    } 
+    }
 }
 
 #[allow(dead_code)]
@@ -228,6 +406,13 @@ pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_i
 #[allow(dead_code)]
 pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
 
+/// Return true when vector sum is zero.
+#[allow(dead_code)]
+pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
+    let vector_sum: I32F32 = vector.iter().sum();
+    vector_sum == I32F32::from_num( 0 )
+}
+
 #[allow(dead_code)]
 pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
     let x_sum: I32F32 = sum( x );
@@ -248,24 +433,223 @@ pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
 }
 
 #[allow(dead_code)]
-pub fn matmul( w: &Vec<Vec<I32F32>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-    if w.len() == 0 { return vec![] }
-    if w[0].len() == 0 { return vec![] }
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    for (i, w_row) in w.iter().enumerate() {
-        for (j, x_i) in x.iter().enumerate() {
-            result [ i ] += x_i * w_row [ j ] 
+pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
+    for i in 0..x.len() {
+        let row_sum: I32F32 = x[i].iter().sum();
+        if row_sum > I32F32::from_num( 0.0 as f32 ) {
+            x[i].iter_mut().for_each(|x_ij| *x_ij /= row_sum);
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_row_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>> ) {
+    for sparse_row in sparse_matrix.iter_mut() {
+        let row_sum: I32F32 = sparse_row.iter().map( | (_j, value) | *value ).sum();
+        if row_sum > I32F32::from_num( 0.0 ) {
+            sparse_row.iter_mut().for_each( | (_j, value) | *value /= row_sum );
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_col_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>> ) {
+    let n = sparse_matrix.len();
+    let mut col_sum: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); n ]; // assume square matrix, rows=cols
+    for sparse_row in sparse_matrix.iter() {
+        for (j, value) in sparse_row.iter() {
+            col_sum[*j as usize] += value;
+        }
+    }
+    for sparse_row in sparse_matrix.iter_mut() {
+        for (j, value) in sparse_row.iter_mut() {
+            if col_sum[*j as usize] == I32F32::from_num( 0.0 as f32 ) { continue }
+            *value /= col_sum[*j as usize];
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
+    if x.len() == 0 { return }
+    if x[0].len() == 0 { return }
+    let cols = x[0].len();
+    let mut col_sum: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); cols ];
+    for i in 0..x.len() {
+        assert_eq!( x[i].len(), cols );
+        for j in 0..cols {
+            col_sum[j] += x[i][j];
+        }
+    }
+    for j in 0..cols {
+        if col_sum[j] == I32F32::from_num( 0.0 as f32 ) { continue }
+        for i in 0..x.len() {
+            x[i][j] /= col_sum[j];
+        }
+    }
+}
+
+#[allow(dead_code)]
+// Apply mask to vector, mask=true will mask out set to 0
+pub fn inplace_mask_vector( mask: &Vec<bool>, vector: &mut Vec<I32F32> ) {
+    if mask.len() == 0 { return }
+    assert_eq!( mask.len(), vector.len() );
+    for i in 0..mask.len() {
+        if mask[i] {
+            vector[i] = I32F32::from_num( 0.0 );
+        }
+    }
+}
+
+#[allow(dead_code)]
+// Apply mask to matrix, mask=true will mask out set to 0
+pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>> ) {
+    if mask.len() == 0 { return }
+    if mask[0].len() == 0 { return }
+    assert_eq!( mask.len(), matrix.len() );
+    for i in 0..mask.len() {
+        for j in 0..mask[i].len() {
+            if mask[i][j] {
+                matrix[i][j] = I32F32::from_num( 0.0 );
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
+    if matrix.len() == 0 { return }
+    if matrix[0].len() == 0 { return }
+    assert_eq!( matrix.len(), matrix[0].len() );
+    for i in 0..matrix.len() {
+        matrix[i][i] = I32F32::from_num( 0.0 );
+    }
+}
+
+#[allow(dead_code)]
+pub fn diag_mask_sparse( sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u16, I32F32)>> {
+    let n: usize = sparse_matrix.len();
+    let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        for (j, value) in sparse_row.iter() {
+            if i != (*j as usize) {
+                result[i].push( (*j, *value) );
+            }
         }
     }
     result
 }
 
 #[allow(dead_code)]
-pub fn sparse_matmul( w: &Vec<Vec<(u16, I32F32)>>, x: &Vec<I32F32> ) -> Vec<I32F32> {
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); x.len() ];
-    for row in w.iter() {
-        for r_i in row.iter() {
-            result [ r_i.0 as usize ] = r_i.1 * x[ r_i.0 as usize ]; 
+pub fn vec_mask_sparse_matrix( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, first_vector: &Vec<u64>, second_vector: &Vec<u64>, mask_fn: &dyn Fn(u64, u64) -> bool) -> Vec<Vec<(u16, I32F32)>> {
+    let n: usize = sparse_matrix.len();
+    let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        for (j, value) in sparse_row.iter() {
+            if !mask_fn(first_vector[i], second_vector[*j as usize]) {
+                result[i].push( (*j, *value) );
+            }
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+/// matrix-vector hadamard product
+pub fn hadamard( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<Vec<I32F32>> {
+    if matrix.len() == 0 { return vec![ vec![] ] }
+    if matrix[0].len() == 0 { return vec![ vec![] ] }
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num( 0.0 ); matrix[0].len() ]; matrix.len() ];
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            result[i][j] = vector[i] * matrix[i][j];
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+/// sparse matrix-vector hadamard product
+pub fn sparse_hadamard( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<Vec<(u16, I32F32)>> {
+    let mut result: Vec<Vec<(u16, I32F32)>> = sparse_matrix.clone();
+    for (i, sparse_row) in result.iter_mut().enumerate() {
+        for (_j, value) in sparse_row.iter_mut() {
+            *value *= vector[i];
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn matmul( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    if matrix.len() == 0 { return vec![] }
+    if matrix[0].len() == 0 { return vec![] }
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            // Compute ranks: r_j = SUM(i) w_ij * s_i
+            // Compute trust scores: t_j = SUM(i) w_ij * s_i
+            // result_j = SUM(i) vector_i * matrix_ij
+            result[j] += vector[i] * matrix[i][j];
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn matmul_transpose( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    if matrix.len() == 0 { return vec![] }
+    if matrix[0].len() == 0 { return vec![] }
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            // Compute dividends: d_j = SUM(i) b_ji * inc_i
+            // result_j = SUM(i) vector_i * matrix_ji
+            result[j] += vector[i] * matrix[j][i];
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_matmul( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); sparse_matrix.len() ];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        for (j, value) in sparse_row.iter() {
+            // Compute ranks: r_j = SUM(i) w_ij * s_i
+            // Compute trust scores: t_j = SUM(i) w_ij * s_i
+            // result_j = SUM(i) vector_i * matrix_ij
+            result[*j as usize] += vector[i] * value;
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_matmul_transpose( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); sparse_matrix.len() ];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        for (j, value) in sparse_row.iter() {
+            // Compute dividends: d_j = SUM(i) b_ji * inc_i
+            // result_j = SUM(i) vector_i * matrix_ji
+            // result_i = SUM(j) vector_j * matrix_ij
+            result[i] += vector[*j as usize] * value;
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_clip( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<(u16, I32F32)>> {
+    let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; sparse_matrix.len() ];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        for (j, value) in sparse_row.iter() {
+            if *value < threshold {
+                result[i].push( (*j, lower) );
+            }
+            else {
+                result[i].push( (*j, upper) );
+            }
         }
     }
     result
@@ -302,17 +686,47 @@ pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32,
 }
 
 #[allow(dead_code)]
-pub fn mat_ema( a: &Vec<Vec<I32F32>>, b: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
-    if a.len() == 0 { return vec![vec![];1] }
-    if a[0].len() == 0 { return vec![vec![];1] }
-    let one: I32F32 = I32F32::from_num( 1.0 );
+/// Matrix exponential moving average: alpha * a_ij + one_minus_alpha * b_ij
+///
+/// # Arguments
+///
+/// * `new` - new observation
+/// * `old` - old observation
+/// * `alpha` - EMA coefficient, typically small, higher alpha discounts older observations faster
+pub fn mat_ema( new: &Vec<Vec<I32F32>>, old: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
+    if new.len() == 0 { return vec![vec![];1] }
+    if new[0].len() == 0 { return vec![vec![];1] }
     let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
-    let mut result: Vec<Vec<I32F32>> = vec![ vec![ one; a[0].len() ]; a.len() ]; 
-    assert!(a.len() == b.len());
-    for i in 0..a.len() {
-        assert!(a[i].len() == b[i].len());
-        for j in 0..a[i].len() {
-            result[i][j] = alpha * a[i][j] + one_minus_alpha * b[i][j] 
+    let mut result: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num( 0.0 ); new[0].len() ]; new.len() ]; 
+    assert!(new.len() == old.len());
+    for i in 0..new.len() {
+        assert!(new[i].len() == old[i].len());
+        for j in 0..new[i].len() {
+            result[i][j] = alpha * new[i][j] + one_minus_alpha * old[i][j] 
+        }
+    }
+    result
+}
+
+#[allow(dead_code)]
+pub fn sparse_mat_ema( new: &Vec<Vec<(u16, I32F32)>>, old: &Vec<Vec<(u16, I32F32)>>, alpha: I32F32 ) -> Vec<Vec<(u16, I32F32)>> {
+    assert!(new.len() == old.len());
+    let n = new.len(); // assume square matrix, rows=cols
+    let zero: I32F32 = I32F32::from_num( 0.0 );
+    let one_minus_alpha:I32F32 = I32F32::from_num( 1.0 ) - alpha;
+    let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n ];
+    for i in 0..new.len() {
+        let mut row: Vec<I32F32> = vec![ zero; n];
+        for (j, value) in new[i].iter() {
+            row[*j as usize] += alpha * value;
+        }
+        for (j, value) in old[i].iter() {
+            row[*j as usize] += one_minus_alpha * value;
+        }
+        for (j, value) in row.iter().enumerate() {
+            if value > &zero {
+                result[i].push( (j as u16, *value) )
+            }
         }
     }
     result
@@ -395,6 +809,9 @@ mod tests {
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(-9),  I32F32::from_num(-9),  I32F32::from_num(-9)], epsilon );
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ], vec![ I32F32::from_num(2.0); 3], vec![ I32F32::from_num(3.0);3 ] ]; 
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
+        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(12),  I32F32::from_num(12),  I32F32::from_num(12)], epsilon );
+        let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1), I32F32::from_num(2), I32F32::from_num(3) ]; 3 ]; 
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
         assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(12),  I32F32::from_num(18)], epsilon );
     }

@@ -100,6 +100,7 @@ impl<T: Config> Pallet<T> {
             /* check if the hotkey is deregistred from all networks */
             // TODO( Saeideh ): We dont need to unstake a peer if it no longer exists in a network.
             // TODO( Saeideh ): Lets also build some solid tests for this.
+            Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph); //UIds, Keys. If we add_subnetwork_account below, we always have to remove it here.
             let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_to_prune); // a list of subnets that hotkey is registered on.
             if vec_subnets_for_pruning_hotkey.len() == 1 { // the pruning hotkey was only registered on this network, so we need to remove it from storages
                 //

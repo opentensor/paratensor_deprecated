@@ -758,8 +758,8 @@ pub mod pallet {
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
 			/*TO DO:
 			1. calculate pending emission for each network
-			2. check if tempo % current_block ==0 for any network, then call epoch with pending emission for this network
-			3. if tempo% current_block == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
+			2. check if (current_block_number + 1) % tempo ==0 for any network, then call epoch with pending emission for this network
+			3. if (current_block_number + 1) % tempo == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
 				we do not need to run epoch for the network 
 			4. Reset RegistrationsThisBlock and RegistrationsThisBlock for all networks. */
 			let current_block_number = Self::get_current_block_as_u64();  
@@ -776,7 +776,8 @@ pub mod pallet {
 					RegistrationsThisInterval::<T>::insert(netuid_i, 0);
 				}
 			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
-			// A network drains it's emission if the tempo % current_block_number == 0.
+			// A network drains it's emission if the (current_block_number + 1) % tempo == 0.
+			// Skip epoch when current_block_number == 0, hence (current_block_number + 1)
 			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
 				if (current_block_number + 1) % (tempo_i as u64) == 0 {
 					// We are going to drain this pending emission because the modulo tempo is zero.
