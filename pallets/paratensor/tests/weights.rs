@@ -56,8 +56,11 @@ fn set_weights_ok_no_weights() {
 		// Let's give it some stake.
 		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_account_id, initial_stake);
 
-        let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-
+		let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
 		// Dispatch a signed extrinsic, setting weights.
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys, weight_values));
 		assert_eq!(ParatensorModule::get_weights_for_neuron(netuid, neuron_uid), vec![0]);

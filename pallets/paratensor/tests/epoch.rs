@@ -20,7 +20,7 @@ fn test_nill_epoch_paratensor() {
 // Test an epoch on a graph with a single item.
 fn test_1_graph() {
 	new_test_ext().execute_with(|| {
-        println!( "test_1_graph:" );
+       println!( "test_1_graph:" );
 		let netuid: u16 = 0;
 		let coldkey: u64 = 0;
 		let hotkey: u64 = 0;
@@ -49,7 +49,7 @@ fn test_1_graph() {
 // Test an epoch on a graph with two items.
 fn test_10_graph() {
 	new_test_ext().execute_with(|| {
-        println!( "test_10_graph" );
+       println!( "test_10_graph" );
 		// Function for adding a nodes to the graph.
 		pub fn add_node( 
 				netuid: u16,
