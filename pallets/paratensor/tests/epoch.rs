@@ -26,6 +26,7 @@ fn test_1_graph() {
 		let hotkey: u64 = 0;
 		let uid: u16 = 0;
 		let stake_amount: u64 = 1;
+		ParatensorModule::set_max_allowed_uids( netuid, 1 ); 
 		ParatensorModule::add_balance_to_coldkey_account( &coldkey, stake_amount as u128 );
  		ParatensorModule::set_stake_for_testing( &hotkey, stake_amount );
 		ParatensorModule::add_subnetwork_account( netuid, uid, &hotkey );
@@ -41,7 +42,7 @@ fn test_1_graph() {
 		assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 		assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
 		assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
-		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 0 );  // all self-weight masked out (TODO: decide emission for this case)
+		assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1_000_000_000 );
 	});
 }
 
@@ -103,7 +104,7 @@ fn test_10_graph() {
 			assert_eq!( ParatensorModule::get_consensus( netuid, i as u16 ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, i as u16 ), 0 );
 			assert_eq!( ParatensorModule::get_dividend( netuid, i as u16 ), 0 );
-			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, i as u16 ), 99999999 );
 		}
 	});
 }
