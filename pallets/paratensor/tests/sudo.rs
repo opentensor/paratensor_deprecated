@@ -88,7 +88,7 @@ fn test_sudo_set_max_allowed_uid() {
         
         match ParatensorModule::get_max_allowed_uids(netuid) {
                 Ok(k) => assert_eq!(k, max_allowed_uids),
-                Err(e) => panic!(),
+                Err(_e) => panic!(),
             } 
     });
 }
@@ -224,16 +224,16 @@ fn test_sudo_test_tempo_pneding_emissions_ok() {
         step_block(1);
         //
         assert_eq!(ParatensorModule::get_tempo(netuid), tempo);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid), 0);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid1), 0);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid2), 200000000);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid3), 300000000);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid), 0);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid1), 0);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid2), 200000000);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid3), 300000000);
         //
         step_block(1);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid), 0);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid1), 400000000);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid2), 0);
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid3), 600000000); // 300000000 + 300000000
+        assert_eq!(ParatensorModule::get_pending_emission(netuid), 0);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid1), 400000000);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid2), 0);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid3), 600000000); // 300000000 + 300000000
     });
 }
 
@@ -256,8 +256,8 @@ pub fn test_sudo_test_pending_emission_ok() {
 
         step_block(3);
 
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid1), 750000000); // 250000000 + 250000000 + 250000000
-        assert_eq!(ParatensorModule::get_pendingEmission(netuid2), 2250000000); // 750000000 + 750000000 + 750000000
+        assert_eq!(ParatensorModule::get_pending_emission(netuid1), 750000000); // 250000000 + 250000000 + 250000000
+        assert_eq!(ParatensorModule::get_pending_emission(netuid2), 2250000000); // 750000000 + 750000000 + 750000000
     });
 }
 
