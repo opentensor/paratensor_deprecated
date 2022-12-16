@@ -227,12 +227,8 @@ pub fn local_testnet_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
 					),
 				],
 				vec![
