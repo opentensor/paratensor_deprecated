@@ -1,10 +1,12 @@
 use crate::{mock::*};
 #[cfg(feature = "no_std")]
 use ndarray::{ndarray::Array1, ndarray::Array2, ndarray::arr1};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 use substrate_fixed::types::I32F32;
 use frame_system::Config;
 use frame_support::{assert_ok};
-use std::time::{Instant};
+use std::time::Instant;
 mod mock;
 
 #[test]
@@ -128,7 +130,7 @@ fn test_512_graph() {
 		let validators_n: u16 = 64;
 		let validators: Vec<u16> = (0..validators_n).collect();
 		let servers: Vec<u16> = (validators_n..n).collect();
-		let server: u16 = servers[0];
+		let server: usize = servers[0] as usize;
 		let epochs: u16 = 100;
 		println!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, false, false);
@@ -142,7 +144,7 @@ fn test_512_graph() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 1023 ); // Note D = floor(1 / 64 * 65_535) = 1023
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 7812485 ); // Note E = 0.5 / 200 * 1_000_000_000 = 7_812_500 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], I32F32::from_num(1023) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 64 * 65_535) / 65_535 = 1023 / 65_535
+			assert_eq!( bonds[uid as usize][server], I32F32::from_num(1023) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 64 * 65_535) / 65_535 = 1023 / 65_535
 		}
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
@@ -153,7 +155,7 @@ fn test_512_graph() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1116073 ); // Note E = floor(0.5 / (512 - 64) * 1_000_000_000) = 1_116_071 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], 0.0 );
+			assert_eq!( bonds[uid as usize][server], 0.0 );
 		}
 	});
 }
@@ -167,7 +169,7 @@ fn test_4096_graph() {
 		let validators_n: u16 = 200;
 		let validators: Vec<u16> = (0..validators_n).collect();
 		let servers: Vec<u16> = (validators_n..n).collect();
-		let server: u16 = servers[0];
+		let server: usize = servers[0] as usize;
 		let epochs: u16 = 1;
 		println!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, false, false);
@@ -181,7 +183,7 @@ fn test_4096_graph() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 ); // Note D = floor(1 / 200 * 65_535) = 327
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 ); // Note E = 0.5 / 200 * 1_000_000_000 = 2_500_000 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], I32F32::from_num(327) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
+			assert_eq!( bonds[uid as usize][server], I32F32::from_num(327) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
 		}
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
@@ -192,7 +194,7 @@ fn test_4096_graph() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 ); // Note E = floor(0.5 / (4096 - 200) * 1_000_000_000) = 128336
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], 0.0 );
+			assert_eq!( bonds[uid as usize][server], 0.0 );
 		}
 	});
 }
@@ -206,7 +208,7 @@ fn test_4096_graph_sparse() {
 		let validators_n: u16 = 200;
 		let validators: Vec<u16> = (0..validators_n).collect();
 		let servers: Vec<u16> = (validators_n..n).collect();
-		let server: u16 = servers[0];
+		let server: usize = servers[0] as usize;
 		let epochs: u16 = 1;
 		println!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, true, false);
@@ -220,7 +222,7 @@ fn test_4096_graph_sparse() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 327 ); // Note D = floor(1 / 200 * 65_535) = 327
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 2499995 ); // Note E = 0.5 / 200 * 1_000_000_000 = 2_500_000 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], I32F32::from_num(327) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
+			assert_eq!( bonds[uid as usize][server], I32F32::from_num(327) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 200 * 65_535) / 65_535 = 327 / 65_535
 		}
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
@@ -231,7 +233,7 @@ fn test_4096_graph_sparse() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 128336 ); // Note E = floor(0.5 / (4096 - 200) * 1_000_000_000) = 128336
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], 0.0 );
+			assert_eq!( bonds[uid as usize][server], 0.0 );
 		}
 	});
 }
@@ -244,7 +246,7 @@ fn test_4096_graph_interleaved() {
 		let n: u16 = 4096;
 		let validators_n: u16 = 256;
 		let (validators, servers): (Vec<_>, Vec<_>) = (0..n).collect::<Vec<u16>>().iter().partition( | &i | i % (n / validators_n) == 0);
-		let server: u16 = servers[0];
+		let server: usize = servers[0] as usize;
 		let epochs: u16 = 1;
 		println!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, true, false);
@@ -258,7 +260,7 @@ fn test_4096_graph_interleaved() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 255 ); // Note D = floor(1 / 256 * 65_535)
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1953110 ); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], I32F32::from_num(255) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 256 * 65_535) / 65_535
+			assert_eq!( bonds[uid as usize][server], I32F32::from_num(255) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 256 * 65_535) / 65_535
 		}
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
@@ -269,7 +271,50 @@ fn test_4096_graph_interleaved() {
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 130209 ); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
-			assert_eq!( bonds[uid as usize][server as usize], 0.0 );
+			assert_eq!( bonds[uid as usize][server], 0.0 );
+		}
+	});
+}
+
+#[test]
+/// Test an epoch_sparse on a graph with 4096 nodes, of which the first 256 are validators setting non-self weights, and the rest servers setting only self-weights.
+fn test_4096_graph_random() {
+	new_test_ext().execute_with(|| {
+		let netuid: u16 = 0;
+		let n: usize = 4096;
+		let validators_n: usize = 256;
+		let mut permuted_uids: Vec<u16> = (0..n as u16).collect();
+		permuted_uids.shuffle(&mut thread_rng());
+		let validators: Vec<u16> = permuted_uids[0..validators_n].into();
+		let servers: Vec<u16> = permuted_uids[validators_n..n].into();
+		let validator: usize = validators[0] as usize;
+		let server: usize = servers[0] as usize;
+		let epochs: u16 = 1;
+		println!( "test_{n:?}_graph ({validators_n:?} validators)" );
+		dbg!(validators[0], validators[1], servers[0], servers[1]);
+		init_run_epochs(netuid, n as u16, &validators, &servers, epochs, false, false);
+		let bonds = ParatensorModule::get_bonds( netuid );
+		for uid in validators {
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 1 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 255 ); // Note D = floor(1 / 256 * 65_535)
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1953110 ); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125 (discrepancy)
+			assert_eq!( bonds[uid as usize][validator], 0.0 );
+			assert_eq!( bonds[uid as usize][server], I32F32::from_num(255) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 256 * 65_535) / 65_535
+		}
+		for uid in servers {
+			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(uid as u64) ), 0 );
+			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 17 ); // Note R = floor(1 / (4096 - 256) * 65_535) = 16
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 17 ); // Note I = floor(1 / (4096 - 256) * 65_535) = 16
+			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 130209 ); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208 (discrepancy)
+			assert_eq!( bonds[uid as usize][validator], 0.0 );
+			assert_eq!( bonds[uid as usize][server], 0.0 );
 		}
 	});
 }
