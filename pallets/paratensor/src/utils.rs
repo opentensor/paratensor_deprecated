@@ -5,6 +5,7 @@ use sp_core::U256;
 use frame_support::inherent::Vec;
 use frame_support::sp_std::vec;
 use frame_support::storage::IterableStorageMap;
+use frame_support::pallet_prelude::DispatchError;
 
 impl<T: Config> Pallet<T> {
     
@@ -22,7 +23,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_max_registratations_per_block( ) -> u16 {
         MaxRegistrationsPerBlock::<T>::get()
     }
-    pub fn set_max_registratations_per_block( max_registrations: u16 ){
+    pub fn set_max_registrations_per_block( max_registrations: u16 ){
         MaxRegistrationsPerBlock::<T>::put( max_registrations );
     }
 
@@ -34,12 +35,12 @@ impl<T: Config> Pallet<T> {
          return Difficulty::<T>::get(netuid); 
     }
 
-    /*pub fn get_max_allowed_uids(netuid: u16 ) -> Result<u16, DispatchError>  {
+    pub fn get_max_allowed_uids(netuid: u16 ) -> Result<u16, DispatchError>  {
         return MaxAllowedUids::<T>::try_get(netuid).map_err(|_err| Error::<T>::NetworkDoesNotExist.into());
-    } */
-    pub fn get_max_allowed_uids(netuid: u16) -> u16 {
+    } 
+    /*pub fn get_max_allowed_uids(netuid: u16) -> u16 {
         return MaxAllowedUids::<T>::get(netuid);
-    }
+    } */
     pub fn set_max_allowed_uids(netuid: u16, max_allowed: u16) {
         return MaxAllowedUids::<T>::insert(netuid, max_allowed);
     }
@@ -50,7 +51,11 @@ impl<T: Config> Pallet<T> {
 		let uid = SubnetworkN::<T>::get(netuid);
 		assert!(uid < MaxAllowedUids::<T>::get(netuid));  // The system should fail if this is ever reached.
         assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
+<<<<<<< HEAD
 		// SubnetworkN::<T>::insert(netuid, uid + 1); 
+=======
+		//SubnetworkN::<T>::insert(netuid, uid + 1); 
+>>>>>>> 8869e3d4980f12ef8b23934128dd4b65ec856309
 		uid
 	}
 
@@ -92,7 +97,11 @@ impl<T: Config> Pallet<T> {
             let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
             //
             for i in vec_hotkey_subnets{
-                let neuron_uid = Self::get_neuron_for_net_and_hotkey(i, &hotkey);
+                let neuron_uid ;
+                match Self::get_neuron_for_net_and_hotkey(i, &hotkey) {
+                    Ok(k) => neuron_uid = k,
+                    Err(e) => panic!("Error: {:?}", e),
+                } 
                 S::<T>::remove(i, neuron_uid);
             }
         }
@@ -177,6 +186,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_tempo(netuid:u16) -> u16{
         Tempo::<T>::get(netuid)
     }
+    pub fn get_pending_emission(netuid:u16) -> u64{
+        PendingEmission::<T>::get(netuid)
+    }
     
     /// =========================
 	/// ==== Global Accounts ====
@@ -217,7 +229,15 @@ impl<T: Config> Pallet<T> {
     //pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
     //pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
-    pub fn increment_subnetwork_n( netuid:u16 ) {let n = SubnetworkN::<T>::get( netuid ); if n < Self::get_max_allowed_uids(netuid) { SubnetworkN::<T>::insert(netuid, n + 1); } }
+    pub fn increment_subnetwork_n( netuid:u16 ) {
+        let n = SubnetworkN::<T>::get( netuid ); 
+        let k = Self::get_max_allowed_uids(netuid);
+        match k {
+                Ok(k) => if n < k { SubnetworkN::<T>::insert(netuid, n + 1);},
+                Err(_e) => (),
+            }   
+    }
+    //
     pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n > 0 { SubnetworkN::<T>::insert(netuid, n - 1); } }
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
@@ -243,12 +263,12 @@ impl<T: Config> Pallet<T> {
         subnets
     }
 
-    pub fn get_hotkey_for_net_and_neuron(netuid: u16, neuron_uid: u16) -> T::AccountId {
-        return Keys::<T>::get(netuid, neuron_uid);
+    pub fn get_hotkey_for_net_and_neuron(netuid: u16, neuron_uid: u16) ->  Result<T::AccountId, DispatchError> {
+        return Keys::<T>::try_get(netuid, neuron_uid).map_err(|_err| Error::<T>::NotRegistered.into());
     }
 
-    pub fn get_neuron_for_net_and_hotkey(netuid: u16, hotkey: &T::AccountId) -> u16 {
-        return Uids::<T>::get(netuid, &hotkey);
+    pub fn get_neuron_for_net_and_hotkey(netuid: u16, hotkey: &T::AccountId) -> Result<u16, DispatchError> {
+        return Uids::<T>::try_get(netuid, &hotkey).map_err(|_err| Error::<T>::NotRegistered.into());
     }
 
     pub fn increment_subnets_for_hotkey(netuid: u16, hotkey: &T::AccountId){
@@ -272,7 +292,11 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_hotkey_stake_for_subnet(netuid: u16, hotkey:  &T::AccountId) -> u64{
 
-        let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, hotkey);
+        let neuron_uid;
+        match Self::get_neuron_for_net_and_hotkey(netuid, hotkey) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        }
         S::<T>::get(netuid, neuron_uid)
     }
 
@@ -290,7 +314,7 @@ impl<T: Config> Pallet<T> {
 		return w;
     } 
 
-    pub fn get_emission_ratio(netuid: u16) -> u64 {
+    pub fn get_emission_value(netuid: u16) -> u64 {
         EmissionValues::<T>::get(netuid)
     }
 

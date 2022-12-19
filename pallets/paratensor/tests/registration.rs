@@ -89,11 +89,20 @@ fn test_registration_ok() {
 		assert_eq!(subs.contains(&netuid), true);
 
 		// Check if the neuron has added to the Keys
-		let neuron_uid: u16 = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-		assert_eq!(ParatensorModule::get_hotkey_for_net_and_neuron(netuid, neuron_uid), hotkey_account_id);
-
+		let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+		//
+		assert!(ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
 		// Check if neuron has added to Uids
-        assert_eq!(ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id), neuron_uid);
+		let neuro_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuro_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        }
+		assert_eq!(neuro_uid, neuron_uid);
 
 		// Check if the balance of this hotkey account for this subnetwork == 0
 		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid, neuron_uid), 0);
@@ -106,7 +115,7 @@ fn test_registration_too_many_registrations_per_block() {
 		
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
-		ParatensorModule::set_max_registratations_per_block( 10 );
+		ParatensorModule::set_max_registrations_per_block( 10 );
 
 		let block_number: u64 = 0;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
@@ -158,7 +167,7 @@ fn test_registration_defaults() {
 		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 2 ));
 		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 3 ));
 		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 2 ));
-		ParatensorModule::set_max_registratations_per_block( 2 );
+		ParatensorModule::set_max_registrations_per_block( 2 );
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
 		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 3 );
 		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 2 );
@@ -326,7 +335,11 @@ fn test_registration_failed_no_signature() {
 fn test_registration_get_next_uid() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
+		//add network
+		add_network(netuid, 13, 0);
 		assert_eq!(ParatensorModule::get_next_uid(netuid), 0); // We start with id 0
+		//
+		ParatensorModule::increment_subnetwork_n(netuid);
 		assert_eq!(ParatensorModule::get_next_uid(netuid), 1); // One up
 	});
 }
@@ -356,14 +369,24 @@ fn test_registration_pruning() {
 		add_network(netuid, tempo, 0);
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
-		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
+		//
+		let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
 		ParatensorModule::set_pruning_score(netuid, neuron_uid, 2);
 		//
 		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 11231312312);
 		let hotkey_account_id1 = 2;
 		let coldkey_account_id1 = 668;
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id1), netuid, block_number, nonce1, work1, hotkey_account_id1, coldkey_account_id1));
-		let neuron_uid1 = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id1);
+		//
+		let neuron_uid1 ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id1) {
+            Ok(k) => neuron_uid1 = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
 		ParatensorModule::set_pruning_score(netuid, neuron_uid1, 3);
 		//
 		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 212312414);
@@ -398,8 +421,13 @@ fn test_registration_get_neuron_metadata() {
 
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		//
-		let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-		let neuron: NeuronMetadataOf = ParatensorModule::get_neuron_metadata(neuron_id);
+		//let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
+		let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+		let neuron: NeuronMetadataOf = ParatensorModule::get_neuron_metadata(neuron_uid);
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);

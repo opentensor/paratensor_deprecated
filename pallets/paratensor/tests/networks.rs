@@ -84,23 +84,32 @@ fn test_remove_uid_for_network() {
 	new_test_ext().execute_with(|| {
 
         let netuid: u16 = 1;
-        let result;
         let tempo: u16 = 13;
 
         add_network(netuid, tempo, 0);
         //
 	register_ok_neuron( 1, 55, 66, 0);
-        let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
+        //let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
+        let neuron_id ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55) {
+            Ok(k) => neuron_id = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+        assert!(ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55).is_ok());
         assert_eq!(neuron_id, 0);
         //
         register_ok_neuron( 1, 56, 67, 300000);
-        let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56);
-        assert_eq!(neuron_id, 1);
+        //let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56);
+        let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+        assert_eq!(neuron_uid, 1);
         //
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         //
-        result = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55);
-        assert_eq!(result, 0);
+        assert!(ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &55).is_err());
 
 	});
 }
@@ -162,7 +171,7 @@ fn test_network_set_default_value_for_other_parameters() {
         add_network(netuid, tempo, 0);
         //
         assert_eq!(ParatensorModule::get_min_allowed_weights(netuid), 0);
-        assert_eq!(ParatensorModule::get_emission_ratio(netuid), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid), 0);
         assert_eq!(ParatensorModule::get_max_weight_limit(netuid), u16::MAX);
         //maxAllowedMaxMinRatio
         assert_eq!(ParatensorModule::get_difficulty_as_u64(netuid), 10000);

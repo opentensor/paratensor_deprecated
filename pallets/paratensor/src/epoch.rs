@@ -108,13 +108,23 @@ impl<T: Config> Pallet<T> {
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
+        // If emission is zero, replace emission with normalized stake.
+        if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
+            if is_zero( &stake ) { // no active stake
+                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                inplace_normalize( &mut unmasked_stake );
+                normalized_emission = unmasked_stake;
+            }
+            else {
+                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+            }
+        }
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
-        if debug { if_std! { println!( "E:\n{:?}\n", emission.clone() );}}
+        if debug { if_std! { println!( "E: {:?}", emission.clone() );}}
 
-        // Compute pruning scores.
-        let mut pruning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        inplace_normalize( &mut pruning );
-        if debug { if_std! { println!( "P:\n{:?}\n", pruning.clone() );}}
+        // Set pruning scores.
+        let pruning: Vec<I32F32> = normalized_emission.clone();
+        if debug { if_std! { println!( "P: {:?}", pruning.clone() );}}
 
         // Sync parameter updates.
         for i in 0..n {
@@ -235,12 +245,22 @@ impl<T: Config> Pallet<T> {
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
+        // If emission is zero, replace emission with normalized stake.
+        if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
+            if is_zero( &stake ) { // no active stake
+                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                inplace_normalize( &mut unmasked_stake );
+                normalized_emission = unmasked_stake;
+            }
+            else {
+                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+            }
+        }
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
         if debug { if_std! { println!( "E: {:?}", emission.clone() );}}
 
-        // Compute pruning scores.
-        let mut pruning: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
-        inplace_normalize( &mut pruning );
+        // Set pruning scores.
+        let pruning: Vec<I32F32> = normalized_emission.clone();
         if debug { if_std! { println!( "P: {:?}", pruning.clone() );}}
 
         // Sync parameter updates.
@@ -385,6 +405,13 @@ pub fn vec_fixed_proportions_to_u16( vec: Vec<I32F32> ) -> Vec<u16> { vec.into_i
 
 #[allow(dead_code)]
 pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
+
+/// Return true when vector sum is zero.
+#[allow(dead_code)]
+pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
+    let vector_sum: I32F32 = vector.iter().sum();
+    vector_sum == I32F32::from_num( 0 )
+}
 
 #[allow(dead_code)]
 pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {

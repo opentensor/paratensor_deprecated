@@ -239,7 +239,11 @@ impl<T: Config> Pallet<T> {
                 for i in vec_new_hotkey_subnets{
 
                     let netuid = i;
-                    let neuron_uid = Self::get_neuron_for_net_and_hotkey(netuid, hotkey);
+                    let neuron_uid ;
+                    match Self::get_neuron_for_net_and_hotkey(netuid, hotkey) {
+                        Ok(k) => neuron_uid = k,
+                        Err(e) => panic!("Error: {:?}", e),
+                    } 
 
                     if S::<T>::contains_key(netuid, neuron_uid){
 

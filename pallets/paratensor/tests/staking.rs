@@ -78,7 +78,7 @@ fn test_dividends_with_run_to_block() {
 		add_network(netuid, 13, 0);
 
 		// Register neuron, this will set a self weight
-		ParatensorModule::set_max_registratations_per_block( 3 );
+		ParatensorModule::set_max_registrations_per_block( 3 );
 		ParatensorModule::set_max_allowed_uids(1, 5);
 		
 		register_ok_neuron( netuid, 0, coldkey_account_id, 2112321);
@@ -397,8 +397,18 @@ fn test_remove_stake_from_hotkey_account_registered_in_various_networks() {
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		register_ok_neuron( netuid_ex, hotkey_id, coldkey_id, 48141209);
 		
-		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_id);
-		let neuron_uid_ex = ParatensorModule::get_neuron_for_net_and_hotkey(netuid_ex, &hotkey_id);
+		//let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_id);
+		let neuron_uid ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_id) {
+            Ok(k) => neuron_uid = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
+		//let neuron_uid_ex = ParatensorModule::get_neuron_for_net_and_hotkey(netuid_ex, &hotkey_id);
+		let neuron_uid_ex ;
+        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid_ex, &hotkey_id) {
+            Ok(k) => neuron_uid_ex = k,
+            Err(e) => panic!("Error: {:?}", e),
+        } 
 		//Add some stake that can be removed
 		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, amount);
 
