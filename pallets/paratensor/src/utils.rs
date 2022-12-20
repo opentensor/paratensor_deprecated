@@ -51,11 +51,7 @@ impl<T: Config> Pallet<T> {
 		let uid = SubnetworkN::<T>::get(netuid);
 		assert!(uid < MaxAllowedUids::<T>::get(netuid));  // The system should fail if this is ever reached.
         assert!(uid < u16::MAX);  // The system should fail if this is ever reached.
-<<<<<<< HEAD
-		// SubnetworkN::<T>::insert(netuid, uid + 1); 
-=======
 		//SubnetworkN::<T>::insert(netuid, uid + 1); 
->>>>>>> 8869e3d4980f12ef8b23934128dd4b65ec856309
 		uid
 	}
 
