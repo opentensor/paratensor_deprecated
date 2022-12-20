@@ -1,0 +1,12 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/rust:1.50.0
+    steps:
+      - checkout
+      - run: cargo --version && rustc --version
+      - run:
+          name: Run Tests
+          command: "cargo test"

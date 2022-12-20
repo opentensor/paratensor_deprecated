@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  validator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: validator
+      args:
+        POLKADOT_VERSION: v0.9.10
+    environment:
+      - CARGO_HOME=/root/.cargo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    tty: true
+    deploy:
+      replicas: 1
+
+  collator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: collator
+    environment:
+      - CARGO_HOME=/root/.cargo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    tty: true
+    deploy:
+      replicas: 1
