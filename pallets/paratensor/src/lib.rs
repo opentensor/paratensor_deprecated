@@ -779,7 +779,7 @@ pub mod pallet {
 			// A network drains it's emission if the (current_block_number + 1) % tempo == 0.
 			// Skip epoch when current_block_number == 0, hence (current_block_number + 1)
 			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-				if (current_block_number + 1) % (tempo_i as u64) == 0 {
+				if ( current_block_number + 1 ) % ( tempo_i as u64 + 1 ) == 0 {
 					// We are going to drain this pending emission because the modulo tempo is zero.
 					let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
 					// Distribute the emission through the epoch.

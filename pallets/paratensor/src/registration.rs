@@ -2,6 +2,7 @@ use super::*;
 use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
+use sp_runtime::sp_std::if_std;
 use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
@@ -60,6 +61,7 @@ impl<T: Config> Pallet<T> {
         ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); // Work must have been done within 3 blocks (stops long range attacks).
 
         // 5. Check for repeat work.
+        if_std! { println!( "Work:\n  {:?}, {:?}, {:?}\n", coldkey, hotkey, work.clone() );}
         ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated );  // Work has not been used before.
 
         // 6. Check difficulty.
