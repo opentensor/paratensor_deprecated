@@ -395,6 +395,7 @@ fn test_registration_pruning() {
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id2), netuid, block_number, nonce2, work2, hotkey_account_id2, coldkey_account_id2));
 		//
 		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
+		println!( "subs: {:?}, {:?}", subs, netuid);
 		assert_eq!(subs.contains(&netuid), false);
 		//
 		assert_eq!(ParatensorModule::if_emission_is_set_for_neuron(netuid, neuron_uid), false);

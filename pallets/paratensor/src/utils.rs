@@ -268,18 +268,25 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn increment_subnets_for_hotkey(netuid: u16, hotkey: &T::AccountId){
-
         let mut vec_new_hotkey_subnets = vec![];
-
         if Subnets::<T>::contains_key(&hotkey){ //update the list of subnets that hotkey is registered on
             vec_new_hotkey_subnets = Subnets::<T>::take(&hotkey);
-            
             vec_new_hotkey_subnets.push(netuid);
             Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
         } else {
             vec_new_hotkey_subnets.push(netuid); 
             Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
         }
+    }
+    pub fn decrement_subnets_for_hotkey( netuid: u16, hotkey: &T::AccountId ) {
+        let mut new_hotkey_subnets: Vec<u16> = vec![];
+        let old_hotkey_subnets: Vec<u16> = Subnets::<T>::take(&hotkey);
+        for netuid_i in old_hotkey_subnets.iter() {
+            if *netuid_i != netuid {
+                new_hotkey_subnets.push( *netuid_i );
+            }
+        }
+        Subnets::<T>::insert( &hotkey, new_hotkey_subnets ); 
     }
     //check if horkey is registered on any network
     pub fn is_hotkey_registered_any(hotkey:  &T::AccountId)-> bool {
