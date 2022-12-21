@@ -132,10 +132,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_neuron_to_prune(netuid: u16) -> u16 {
         let mut min_score : u16 = u16::MAX;
         let mut uid_with_min_score = 0;
-        for (uid_i, _prune_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-            let value = PruningScores::<T>::get(netuid, uid_i);
-            if min_score > value { 
-                min_score = value; 
+        for (uid_i, pruning_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
+            if min_score > pruning_score { 
+                min_score = pruning_score; 
                 uid_with_min_score = uid_i;
             }
         }
