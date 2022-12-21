@@ -15,9 +15,7 @@ fn test_add_network_dispatch_info_ok() {
         let netuid: u16 = 1;
         let modality = 0;
         let tempo: u16 = 13;
-
 		let call = Call::ParatensorModule(ParatensorCall::sudo_add_network{netuid, tempo, modality});
-
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Operational,

@@ -106,17 +106,18 @@ impl<T: Config> Pallet<T> {
     // Removes a uid from a subnetwork by erasing all its data.
     // The function sets all terms to default state 0, false, or None.
     pub fn prune_uid_from_subnetwork( netuid: u16, uid_to_prune: u16 ) {
-        Self::deactive_neuron( netuid, uid_to_prune);
-        Self::remove_rank_from_subnet( netuid, uid_to_prune );
-        Self::remove_trust_from_subnet( netuid, uid_to_prune );
-        Self::remove_bonds_from_subnet( netuid, uid_to_prune );
-        Self::remove_subnetwork_account( netuid, uid_to_prune );
-        Self::remove_weights_from_subnet( netuid, uid_to_prune );
-        Self::remove_dividend_from_subnet( netuid, uid_to_prune );
-        Self::remove_emission_from_subnet( netuid, uid_to_prune );
-        Self::remove_incentive_from_subnet( netuid, uid_to_prune );
-        Self::remove_consensus_from_subnet( netuid, uid_to_prune );
-        Self::remove_pruning_score_from_subnet( netuid, uid_to_prune );
+        Uids::<T>::remove( netuid, Keys::<T>::get( netuid, uid_to_prune ).clone() );
+        Keys::<T>::remove( netuid, uid_to_prune ); 
+        Rank::<T>::remove( netuid, uid_to_prune );
+        Trust::<T>::remove( netuid, uid_to_prune );
+        Bonds::<T>::remove( netuid, uid_to_prune );
+        Active::<T>::remove( netuid, uid_to_prune );
+        Weights::<T>::remove( netuid, uid_to_prune );
+        Emission::<T>::remove( netuid, uid_to_prune );
+        Dividends::<T>::remove( netuid, uid_to_prune );
+        Consensus::<T>::remove( netuid, uid_to_prune );
+        Incentive::<T>::remove( netuid, uid_to_prune );
+        PruningScores::<T>::remove( netuid, uid_to_prune );
     }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
@@ -242,13 +243,13 @@ impl<T: Config> Pallet<T> {
     pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
         
         let stake = Stake::<T>::get(&hotkey);
-        let neuron_uid ;
+        let uid_to_prune ;
         match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey) {
-            Ok(k) => neuron_uid = k,
+            Ok(k) => uid_to_prune = k,
             Err(e) => panic!("Error: {:?}", e),
         } 
         //
-        S::<T>::insert(netuid, neuron_uid, stake);
+        S::<T>::insert(netuid, uid_to_prune, stake);
     }
 
 }

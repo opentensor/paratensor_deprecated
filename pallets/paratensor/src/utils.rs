@@ -332,61 +332,26 @@ impl<T: Config> Pallet<T> {
     /// ==============================
 	/// ==== Subnetworks Consensus ===
 	/// ==============================
-    pub fn remove_emission_from_subnet(netuid:u16, neuron_uid: u16){
-        Emission::<T>::remove(netuid, neuron_uid);
-    }
     pub fn if_emission_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Emission::<T>::contains_key(netuid, neuron_uid)
-    }
-    //
-    pub fn remove_dividend_from_subnet(netuid:u16, neuron_uid: u16){
-        Dividends::<T>::remove(netuid, neuron_uid);
     }
     pub fn if_dividend_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Dividends::<T>::contains_key(netuid, neuron_uid)
     }
-    //
-    pub fn remove_consensus_from_subnet(netuid:u16, neuron_uid: u16){
-        Consensus::<T>::remove(netuid, neuron_uid);
-    }
     pub fn if_consensus_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Consensus::<T>::contains_key(netuid, neuron_uid)
-    }
-    //
-    pub fn remove_incentive_from_subnet(netuid:u16, neuron_uid: u16){
-        Incentive::<T>::remove(netuid, neuron_uid);
     }
     pub fn if_incentive_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Incentive::<T>::contains_key(netuid, neuron_uid)
     }
-    //
-    pub fn remove_trust_from_subnet(netuid:u16, neuron_uid: u16){
-        Trust::<T>::remove(netuid, neuron_uid);
-    }
     pub fn if_trust_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Trust::<T>::contains_key(netuid, neuron_uid)
-    }
-    //
-    pub fn remove_rank_from_subnet(netuid:u16, neuron_uid: u16){
-        Rank::<T>::remove(netuid, neuron_uid);
     }
     pub fn if_rank_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Rank::<T>::contains_key(netuid, neuron_uid)
     }
-    //
-    pub fn remove_pruning_score_from_subnet(netuid:u16, neuron_uid: u16){
-        PruningScores::<T>::remove(netuid, neuron_uid);
-    }
-    //
-    pub fn remove_bonds_from_subnet(netuid:u16, neuron_uid: u16){
-        Bonds::<T>::remove(netuid, neuron_uid);
-    }
     pub fn if_bonds_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Bonds::<T>::contains_key(netuid, neuron_uid)
-    }
-    //
-    pub fn remove_weights_from_subnet(netuid:u16, neuron_uid: u16){
-        Weights::<T>::remove(netuid, neuron_uid);
     }
     pub fn if_weights_is_set_for_neuron(netuid: u16, neuron_uid: u16) -> bool{
         Weights::<T>::contains_key(netuid, neuron_uid)
