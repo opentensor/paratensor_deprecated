@@ -2,12 +2,12 @@ use super::*;
 use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
+use sp_runtime::sp_std::if_std;
 use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
 use frame_support::storage::IterableStorageDoubleMap;
-
 
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
 
@@ -23,144 +23,102 @@ impl<T: Config> Pallet<T> {
         coldkey: T::AccountId 
     ) -> DispatchResult {
 
-        // --- Check the callers hotkey signature.
-        ensure_signed(origin)?;
-        // TO DO:
-        // 1. --- Check if network exist 
-        // 2. --- Check that registrations per block and hotkey in this network
-        // 3. --- Check that the hotkey has not already been registered in this network.
-        // 4. --- Check block number validity.
-        // 5. --- Check for repeat work,
-        // 6. --- Check difficulty.
-        // 7. --- Check work.
-        // 8. --- check to see if the uid limit has been reached.
-        //     a. YES: 
-        //         - find a replacement uid.
-        //         - update all relevant data structures
-        //     b. NO:
-        //         - increment the uid.
-        //         - create a new entry in the table with the new metadata.
-        //         - update appropriate parameters.
-        //         -  add new neuron to neurons. hotkeys, and works
-        // TODO( Saeideh ): lets remove these todo lists when they are done.
-        
-        // 1. Check if network exist.
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist); 
+        // --- 1. Check that the caller has signed the transaction. 
+        // TODO( const ): This not be the hotkey signature or else an exterior actor can register the hotkey and potentially control it?
+        ensure_signed( origin )?;
+    
+        // --- 2. Ensure the passed network is valid.
+        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
-        // 2. Check registration per block.
-        let registrations_this_block: u16 = Self:: get_registrations_this_block(netuid);
-        ensure! (registrations_this_block < Self:: get_max_registratations_per_block(), Error::<T>::TooManyRegistrationsThisBlock); // Number of registrations this block exceeded.
+        // --- 3. Ensure we are not exceeding the max allowed registrations per block.
+        ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registratations_per_block(), Error::<T>::TooManyRegistrationsThisBlock );
 
-        // 3. Check that the hotkey has not already been registered.
-        ensure! (!Uids::<T>::contains_key(netuid, &hotkey), Error::<T>::AlreadyRegistered); // Hotkey has already registered.
+        // --- 4. Ensure that the key is not already registered.
+        ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
         
-        // 4. Check block number validity.
+        // --- 5. Ensure the passed block number is valid, not in the future or too old.
+        // Work must have been done within 3 blocks (stops long range attacks).
         let current_block_number: u64 = Self::get_current_block_as_u64();
         ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
-        ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); // Work must have been done within 3 blocks (stops long range attacks).
+        ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); 
 
-        // 5. Check for repeat work.
-        ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated );  // Work has not been used before.
+        // --- 6. Ensure the passed work has not already been used.
+        ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated ); 
 
-        // 6. Check difficulty.
-        let difficulty: U256 = Self::get_difficulty(netuid);
+        // --- 7. Ensure the supplied work passes the difficulty.
+        let difficulty: U256 = Self::get_difficulty( netuid );
         let work_hash: H256 = Self::vec_to_hash( work.clone() );
         ensure! ( Self::hash_meets_difficulty( &work_hash, difficulty ), Error::<T>::InvalidDifficulty ); // Check that the work meets difficulty.
         
-        // 7. Check Work.
+        // --- 8. Check Work is the product of the nonce and the block number. Add this as used work.
         let seal: H256 = Self::create_seal_hash( block_number, nonce );
-        ensure! ( seal == work_hash, Error::<T>::InvalidSeal ); // Check that this work matches hash and nonce.
-        
-        // 8. Check to see if the uid limit has been reached.
-        let uid_to_set_in_metagraph: u16; // To be filled, we either are pruning or setting with get_next_uid.
-        
-        let max_allowed_uids: u16; // Get uid limit.
-        let k = Self::get_max_allowed_uids(netuid);
-        match k {
-                Ok(k) => max_allowed_uids = k,
-                Err(e) => return Err(e),
-            } 
-        //
-        let neuron_count: u16 = Self::get_subnetwork_n(netuid); // Current number of uids for netuid network.
-        let current_block: u64 = Self::get_current_block_as_u64();
-        //let immunity_period: u16 = Self::get_immunity_period(netuid); // Num blocks uid cannot be pruned since registration.
-        if neuron_count < max_allowed_uids { 
+        ensure! ( seal == work_hash, Error::<T>::InvalidSeal );
+        UsedWork::<T>::insert( &work.clone(), current_block_number );
 
-            // 8.b. NO:  The metagraph is not full and we simply increment the uid.
-            uid_to_set_in_metagraph = Self::get_next_uid(netuid);  
-        } else { 
-            // 8.a. YES:
-                // - compute the pruning score
-            let uid_to_prune: u16 = Self::get_neuron_to_prune(netuid); // neuron uid to prune
-            uid_to_set_in_metagraph = uid_to_prune; 
-            let hotkey_to_prune = Keys::<T>::get(netuid, uid_to_prune);
-            //
-            Self::remove_subnetwork_account(netuid, uid_to_set_in_metagraph); //UIds, Keys
-            //
-            /* check if the hotkey is deregistred from all networks */
-            // TODO( Saeideh ): We dont need to unstake a peer if it no longer exists in a network.
-            // TODO( Saeideh ): Lets also build some solid tests for this.
-            let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_to_prune); // a list of subnets that hotkey is registered on.
-            if vec_subnets_for_pruning_hotkey.len() == 1 { // the pruning hotkey was only registered on this network, so we need to remove it from storages
-                //
-                if vec_subnets_for_pruning_hotkey[0] == netuid {
-                    Self::remove_global_account(&hotkey); //Hotkeys, Coldkeys
-                } 
-            } 
-            Subnets::<T>::remove(&hotkey_to_prune);
-            // remove consensus storage for pruning uid
-            // remove weights
-            // TODO( Saeideh ): Move this to a single function like "remove uid from network." otherwise this is ugly IMO.
-            Self::remove_weights_from_subnet(netuid, uid_to_prune);
-            // remove bonds
-            Self::remove_bonds_from_subnet(netuid, uid_to_prune);
-            // remove from active 
-            Self::deactive_neuron(netuid, uid_to_prune);
-            // remove rank
-            Self::remove_rank_from_subnet(netuid, uid_to_prune);
-            // remove trust
-            Self::remove_trust_from_subnet(netuid, uid_to_prune);
-            // remove incentive
-            Self::remove_incentive_from_subnet(netuid, uid_to_prune);
-            // remove consensus
-            Self::remove_consensus_from_subnet(netuid, uid_to_prune);
-            // remove dividend
-            Self::remove_dividend_from_subnet(netuid, uid_to_prune);
-            // remove emission
-            Self::remove_emission_from_subnet(netuid, uid_to_prune);
-            // remove pruning score 
-            Self::remove_pruning_score_from_subnet(netuid, uid_to_prune);
+        // --- 9. Append neuron or prune it.
+        let subnetwork_uid: u16;
+        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        if current_subnetwork_n < MaxAllowedUids::<T>::get( netuid ) {
+
+            // --- 9.a No replacement required, the uid appends the subnetwork.
+            // We increment the subnetwork count here but not below.
+            subnetwork_uid = current_subnetwork_n;
+            Self::increment_subnetwork_n( netuid );
+
+        } else {
+
+            // --- 9.b Replacement required.
+            // We take the neuron with the lowest pruning score here.
+            subnetwork_uid = Self::get_neuron_to_prune( netuid );
+            Self::decrement_subnets_for_hotkey( netuid, &Keys::<T>::get( netuid, subnetwork_uid ) );
+            Self::prune_uid_from_subnetwork( subnetwork_uid, netuid );
         }
         
-        // next, we add new registered node to all structures
-        let neuron_metadata = NeuronMetadata {
-            version: 0,
-            ip: 0,
-            port: 0,
-            ip_type: 0,
-        };
+        // --- 10. Sets the neuron information on the network under the specified uid with coldkey and hotkey.
+        // The function ensures the the global account is created if not already existent.
+        Self::fill_new_neuron_account_in_subnetwork( netuid, subnetwork_uid, &coldkey, &hotkey);
 
-        // TODO( Saeideh ): lets comment these lines.
-        NeuronsMetaData::<T>::insert(uid_to_set_in_metagraph, neuron_metadata);
-        Active::<T>::insert(netuid, uid_to_set_in_metagraph, true); //set neuron active
-        BlockAtRegistration::<T>::insert( netuid, uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
-
-        Self::add_global_account(&hotkey, &coldkey);
-        Self::increment_subnets_for_hotkey(netuid, &hotkey);
-        Self::add_subnetwork_account(netuid, uid_to_set_in_metagraph, &hotkey);
-        Self::add_hotkey_stake_for_network(netuid, &hotkey);
-        UsedWork::<T>::insert( &work.clone(), current_block ); // Add the work to current + block. So we can prune at a later date.
-        // --- Update avg registrations per 1000 block.
+        // --- 11. Record the registration and increment block and interval counters.
+        BlockAtRegistration::<T>::insert( netuid, subnetwork_uid, current_block_number );
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
+        RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
+    
+        // --- 12. Deposit successful event.
+        Self::deposit_event( Event::NeuronRegistered( subnetwork_uid ) );
 
-        RegistrationsThisBlock::<T>::mutate(netuid,  |val| *val += 1 );
-        //
-        // TODO( Saeideh ): Remove blank comments.
-        Self::deposit_event(Event::NeuronRegistered( uid_to_set_in_metagraph ));
-        //
+        // --- 13. Ok and done.
         Ok(())
     }
 
+    // Sets new neuron information on the network under the specified uid with coldkey and hotkey information.
+    // The function ensures the the global account is created if not already existent.
+    pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16 , coldkey: &T::AccountId, hotkey: &T::AccountId ) {
+        NeuronsMetaData::<T>::insert( uid, NeuronMetadata { version: 0, ip: 0, port: 0, ip_type: 0 } );
+        Active::<T>::insert( netuid, uid, true );
+        Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
+        Uids::<T>::insert( netuid, hotkey.clone(), uid );
+        Hotkeys::<T>::insert( hotkey.clone(), coldkey.clone() );
+        Coldkeys::<T>::insert( coldkey.clone(), hotkey.clone() );
+        Self::increment_subnets_for_hotkey( netuid, hotkey );
+        Self::add_hotkey_stake_for_network( netuid, hotkey );
+    }
+
+    // Removes a uid from a subnetwork by erasing all its data.
+    // The function sets all terms to default state 0, false, or None.
+    pub fn prune_uid_from_subnetwork( netuid: u16, uid_to_prune: u16 ) {
+        Uids::<T>::remove( netuid, Keys::<T>::get( netuid, uid_to_prune ).clone() );
+        Keys::<T>::remove( netuid, uid_to_prune ); 
+        Rank::<T>::remove( netuid, uid_to_prune );
+        Trust::<T>::remove( netuid, uid_to_prune );
+        Bonds::<T>::remove( netuid, uid_to_prune );
+        Active::<T>::remove( netuid, uid_to_prune );
+        Weights::<T>::remove( netuid, uid_to_prune );
+        Emission::<T>::remove( netuid, uid_to_prune );
+        Dividends::<T>::remove( netuid, uid_to_prune );
+        Consensus::<T>::remove( netuid, uid_to_prune );
+        Incentive::<T>::remove( netuid, uid_to_prune );
+        PruningScores::<T>::remove( netuid, uid_to_prune );
+    }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
         let de_ref_hash = &vec_hash; // b: &Vec<u8>
@@ -174,10 +132,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_neuron_to_prune(netuid: u16) -> u16 {
         let mut min_score : u16 = u16::MAX;
         let mut uid_with_min_score = 0;
-        for (uid_i, _prune_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-            let value = PruningScores::<T>::get(netuid, uid_i);
-            if min_score > value { 
-                min_score = value; 
+        for (uid_i, pruning_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
+            if min_score > pruning_score { 
+                min_score = pruning_score; 
                 uid_with_min_score = uid_i;
             }
         }
@@ -285,13 +242,13 @@ impl<T: Config> Pallet<T> {
     pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
         
         let stake = Stake::<T>::get(&hotkey);
-        let neuron_uid ;
+        let uid_to_prune ;
         match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey) {
-            Ok(k) => neuron_uid = k,
+            Ok(k) => uid_to_prune = k,
             Err(e) => panic!("Error: {:?}", e),
         } 
         //
-        S::<T>::insert(netuid, neuron_uid, stake);
+        S::<T>::insert(netuid, uid_to_prune, stake);
     }
 
 }

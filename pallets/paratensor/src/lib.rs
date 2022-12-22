@@ -779,7 +779,7 @@ pub mod pallet {
 			// A network drains it's emission if the (current_block_number + 1) % tempo == 0.
 			// Skip epoch when current_block_number == 0, hence (current_block_number + 1)
 			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-				if (current_block_number + 1) % (tempo_i as u64) == 0 {
+				if ( current_block_number + 1 ) % ( tempo_i as u64 + 1 ) == 0 {
 					// We are going to drain this pending emission because the modulo tempo is zero.
 					let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
 					// Distribute the emission through the epoch.
@@ -831,16 +831,26 @@ pub mod pallet {
 		/// 		- On successfully setting the weights on chain.
 		///
 		/// # Raises:
+		/// 	* 'NetworkDoesNotExist':
+		/// 		- Attempting to set weights on a non-existent network.
+		///
+		/// 	* 'NotRegistered':
+		/// 		- Attempting to set weights from a non registered account.
+		///
 		/// 	* 'WeightVecNotEqualSize':
-		/// 		- If the passed weights and uids have unequal size.
+		/// 		- Attempting to set weights with uids not of same length.
 		///
-		/// 	* 'WeightSumToLarge':
-		/// 		- When the calling coldkey is not associated with the hotkey account.
+		/// 	* 'DuplicateUids':
+		/// 		- Attempting to set weights with duplicate uids.
 		///
-		/// 	* 'InsufficientBalance':
-		/// 		- When the amount to stake exceeds the amount of balance in the
-		/// 		associated colkey account.
+		/// 	* 'InvalidUid':
+		/// 		- Attempting to set weights with invalid uids.
 		///
+		/// 	* 'NotSettingEnoughWeights':
+		/// 		- Attempting to set weights with fewer weights than min.
+		///
+		/// 	* 'MaxWeightExceeded':
+		/// 		- Attempting to set weights with max value exceeding limit.
         #[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn set_weights(
 			origin:OriginFor<T>, 
@@ -848,7 +858,7 @@ pub mod pallet {
 			dests: Vec<u16>, 
 			weights: Vec<u16>
 		) -> DispatchResult {
-			Self::do_set_weights(origin, netuid, dests, weights)
+			Self::do_set_weights( origin, netuid, dests, weights )
 		}
 
 		/// --- Adds stake to a hotkey. The call is made from the

@@ -196,44 +196,40 @@ fn test_sudo_validator_exclude_quantile() {
 }
 
 /// -------- tests for PendingEmissionValues --------
- //This test is passed without running epoch and only 
- //for testing the tempo and pending emission values
 #[test]
-fn test_sudo_test_tempo_pneding_emissions_ok() {
+fn test_sudo_test_tempo_pending_emissions_ok() {
 	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let tempo: u16 = 1;
-
+        let netuid0: u16 = 1;
         let netuid1: u16 = 2;
-        let tempo1  : u16 = 2;
-
         let netuid2: u16 = 3;
-        let tempo2  : u16 = 3;
-
         let netuid3: u16 = 5;
-        let tempo3  : u16 = 5;
-        //
-        let emission_values: Vec<(u16, u64)> = vec![(1, 100000000),(2, 400000000), (3, 200000000), (5, 300000000)]; 
-        //
-        add_network(netuid, tempo, 0);
+        let tempo0: u16 = 1;
+        let tempo1: u16 = 2;
+        let tempo2: u16 = 3;
+        let tempo3: u16 = 5;
+        add_network(netuid0, tempo0, 0);
 		add_network(netuid1, tempo1, 0);
         add_network(netuid2, tempo2, 0);
         add_network(netuid3, tempo3, 0);
+        assert_eq!(ParatensorModule::get_tempo(netuid0), tempo0);
+        assert_eq!(ParatensorModule::get_tempo(netuid1), tempo1);
+        assert_eq!(ParatensorModule::get_tempo(netuid2), tempo2);
+        assert_eq!(ParatensorModule::get_tempo(netuid3), tempo3);
+        assert_eq!(ParatensorModule::get_emission_value(netuid0), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid1), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid2), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid3), 0);
+        let emission_values: Vec<(u16, u64)> = vec![(1, 100000000),(2, 400000000), (3, 200000000), (5, 300000000)]; 
         assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_values));
-        //
-        step_block(1);
-        //
-        assert_eq!(ParatensorModule::get_tempo(netuid), tempo);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid0), 100000000);
+        assert_eq!(ParatensorModule::get_emission_value(netuid1), 400000000);
+        assert_eq!(ParatensorModule::get_emission_value(netuid2), 200000000);
+        assert_eq!(ParatensorModule::get_emission_value(netuid3), 300000000);
+        assert_eq!(ParatensorModule::get_pending_emission(netuid0), 0);
         assert_eq!(ParatensorModule::get_pending_emission(netuid1), 0);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid2), 200000000);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid3), 300000000);
-        //
-        step_block(1);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid), 0);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid1), 400000000);
         assert_eq!(ParatensorModule::get_pending_emission(netuid2), 0);
-        assert_eq!(ParatensorModule::get_pending_emission(netuid3), 600000000); // 300000000 + 300000000
+        assert_eq!(ParatensorModule::get_pending_emission(netuid3), 0);
+        
     });
 }
 
