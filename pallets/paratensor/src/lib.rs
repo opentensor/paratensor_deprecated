@@ -451,10 +451,8 @@ pub mod pallet {
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
 
 	/// ---- DoubleMap Network UID --> Hotkey --> Neuron UID
-	#[pallet::type_value] 
-	pub fn DefaultUid<T:Config>() -> u16 { 0 }
 	#[pallet::storage]
-	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultUid<T> >;
+	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
 
 	/// ---- DoubleMap Network UID --> Neuron UID --> Row Weights
 	#[pallet::type_value] 
@@ -1053,6 +1051,7 @@ pub mod pallet {
 			bonds_moving_average: u64 
 		) -> DispatchResult {  
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			BondsMovingAverage::<T>::insert( netuid, bonds_moving_average );
 			Self::deposit_event( Event::BondsMovingAverageSet( netuid, bonds_moving_average ) );
 			Ok(())
@@ -1076,6 +1075,7 @@ pub mod pallet {
 			difficulty: u64 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			Difficulty::<T>::insert( netuid, difficulty );
 			Self::deposit_event( Event::DifficultySet( netuid, difficulty ) );
 			Ok(())
@@ -1099,6 +1099,7 @@ pub mod pallet {
 			adjustment_interval: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			AdjustmentInterval::<T>::insert(netuid, adjustment_interval);
 			Self::deposit_event( Event::AdjustmentIntervalSet( netuid, adjustment_interval) );
 			Ok(()) 
@@ -1122,6 +1123,7 @@ pub mod pallet {
 			target_registrations_per_interval: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			TargetRegistrationsPerInterval::<T>::insert(netuid, target_registrations_per_interval);
 			Self::deposit_event( Event::RegistrationPerIntervalSet( netuid, target_registrations_per_interval) );
 			Ok(())
@@ -1145,6 +1147,7 @@ pub mod pallet {
 			activity_cutoff: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ActivityCutoff::<T>::insert(netuid, activity_cutoff);
 			Self::deposit_event( Event::ActivityCutoffSet( netuid, activity_cutoff) );
 			Ok(())
@@ -1168,6 +1171,7 @@ pub mod pallet {
 			rho: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			Rho::<T>::insert(netuid, rho);
 			Self::deposit_event( Event::RhoSet( rho ) );
 			Ok(())
@@ -1191,6 +1195,7 @@ pub mod pallet {
 			kappa: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			Kappa::<T>::insert(netuid, kappa);
 			Self::deposit_event( Event::KappaSet( netuid, kappa) );
 			Ok(())
@@ -1214,6 +1219,7 @@ pub mod pallet {
 			max_allowed_uids: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ensure!( max_allowed_uids < u16::MAX, Error::<T>::MaxAllowedUIdsNotAllowed );
 			MaxAllowedUids::<T>::insert(netuid, max_allowed_uids);
 			Self::deposit_event( Event::MaxAllowedUidsSet( netuid, max_allowed_uids) );
@@ -1238,6 +1244,7 @@ pub mod pallet {
 			min_allowed_weights: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			MinAllowedWeights::<T>::insert(netuid, min_allowed_weights);
 			Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
 			Ok(())
@@ -1261,6 +1268,7 @@ pub mod pallet {
 			max_allowed_max_min_ratio: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			MaxAllowedMaxMinRatio::<T>::insert(netuid, max_allowed_max_min_ratio);
 			Self::deposit_event( Event::MaxAllowedMaxMinRatioSet( netuid, max_allowed_max_min_ratio) );
 			Ok(())
@@ -1284,6 +1292,7 @@ pub mod pallet {
 			validator_batch_size: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ValidatorBatchSize::<T>::insert(netuid, validator_batch_size);
 			Self::deposit_event(Event::ValidatorBatchSizeSet(netuid, validator_batch_size));
 			Ok(())
@@ -1307,6 +1316,7 @@ pub mod pallet {
 			validator_sequence_length: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?; 
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ValidatorSequenceLength::<T>::insert(netuid, validator_sequence_length);
 			Self::deposit_event(Event::ValidatorSequenceLengthSet(netuid, validator_sequence_length));
 			Ok(())
@@ -1330,6 +1340,7 @@ pub mod pallet {
 			validator_epochs_per_reset : u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ValidatorEpochsPerReset::<T>::insert(netuid, validator_epochs_per_reset);
 			Self::deposit_event(Event::ValidatorEpochPerResetSet(netuid, validator_epochs_per_reset));
 			Ok(())
@@ -1353,6 +1364,7 @@ pub mod pallet {
 			incentive_pruning_denominator: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			IncentivePruningDenominator::<T>::insert(netuid, incentive_pruning_denominator);
 			Self::deposit_event(Event::IncentivePruningDenominatorSet(netuid, incentive_pruning_denominator));
 			Ok(())
@@ -1376,6 +1388,7 @@ pub mod pallet {
 			stake_pruning_denominator: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			StakePruningDenominator::<T>::insert(netuid, stake_pruning_denominator);
 			Self::deposit_event(Event::StakePruningDenominatorSet(netuid, stake_pruning_denominator));
 			Ok(())
@@ -1399,6 +1412,7 @@ pub mod pallet {
 			immunity_period: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ImmunityPeriod::<T>::insert(netuid, immunity_period);
 			Self::deposit_event(Event::ImmunityPeriodSet(netuid, immunity_period));
 			Ok(())
@@ -1422,6 +1436,7 @@ pub mod pallet {
 			max_weight_limit: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			MaxWeightsLimit::<T>::insert( netuid, max_weight_limit );
 			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
 			Ok(())
@@ -1449,6 +1464,7 @@ pub mod pallet {
 			validator_exclude_quantile: u16 
 		) -> DispatchResult {
 			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
 		    ValidatorExcludeQuantile::<T>::insert(netuid, validator_exclude_quantile );
 			Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));

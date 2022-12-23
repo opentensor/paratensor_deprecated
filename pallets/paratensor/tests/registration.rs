@@ -154,6 +154,7 @@ fn test_registration_too_many_registrations_per_block() {
 fn test_registration_defaults() {
 	new_test_ext().execute_with(|| { 
 		let netuid: u16 = 1;
+		add_network(netuid, 12, 0);
 		//
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
 		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
@@ -305,10 +306,10 @@ fn test_registration_invalid_difficulty() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
-		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 18_446_744_073_709_551_615u64 ));
-		
 		//add network
 		add_network(netuid, tempo, 0);
+
+		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 18_446_744_073_709_551_615u64 ));
 		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidDifficulty.into()) );
