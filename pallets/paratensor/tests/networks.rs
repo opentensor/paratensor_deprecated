@@ -15,9 +15,7 @@ fn test_add_network_dispatch_info_ok() {
         let netuid: u16 = 1;
         let modality = 0;
         let tempo: u16 = 13;
-
 		let call = Call::ParatensorModule(ParatensorCall::sudo_add_network{netuid, tempo, modality});
-
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Operational,
@@ -124,7 +122,7 @@ fn test_remove_difficulty_for_network() {
 
         add_network(netuid, tempo, 0);
         //
-		register_ok_neuron( 1, 55, 66, 0);
+	register_ok_neuron( 1, 55, 66, 0);
         //
         assert_ok!(ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid, difficulty));
         assert_eq!(ParatensorModule::get_difficulty_as_u64(netuid), difficulty);
@@ -244,4 +242,12 @@ fn test_network_set_emission_ratios_fail_net() {
         //
         assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
 	});
+}
+
+#[test]
+fn test_add_difficulty_fail(){
+        new_test_ext().execute_with(|| { 
+                let netuid: u16 = 1;
+                assert_eq!(ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid, 120000) , Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        });
 }

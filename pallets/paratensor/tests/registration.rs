@@ -146,6 +146,7 @@ fn test_registration_too_many_registrations_per_block() {
 fn test_registration_defaults() {
 	new_test_ext().execute_with(|| { 
 		let netuid: u16 = 1;
+		add_network(netuid, 12, 0);
 		//
 		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
 		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
@@ -297,10 +298,10 @@ fn test_registration_invalid_difficulty() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		let hotkey_account_id = 1;
 		let coldkey_account_id = 667;
-		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 18_446_744_073_709_551_615u64 ));
-		
 		//add network
 		add_network(netuid, tempo, 0);
+
+		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 18_446_744_073_709_551_615u64 ));
 		
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce, work, hotkey_account_id, coldkey_account_id);
 		assert_eq!( result, Err(Error::<Test>::InvalidDifficulty.into()) );
@@ -379,6 +380,7 @@ fn test_registration_pruning() {
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id2), netuid, block_number, nonce2, work2, hotkey_account_id2, coldkey_account_id2));
 		//
 		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
+		println!( "subs: {:?}, {:?}", subs, netuid);
 		assert_eq!(subs.contains(&netuid), false);
 		//
 		assert_eq!(ParatensorModule::if_emission_is_set_for_neuron(netuid, neuron_uid), false);
@@ -441,5 +443,133 @@ fn test_registration_add_network_size() {
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(2), netuid2, block_number, nonce2, work2, 2, coldkey_account_id));
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
 		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid2), 2);
+	});
+}
+
+
+#[test]
+fn test_full_pass_through() {
+	new_test_ext().execute_with(|| {
+
+		// Create 3 networks.
+        let netuid0: u16 = 0;
+		let netuid1: u16 = 1;
+		let netuid2: u16 = 2;
+		
+		// With 3 tempos
+		let tempo0: u16 = 2;
+		let tempo1: u16 = 2;
+		let tempo2: u16 = 2;
+		
+		// Create 3 keys.
+		let hotkey0: u64 = 0;
+		let hotkey1: u64 = 1;
+		let hotkey2: u64 = 2;
+
+		// With 3 different coldkeys.
+		let coldkey0: u64 = 0;
+		let coldkey1: u64 = 1;
+		let coldkey2: u64 = 2;
+
+		// Add the 3 networks.
+		add_network( netuid0, tempo0, 0 );
+		add_network( netuid1, tempo1, 0 );
+		add_network( netuid2, tempo2, 0 );
+
+		// Check their tempo.
+		assert_eq!(ParatensorModule::get_tempo(netuid0), tempo0);
+        assert_eq!(ParatensorModule::get_tempo(netuid1), tempo1);
+        assert_eq!(ParatensorModule::get_tempo(netuid2), tempo2);
+
+		// Check their emission value.
+        assert_eq!(ParatensorModule::get_emission_value(netuid0), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid1), 0);
+        assert_eq!(ParatensorModule::get_emission_value(netuid2), 0);
+
+		// Set their max allowed uids.
+		ParatensorModule::set_max_allowed_uids( netuid0, 2 );
+		ParatensorModule::set_max_allowed_uids( netuid1, 2 );
+		ParatensorModule::set_max_allowed_uids( netuid2, 2 );
+
+		// Check their max allowed.
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
+		
+		// Set the max registration per block.
+		ParatensorModule::set_max_registrations_per_block( 3 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
+
+		// Check that no one has registered yet.
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 0);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid1), 0);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 0);
+
+		// Registered the keys to all networks.
+    	register_ok_neuron( netuid0, hotkey0, coldkey0, 39420842 );
+    	register_ok_neuron( netuid0, hotkey1, coldkey1, 12412392 );
+		register_ok_neuron( netuid1, hotkey0, coldkey0, 21813123 );
+    	register_ok_neuron( netuid1, hotkey1, coldkey1, 25755207 );
+		register_ok_neuron( netuid2, hotkey0, coldkey0, 251232207 );
+    	register_ok_neuron( netuid2, hotkey1, coldkey1, 159184122 );
+
+		// Check the number of registrations.
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid0), 2);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid1), 2);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid2), 2);
+
+		// Get the number of uids in each network.
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid1), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
+
+		// Check the uids exist.
+		assert!( ParatensorModule::is_uid_exist( netuid0, 0) );
+		assert!( ParatensorModule::is_uid_exist( netuid1, 0) );
+		assert!( ParatensorModule::is_uid_exist( netuid2, 0) );
+
+		// Check the other exists.
+		assert!( ParatensorModule::is_uid_exist( netuid0, 1) );
+		assert!( ParatensorModule::is_uid_exist( netuid1, 1) );
+		assert!( ParatensorModule::is_uid_exist( netuid2, 1) );
+
+		// Get the hotkey under each uid.
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 0).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 0).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 0).unwrap(), hotkey0 );
+
+		// Get the hotkey under the other uid.
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 1).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 1).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 1).unwrap(), hotkey1 );
+
+		// Check for replacement.
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid1), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
+
+		// Register the 3rd hotkey.
+		register_ok_neuron( netuid0, hotkey2, coldkey2, 59420842 );
+		register_ok_neuron( netuid1, hotkey2, coldkey2, 31813123 );
+		register_ok_neuron( netuid2, hotkey2, coldkey2, 451232207 );
+
+		// Check for replacement.
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid1), 2);
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
+
+		// Check the registration counters.
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid0), 3);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid1), 3);
+		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid2), 3);
+
+		// Check the hotkeys are expected.
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 0 ).unwrap(), hotkey2 );
+
+		
+
+
 	});
 }
