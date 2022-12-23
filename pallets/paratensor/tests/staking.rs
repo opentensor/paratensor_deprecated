@@ -144,6 +144,8 @@ fn test_add_stake_err_neuron_does_not_belong_to_coldkey() {
 		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
+		// Give it some $$$ in his coldkey balance
+		ParatensorModule::add_balance_to_coldkey_account( &other_cold_key, 100000 );
 
 		// Perform the request which is signed by a different cold key
 		let result = ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(other_cold_key), hotkey_id, 1000);

@@ -203,25 +203,23 @@ pub mod pallet {
 	#[pallet::getter(fn usedwork)]
     pub(super) type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 
-	/// ==============================
-	/// ==== Accounts Storage ====
-	/// ==============================
+	/// =========================
+	/// ==== Global Accounts ====
+	/// =========================
 
 	/// ---- SingleMap Hotkey --> Global Stake
 	#[pallet::storage]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 
-	/// ---- SingleMap Hotkey --> Coldkey
-	#[pallet::type_value] 
-	pub fn DefaultHotkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
-	#[pallet::storage]
-    pub(super) type Coldkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultHotkeyAccount<T> >;
-
-	/// ---- SingleMap Coldkey --> Hotkey
+	/// ---- SingleMap Hotkey --> Owning Coldkey
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 	#[pallet::storage]
-	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
+    pub(super) type GlobalAccounts<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
+
+	/// ---- Total number of Existing Global Accounts
+	#[pallet::storage]
+	pub type TotalGlobalAccounts<T> = StorageValue<_, u64, ValueQuery>;
 
 	/// ==============================
 	/// ==== Subnetworks Storage =====

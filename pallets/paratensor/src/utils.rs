@@ -189,21 +189,26 @@ impl<T: Config> Pallet<T> {
     /// =========================
 	/// ==== Global Accounts ====
 	/// =========================
-    pub fn is_hotkey_globally_active( hotkey: &T::AccountId ) -> bool { return Coldkeys::<T>::contains_key( hotkey ) }
-    pub fn add_global_account( hotkey: &T::AccountId, coldkey: &T::AccountId )  {
-        if !Hotkeys::<T>::contains_key( &hotkey ) { 
-            Hotkeys::<T>::insert( hotkey.clone(), coldkey.clone() );
-            Coldkeys::<T>::insert( coldkey.clone(), hotkey.clone() );
-            //Self::increment_global_n();
+
+    // Creates a global account pairing between the hotkey and the coldkey and increments the
+    // number of global accounts.
+    pub fn account_exists( hotkey: &T::AccountId ) -> bool {
+        return GlobalAccounts::<T>::contains_key( hotkey )
+    }
+    pub fn create_account_if_non_existent( hotkey: &T::AccountId, coldkey: &T::AccountId )  {
+        if !Self::account_exists( hotkey ) {
+            GlobalAccounts::<T>::insert( hotkey.clone(), coldkey.clone() );
+            TotalGlobalAccounts::<T>::mutate( | gloabl_n | *gloabl_n += 1 );
         }
     }
-    pub fn remove_global_account( hotkey: &T::AccountId )  {
-        if Hotkeys::<T>::contains_key( &hotkey ) { 
-            let coldkey = Coldkeys::<T>::get( &hotkey.clone() );
-            Hotkeys::<T>::remove( coldkey.clone() );
-            Coldkeys::<T>::remove( hotkey.clone() );
+    pub fn account_belongs_to_coldkey( hotkey: &T::AccountId, coldkey: &T::AccountId ) -> bool {
+        if GlobalAccounts::<T>::contains_key( hotkey ) {
+            return GlobalAccounts::<T>::get( hotkey ) == *coldkey;
+        } else {
+            return false;
         }
     }
+ 
     pub fn get_stake_for_hotkey(hotkey: &T::AccountId) -> u64 {
         Stake::<T>::get(hotkey)
     }
@@ -246,12 +251,8 @@ impl<T: Config> Pallet<T> {
         Keys::<T>::remove( netuid, uid ); 
         Self::decrement_subnetwork_n( netuid );
     }
-    pub fn get_coldkey_for_hotkey(hotkey:  &T::AccountId) ->  T::AccountId {
-        return Hotkeys::<T>::get(hotkey);
-    }
-
-    pub fn get_hotkey_for_coldkey(coldkey: &T::AccountId) -> T::AccountId {
-        return Coldkeys::<T>::get(coldkey);
+    pub fn get_coldkey_for_hotkey( hotkey:  &T::AccountId ) ->  T::AccountId {
+        return GlobalAccounts::<T>::get( hotkey );
     }
 
     pub fn get_subnets_for_hotkey(hotkey: T::AccountId) -> Vec<u16> {

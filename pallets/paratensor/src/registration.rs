@@ -2,10 +2,6 @@ use super::*;
 use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
-<<<<<<< HEAD
-=======
-// use sp_runtime::sp_std::if_std;
->>>>>>> 10109a95231d98157646899a957092d73055940a
 use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
@@ -78,7 +74,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the hotkey signature or else an exterior actor can register the hotkey and potentially control it?
-        ensure_signed( origin )?;
+        ensure_signed( origin )?;        
     
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
@@ -108,38 +104,44 @@ impl<T: Config> Pallet<T> {
         ensure! ( seal == work_hash, Error::<T>::InvalidSeal );
         UsedWork::<T>::insert( &work.clone(), current_block_number );
 
-        // --- 9. Append neuron or prune it.
+        // --- 9. If the network account does not exist we will create it here.
+        Self::create_account_if_non_existent( &hotkey, &coldkey );         
+
+        // --- 10. Ensure that the pairing is correct.
+        ensure!( Self::account_belongs_to_coldkey( &hotkey, &coldkey ), Error::<T>::NonAssociatedColdKey );
+
+        // --- 11. Append neuron or prune it.
         let subnetwork_uid: u16;
         let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
         if current_subnetwork_n < MaxAllowedUids::<T>::get( netuid ) {
 
-            // --- 9.a No replacement required, the uid appends the subnetwork.
+            // --- 11.a No replacement required, the uid appends the subnetwork.
             // We increment the subnetwork count here but not below.
             subnetwork_uid = current_subnetwork_n;
             Self::increment_subnetwork_n( netuid );
 
         } else {
 
-            // --- 9.b Replacement required.
+            // --- 11.b Replacement required.
             // We take the neuron with the lowest pruning score here.
             subnetwork_uid = Self::get_neuron_to_prune( netuid );
             Self::decrement_subnets_for_hotkey( netuid, &Keys::<T>::get( netuid, subnetwork_uid ) );
             Self::prune_uid_from_subnetwork( subnetwork_uid, netuid );
         }
         
-        // --- 10. Sets the neuron information on the network under the specified uid with coldkey and hotkey.
+        // --- 12. Sets the neuron information on the network under the specified uid with coldkey and hotkey.
         // The function ensures the the global account is created if not already existent.
         Self::fill_new_neuron_account_in_subnetwork( netuid, subnetwork_uid, &coldkey, &hotkey);
 
-        // --- 11. Record the registration and increment block and interval counters.
+        // --- 13. Record the registration and increment block and interval counters.
         BlockAtRegistration::<T>::insert( netuid, subnetwork_uid, current_block_number );
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
         RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
     
-        // --- 12. Deposit successful event.
+        // --- 14. Deposit successful event.
         Self::deposit_event( Event::NeuronRegistered( subnetwork_uid ) );
 
-        // --- 13. Ok and done.
+        // --- 15. Ok and done.
         Ok(())
     }
 
@@ -150,8 +152,6 @@ impl<T: Config> Pallet<T> {
         Active::<T>::insert( netuid, uid, true );
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
-        Hotkeys::<T>::insert( hotkey.clone(), coldkey.clone() );
-        Coldkeys::<T>::insert( coldkey.clone(), hotkey.clone() );
         Self::increment_subnets_for_hotkey( netuid, hotkey );
         Self::add_hotkey_stake_for_network( netuid, hotkey );
     }

@@ -81,9 +81,6 @@ fn test_registration_ok() {
 		//check if hotkey is added to the Hotkeys
 		assert_eq!(ParatensorModule::get_coldkey_for_hotkey(&hotkey_account_id), coldkey_account_id);
 
-		//check if coldkey is added to coldkeys
-		assert_eq!(ParatensorModule::get_hotkey_for_coldkey(&coldkey_account_id), hotkey_account_id);
-
 		// Check the list of neworks that uid has registered 
 		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
 		assert_eq!(subs.contains(&netuid), true);

@@ -201,7 +201,7 @@ impl<T: Config> Pallet<T> {
                 // we need to remove all stakes since this hotkey is not staked in any other networks
                     // These funds are deposited back into the coldkey account so that no funds are destroyed. 
                     //
-                    let coldkey_to_add_stake = Coldkeys::<T>::get(&hotkey_i);
+                    let coldkey_to_add_stake = GlobalAccounts::<T>::get(&hotkey_i);
                     let stake_to_remove = Stake::<T>::get(&hotkey_i);
                     Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_remove).unwrap());
                     Self::decrease_total_stake( stake_to_remove );
