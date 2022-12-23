@@ -141,7 +141,7 @@ impl<T: Config> Pallet<T> {
         };
 
         // TODO( Saeideh ): lets comment these lines.
-        NeuronsMetaData::<T>::insert(uid_to_set_in_metagraph, neuron_metadata);
+        NeuronsMetaData::<T>::insert( netuid, uid_to_set_in_metagraph, neuron_metadata );
         Active::<T>::insert(netuid, uid_to_set_in_metagraph, true); //set neuron active
         BlockAtRegistration::<T>::insert( netuid, uid_to_set_in_metagraph, current_block ); // Set immunity momment. 
 

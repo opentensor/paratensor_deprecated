@@ -135,7 +135,7 @@ fn test_serving_set_metadata() {
             Ok(k) => neuron_uid = k,
             Err(e) => panic!("Error: {:?}", e),
         } 
-	let neuron = ParatensorModule::get_neuron_metadata(neuron_uid);
+	let neuron = ParatensorModule::get_neuron_metadata( netuid, neuron_uid);
 	assert_eq!(neuron.ip, 1676056785);
 	assert_eq!(neuron.version, 2);
 	assert_eq!(neuron.port, 128);

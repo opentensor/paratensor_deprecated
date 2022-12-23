@@ -314,8 +314,8 @@ impl<T: Config> Pallet<T> {
         EmissionValues::<T>::get(netuid)
     }
 
-    pub fn get_neuron_metadata(neuron_id: u16) -> NeuronMetadataOf {
-        return NeuronsMetaData::<T>::get(neuron_id).unwrap();
+    pub fn get_neuron_metadata(netuid: u16, neuron_id: u16) -> NeuronMetadataOf {
+        return NeuronsMetaData::<T>::get(netuid, neuron_id).unwrap();
     }
 
     pub fn if_tempo_is_valid(tempo: u16) -> bool {

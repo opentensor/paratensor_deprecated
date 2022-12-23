@@ -45,14 +45,14 @@ impl<T: Config> Pallet<T> {
             Err(e) => panic!("Error: {:?}", e),
         } 
         // --- 5. We get the neuron assoicated with this hotkey.
-        let mut neuron = Self::get_neuron_metadata(neuron_uid);
+        let mut neuron = Self::get_neuron_metadata(netuid, neuron_uid);
 
         // --- 6. We insert the neuron metadata.
         neuron.version = version;
         neuron.ip = ip;
         neuron.port = port;
         neuron.ip_type = ip_type;
-        NeuronsMetaData::<T>::insert(neuron_uid, neuron);
+        NeuronsMetaData::<T>::insert(netuid, neuron_uid, neuron);
 
         // --- 7. We deposit the neuron updated event.
         Self::deposit_event(Event::AxonServed(neuron_uid));

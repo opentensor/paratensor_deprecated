@@ -192,73 +192,21 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 
-	/// ---- Total number of Existing Networks
-	#[pallet::storage]
-	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
-
-	/// --- SingleMap Network UID -> if network is added
-	#[pallet::type_value]
-	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
-	#[pallet::storage]
-	pub(super) type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;
-
-	/// --- SingleMap Network UID -> Pending Emission
-	#[pallet::type_value]
-	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
-	#[pallet::storage]
-	pub(super) type PendingEmission<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
-
-	/// ---- StorageItem Hotkey --> Global Stake
+	/// ---- StorageItem Total issuance on chain.
 	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
 	#[pallet::storage]
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-
-	/// ---- SingleMap Network UID --> EmissionValues
-	#[pallet::type_value]
-	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0}
-	#[pallet::storage]
-	pub(super) type EmissionValues<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
-
-	/// ---- StorageItem Global Max Registration Per Block
-	#[pallet::type_value] 
-	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
-	#[pallet::storage]
-	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
-
-	/// ----  SingleMap Network UID --> Registration this Block
-	#[pallet::type_value]
-	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
-	#[pallet::storage]
-	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
 
 	/// ---- StorageItem Global Used Work
 	#[pallet::storage]
 	#[pallet::getter(fn usedwork)]
     pub(super) type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 
-	#[pallet::type_value] 
-	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
-	#[pallet::storage]
-	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
-
-	#[pallet::storage]
-	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
-
-	/// ---- SingleMap Network UID --> validator Exclude Quantile
-	#[pallet::type_value]
-	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
-	#[pallet::storage]
-	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
-	//	
-	/// ---- SingleMap Neuron UID --> Neuron Metadata (veriosn, ip address, port, ip type)
-	#[pallet::storage]
-	#[pallet::getter(fn uid)]
-	pub(super) type NeuronsMetaData<T:Config> = StorageMap<_, Identity, u16, NeuronMetadataOf, OptionQuery>;
-
 	/// ==============================
 	/// ==== Accounts Storage ====
 	/// ==============================
+
 	/// ---- SingleMap Hotkey --> Global Stake
 	#[pallet::storage]
     pub(super) type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
@@ -275,17 +223,81 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type Hotkeys<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
+	/// ==============================
+	/// ==== Subnetworks Storage =====
+	/// ==============================
+
+	/// ---- Total number of Existing Networks
+	#[pallet::storage]
+	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
+
+	/// --- SingleMap Network UID --> SubNetwork Size (Number of UIDs in the network)
+	#[pallet::type_value] 
+	pub fn DefaultN<T:Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
+
+	/// ---- SingleMap Network UID --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
+	#[pallet::type_value] 
+	pub fn DefaultModality<T:Config>() -> u16 { 0 }
+	#[pallet::storage]
+	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
+
 	/// --- SingleMap Hotkey --> A Vector of Network UIDs // a list of subnets that each hotkey is registered on
 	#[pallet::type_value] 
 	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![] }
 	#[pallet::storage]
 	pub(super) type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;
 
-	/// ---- DoubleMap Network UID --> neuron UID --> last_update
-	#[pallet::type_value] 
-	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
+	/// --- SingleMap Network UID -> if network is added
+	#[pallet::type_value]
+	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
 	#[pallet::storage]
-    pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
+	pub(super) type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;
+
+	/// ==============================
+	/// ==== Subnetwork Features =====
+	/// ==============================
+
+	/// ---- SingleMap Network UID --> EmissionValues
+	#[pallet::type_value]
+	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0 }
+	#[pallet::storage]
+	pub(super) type EmissionValues<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
+
+	/// --- SingleMap Network UID -> Pending Emission
+	#[pallet::type_value]
+	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
+	#[pallet::storage]
+	pub(super) type PendingEmission<T:Config> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
+
+	/// ---- SingleMap Network UID --> Blocks since last step.
+	#[pallet::type_value] 
+	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
+	#[pallet::storage]
+	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
+
+	/// ----  SingleMap Network UID --> Registration this Block
+	#[pallet::type_value]
+	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
+	#[pallet::storage]
+	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
+
+	/// ---- SingleMap Network UID --> block of last mechanism step.
+	#[pallet::storage]
+	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
+
+	/// ---- SingleMap Network UID --> validator Exclude Quantile
+	#[pallet::type_value]
+	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
+	#[pallet::storage]
+	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
+
+	/// ---- StorageItem Global Max Registration Per Block
+	#[pallet::type_value] 
+	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
+	#[pallet::storage]
+	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam stroage  ====
@@ -432,17 +444,16 @@ pub mod pallet {
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
 	/// =======================================
-	/// --- SingleMap Network UID --> SubNetwork Size (Number of UIDs in the network)
-	#[pallet::type_value] 
-	pub fn DefaultN<T:Config>() -> u16 { 0 }
-	#[pallet::storage]
-	pub(super) type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 
-	/// ---- SingleMap Network UID --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
+	/// ---- DoubleMap Network UID --> neuron UID --> last_update
 	#[pallet::type_value] 
-	pub fn DefaultModality<T:Config>() -> u16 { 0 }
+	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
 	#[pallet::storage]
-	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
+	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
+
+	/// ---- SingleMap Neuron UID --> Neuron Metadata (version, ip address, port, ip type)
+	#[pallet::storage]
+	pub(super) type NeuronsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, NeuronMetadataOf, OptionQuery>;
 
 	/// ---- DoubleMap Network UID --> Neuron UID --> Hotkey
 	#[pallet::type_value] 
