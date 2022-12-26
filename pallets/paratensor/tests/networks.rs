@@ -98,11 +98,8 @@ fn test_remove_uid_for_network() {
         //
         register_ok_neuron( 1, 56, 67, 300000);
         //let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56);
-        let neuron_uid ;
-        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56) {
-            Ok(k) => neuron_uid = k,
-            Err(e) => panic!("Error: {:?}", e),
-        } 
+        let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &56).unwrap();
+
         assert_eq!(neuron_uid, 1);
         //
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
@@ -144,7 +141,7 @@ fn test_remove_network_for_all_hotkeys() {
 
         add_network(netuid, tempo, 0);
         //
-		register_ok_neuron( 1, 55, 66, 0);
+        register_ok_neuron( 1, 55, 66, 0);
         register_ok_neuron( 1, 77, 88, 65536);
         //
         assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 2);

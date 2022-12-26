@@ -381,6 +381,7 @@ fn test_active_stake() {
 		let block_number: u64 = 0;
 		add_network(netuid, tempo, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, n );
+		assert_eq!(ParatensorModule::get_max_allowed_uids(netuid), n);
 		ParatensorModule::set_max_registrations_per_block( n );
 		// === Register [validator1, validator2, server1, server2]
 		for key in 0..n as u64 {
@@ -389,6 +390,7 @@ fn test_active_stake() {
 			ParatensorModule::add_balance_to_coldkey_account( &key, 1 );
 			ParatensorModule::set_stake_for_testing( &key, 1 );
 		}
+		assert_eq!(ParatensorModule::get_max_allowed_uids(netuid), n);
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), n);
 		run_to_block( 1 ); // run to next block to ensure weights are set on nodes after their registration block
 		// === Set weights [val1->srv1: 0.5, val1->srv2: 0.5, val2->srv1: 0.5, val2->srv2: 0.5]

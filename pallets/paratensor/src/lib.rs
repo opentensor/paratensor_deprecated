@@ -1024,6 +1024,43 @@ pub mod pallet {
 			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
 
+		/// ---- Sudo add a network to the network set.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network uid to create.
+		///
+		/// 	* `modality` (u8):
+		/// 		- The network modality identifier.
+		///	
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_add_network(
+			origin: OriginFor<T>,
+			netuid: u16,
+			tempo: u16,
+			modality: u16
+		)-> DispatchResult {
+			Self::do_add_network(origin, netuid, tempo, modality)
+		}
+
+		/// ---- Sudo remove a network from the network set.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network uid to remove.
+		///
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_remove_network(
+			origin: OriginFor<T>,
+			netuid: u16
+		) -> DispatchResult {
+			Self::do_remove_network(origin, netuid)
+		} 
+
 		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
 
 		/// ---- Sudo set this networks emission values.
@@ -1504,41 +1541,5 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// ---- Sudo add a network to the network set.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network uid to create.
-		///
-		/// 	* `modality` (u8):
-		/// 		- The network modality identifier.
-		///	
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network(
-			origin: OriginFor<T>,
-			netuid: u16,
-			tempo: u16,
-			modality: u16
-		)-> DispatchResult {
-			Self::do_add_network(origin, netuid, tempo, modality)
-		}
-
-		/// ---- Sudo remove a network from the network set.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network uid to remove.
-		///
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network(
-			origin: OriginFor<T>,
-			netuid: u16
-		) -> DispatchResult {
-			Self::do_remove_network(origin, netuid)
-		} 
 	}	
 }

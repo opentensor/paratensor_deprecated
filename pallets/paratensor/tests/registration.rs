@@ -489,9 +489,9 @@ fn test_full_pass_through() {
 		ParatensorModule::set_max_allowed_uids( netuid2, 2 );
 
 		// Check their max allowed.
-		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
-		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
-		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ).unwrap(), 2 );
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ), 2 );
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ), 2 );
+		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ), 2 );
 		
 		// Set the max registration per block.
 		ParatensorModule::set_max_registrations_per_block( 3 );

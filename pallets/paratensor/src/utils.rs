@@ -35,9 +35,8 @@ impl<T: Config> Pallet<T> {
          return Difficulty::<T>::get(netuid); 
     }
 
-    pub fn get_max_allowed_uids(netuid: u16 ) -> Result<u16, DispatchError>  {
-        return MaxAllowedUids::<T>::try_get(netuid).map_err(|_err| Error::<T>::NetworkDoesNotExist.into());
-    } 
+    pub fn get_max_allowed_uids(netuid: u16 ) -> u16  { MaxAllowedUids::<T>::get(netuid) }
+    
     /*pub fn get_max_allowed_uids(netuid: u16) -> u16 {
         return MaxAllowedUids::<T>::get(netuid);
     } */
@@ -231,12 +230,7 @@ impl<T: Config> Pallet<T> {
     //pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
     pub fn increment_subnetwork_n( netuid:u16 ) {
-        let n = SubnetworkN::<T>::get( netuid ); 
-        let k = Self::get_max_allowed_uids(netuid);
-        match k {
-                Ok(k) => if n < k { SubnetworkN::<T>::insert(netuid, n + 1);},
-                Err(_e) => (),
-            }   
+        SubnetworkN::<T>::insert( netuid, SubnetworkN::<T>::take( netuid ) + 1 );
     }
     //
     pub fn decrement_subnetwork_n( netuid:u16 ) { let n = SubnetworkN::<T>::get( netuid ); if n > 0 { SubnetworkN::<T>::insert(netuid, n - 1); } }

@@ -136,14 +136,10 @@ fn test_sudo_set_rho_fail() {
 fn test_sudo_set_max_allowed_uid() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 10;
-        let max_allowed_uids: u16 = 10;
+        let new_max_allowed_uids: u16 = 10;
         add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, max_allowed_uids));
-        
-        match ParatensorModule::get_max_allowed_uids(netuid) {
-                Ok(k) => assert_eq!(k, max_allowed_uids),
-                Err(_e) => panic!(),
-            } 
+		assert_ok!(ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, new_max_allowed_uids));
+        assert!( ParatensorModule::get_max_allowed_uids(netuid) == new_max_allowed_uids );
     });
 }
 

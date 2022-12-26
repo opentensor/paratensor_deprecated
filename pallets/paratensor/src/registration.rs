@@ -2,6 +2,7 @@ use super::*;
 use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
+use sp_runtime::sp_std::if_std;
 use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
@@ -113,13 +114,13 @@ impl<T: Config> Pallet<T> {
         // --- 11. Append neuron or prune it.
         let subnetwork_uid: u16;
         let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
-        if current_subnetwork_n < MaxAllowedUids::<T>::get( netuid ) {
+        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
 
             // --- 11.a No replacement required, the uid appends the subnetwork.
             // We increment the subnetwork count here but not below.
             subnetwork_uid = current_subnetwork_n;
             Self::increment_subnetwork_n( netuid );
-
+            
         } else {
 
             // --- 11.b Replacement required.
@@ -128,6 +129,7 @@ impl<T: Config> Pallet<T> {
             Self::decrement_subnets_for_hotkey( netuid, &Keys::<T>::get( netuid, subnetwork_uid ) );
             Self::prune_uid_from_subnetwork( subnetwork_uid, netuid );
         }
+
         
         // --- 12. Sets the neuron information on the network under the specified uid with coldkey and hotkey.
         // The function ensures the the global account is created if not already existent.
