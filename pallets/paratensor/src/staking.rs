@@ -2,18 +2,6 @@ use super::*;
 
 impl<T: Config> Pallet<T> {
 
-      /***********************************************************
-     * do_add_stake() - main function called from parent module
-     ***********************************************************/
-     /* TO DO:
-     1. check the transaction is signed by the caller and retrieve the T::AccountId coldkey. 
-     2. Add key pair if it is not in the list of keys
-     3. check that the hotkey is linked to the calling cold key, otherwise throw a NonAssociatedColdKey error.
-     4. check that the calling coldkey contains enough funds to create the staking transaction.
-     5. transfer stake from coldkey to hotkey
-     6. emit the staking event.*/
-
-
     /// ---- The implementation for the extrinsic add_stake: Adds stake to a hotkey account.
     ///
     /// # Args:
@@ -26,27 +14,43 @@ impl<T: Config> Pallet<T> {
     /// 	* 'stake_to_be_added' (u64):
     /// 		- The amount of stake to be added to the hotkey staking account.
     ///
+    /// # Event:
+    /// 	* StakeAdded;
+    /// 		- On the successfully adding stake to a global account.
+    ///
+    /// # Raises:
+    /// 	* 'CouldNotConvertToBalance':
+    /// 		- Unable to convert the passed stake value to a balance.
+    ///
+    /// 	* 'NotEnoughBalanceToStake':
+    /// 		- Not enough balance on the coldkey to add onto the global account.
+    ///
+    /// 	* 'NonAssociatedColdKey':
+    /// 		- The calling coldkey is not associated with this hotkey.
+    ///
+    /// 	* 'BalanceWithdrawalError':
+    /// 		- Errors stemming from transaction pallet.
+    ///
+    ///
     pub fn do_add_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_added: u64) -> dispatch::DispatchResult
     {
-        // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId pubkey information.
-        let coldkey = ensure_signed(origin)?;
+        // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
+        let coldkey = ensure_signed( origin )?;
  
-        // --- 2. We check that the calling coldkey contains enough funds to
-        // create the staking transaction and pay the call.
+        // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance(stake_to_be_added);
-        ensure!(stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance);
+        ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
  
-        // --- 3. We check if the staking coldkey has enough stake to add to the hotkey.
-        // otherwise we throw a NotEnoughBalanceToStake error.
-        ensure!(Self::can_remove_balance_from_coldkey_account(&coldkey, stake_as_balance.unwrap()), Error::<T>::NotEnoughBalanceToStake);
+        // --- 3. Ensure the callers coldkey has enough stake to perform the transaction.
+        ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
 
-        // --- 4. Check and create accounts. If the hotkey - coldkey account does not exist we create it.
+        // --- 4. Potentially create the global account. Note that this creates a global account and thus this transaction should be paid.
         Self::create_account_if_non_existent( &hotkey, &coldkey );         
 
         // --- 5. Ensure that the hot - cold pairing is correct, the hotkey is associated with this coldkey.
         ensure!( Self::account_belongs_to_coldkey( &hotkey, &coldkey ), Error::<T>::NonAssociatedColdKey );
 
-        // --- 6. Transfer stake from coldkey to hotkey. Removing first from coldkey and then adding to the hotkey.
+        // --- 6. Transfer the stake from coldkey to hotkey. Removing first from coldkey and then adding to the hotkey.
         // This can throw a BalanceWidthdrawError so we remove from the coldkey first before adding to the hotkey.
         ensure!(Self::remove_balance_from_coldkey_account(&coldkey, stake_as_balance.unwrap()) == true, Error::<T>::BalanceWithdrawalError);
         Self::add_stake_to_neuron_hotkey_account(&hotkey, stake_to_be_added);
@@ -54,7 +58,7 @@ impl<T: Config> Pallet<T> {
         // --- 7. Emit the staking event.
         Self::deposit_event(Event::StakeAdded(hotkey, stake_to_be_added));
  
-        // --- ok and return.
+        // --- Ok and return.
         Ok(())
      }
     
