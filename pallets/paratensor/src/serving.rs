@@ -26,7 +26,14 @@ impl<T: Config> Pallet<T> {
     /// 	* 'ip_type' (u8):
     /// 		- The endpoint ip version as a u8, 4 or 6.
     ///
-    pub fn do_serve_axon( origin: T::Origin, netuid: u16, version: u32, ip: u128, port: u16, ip_type: u8) -> dispatch::DispatchResult {
+    pub fn do_serve_axon( 
+        origin: T::Origin, 
+        netuid: u16, 
+        version: u32, 
+        ip: u128, 
+        port: u16, 
+        ip_type: u8
+    ) -> dispatch::DispatchResult {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
 
@@ -52,7 +59,7 @@ impl<T: Config> Pallet<T> {
         neuron.ip = ip;
         neuron.port = port;
         neuron.ip_type = ip_type;
-        NeuronsMetaData::<T>::insert(netuid, neuron_uid, neuron);
+        AxonsMetaData::<T>::insert(netuid, neuron_uid, neuron);
 
         // --- 7. We deposit the neuron updated event.
         Self::deposit_event(Event::AxonServed(neuron_uid));
@@ -64,6 +71,10 @@ impl<T: Config> Pallet<T> {
     /********************************
      --==[[  Helper functions   ]]==--
     *********************************/
+
+    pub fn get_neuron_metadata(netuid: u16, neuron_id: u16) -> AxonMetadataOf {
+        return AxonsMetaData::<T>::get(netuid, neuron_id).unwrap();
+    }
 
     pub fn is_valid_ip_type(ip_type: u8) -> bool {
         let allowed_values: Vec<u8> = vec![4, 6];

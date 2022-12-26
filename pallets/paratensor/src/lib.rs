@@ -157,9 +157,9 @@ pub mod pallet {
 	/// =========================
 	/// ==== Endpoint Struct ====
 	/// =========================
-	pub type NeuronMetadataOf = NeuronMetadata;
+	pub type AxonMetadataOf = AxonMetadata;
 	#[derive(Encode, Decode, Default, TypeInfo)]
-    pub struct NeuronMetadata {
+    pub struct AxonMetadata {
 
 		/// ---- The endpoint's code version.
         pub version: u32,
@@ -451,7 +451,7 @@ pub mod pallet {
 
 	/// ---- SingleMap Neuron UID --> Neuron Metadata (version, ip address, port, ip type)
 	#[pallet::storage]
-	pub(super) type NeuronsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, NeuronMetadataOf, OptionQuery>;
+	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
 
 	/// ---- DoubleMap Network UID --> Neuron UID --> Hotkey
 	#[pallet::type_value] 

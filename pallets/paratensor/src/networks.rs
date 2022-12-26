@@ -102,6 +102,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Initializes a new subnetwork under netuid with parameters.
+    ///
     pub fn init_new_network( netuid:u16, tempo:u16, modality:u16 ){
 
         // --- 1. Set network to 0 size.
@@ -124,6 +125,7 @@ impl<T: Config> Pallet<T> {
     }
 
       /// Removes the network (netuid) and all of its parameters.
+      ///
       pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
@@ -148,6 +150,7 @@ impl<T: Config> Pallet<T> {
 
     /// Explicitly sets all network parameters to their default values.
     /// Note: this is required because, although there are defaults, they do not come through on all calls.
+    ///
     pub fn set_default_values_for_all_parameters(netuid: u16){
         // Make network parameters explicit.
         if !Tempo::<T>::contains_key(netuid) { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
@@ -170,6 +173,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Explicitly erases all data associated with this network.
+    ///
     pub fn erase_all_network_data(netuid: u16){
 
         // --- 1. Remove incentive mechanism memory.
@@ -249,7 +253,7 @@ impl<T: Config> Pallet<T> {
         ensure!( !Self::contains_invalid_netuids( &netuids ), Error::<T>::InvalidUid );
 
         // --- 6. check if sum of emission rates is equal to 1.
-        ensure!( emission.iter().sum::<u64>() as u64 == BlockEmission::<T>::get(), Error::<T>::InvalidEmissionValues);
+        ensure!( emission.iter().sum::<u64>() as u64 == Self::get_block_emission(), Error::<T>::InvalidEmissionValues);
 
         // --- 7. Add emission values for each network
         Self::set_emission_values( &netuids, &emission );
@@ -262,7 +266,8 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Returns true if the items contain duplicates.
-    fn has_duplicate_netuids(netuids: &Vec<u16>) -> bool {
+    ///
+    fn has_duplicate_netuids( netuids: &Vec<u16> ) -> bool {
         let mut parsed: Vec<u16> = Vec::new();
         for item in netuids {
             if parsed.contains(&item) { return true; }
@@ -272,6 +277,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Checks for any invalid netuids on this network.
+    ///
     pub fn contains_invalid_netuids( netuids: &Vec<u16> ) -> bool {
         for netuid in netuids {
             if !Self::if_subnet_exist( *netuid ) {
@@ -281,22 +287,32 @@ impl<T: Config> Pallet<T> {
         return false;
     }
 
-    // Set emission values on networks.
+    /// Set emission values for the passed networks. networks.
+    ///
     pub fn set_emission_values( netuids: &Vec<u16>, emission: &Vec<u64> ){
         for (i, netuid_i) in netuids.iter().enumerate() {
             EmissionValues::<T>::insert( netuid_i, emission[i] );
         }
     }
 
-    // Checks to see if a subnet exists.
-    pub fn if_subnet_exist(netuid: u16) -> bool{
+    /// Returns true if the subnetwork exists.
+    ///
+    pub fn if_subnet_exist( netuid: u16 ) -> bool{
         return NetworksAdded::<T>::get( netuid );
     }
 
-    pub fn if_modality_is_valid(modality: u16) -> bool{
+    /// Returns true if the passed modality is allowed.
+    ///
+    pub fn if_modality_is_valid( modality: u16 ) -> bool{
         let allowed_values: Vec<u16> = vec![0, 1, 2];
-        return allowed_values.contains(&modality);
+        return allowed_values.contains( &modality );
     } 
+
+    /// Returns true if the passed tempo is allowed.
+    ///
+    pub fn if_tempo_is_valid(tempo: u16) -> bool {
+        tempo < u16::MAX
+    }
 
     pub fn remove_subnet_for_all_hotkeys(netuid: u16){
 
@@ -329,208 +345,6 @@ impl<T: Config> Pallet<T> {
                     Subnets::<T>::remove(hotkey_i);
             }
         }
-    }
-
-
-    pub fn clear_last_update_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <LastUpdate<T> as IterableStorageDoubleMap<u16, u16, u64 >>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { LastUpdate::<T>::remove_prefix(netuid, None); }
-       
-    }
-
-    pub fn clear_min_allowed_weight_for_subnet(netuid: u16){
-
-        if MinAllowedWeights::<T>::contains_key(netuid)
-            {MinAllowedWeights::<T>::remove(netuid);}
-    }
-
-    pub fn clear_max_weight_limit_for_subnet(netuid: u16){
-        if MaxWeightsLimit::<T>::contains_key(netuid)
-            {MaxWeightsLimit::<T>::remove(netuid);}
-    }
-
-    pub fn clear_max_allowed_max_min_ratio_for_subnet(netuid: u16){
-        if MaxAllowedMaxMinRatio::<T>::contains_key(netuid)
-            {MaxAllowedMaxMinRatio::<T>::remove(netuid);}
-    }
-
-    pub fn clear_tempo_for_subnet(netuid: u16){
-        if Tempo::<T>::contains_key(netuid)
-            {Tempo::<T>::remove(netuid);}
-    }
-
-    pub fn clear_difficulty_for_subnet(netuid: u16){
-        if Difficulty::<T>::contains_key(netuid)
-            {Difficulty::<T>::remove(netuid);}
-    }
-
-    pub fn clear_kappa_for_subnet(netuid: u16){
-        if Kappa::<T>::contains_key(netuid)
-            {Kappa::<T>::remove(netuid);}
-    }
-
-    pub fn clear_max_allowed_uids_for_subnet(netuid: u16){
-        if MaxAllowedUids::<T>::contains_key(netuid)
-            {MaxAllowedUids::<T>::remove(netuid);}
-    }
-
-    pub fn clear_validator_batch_size_for_subnet(netuid: u16){
-       if ValidatorBatchSize::<T>::contains_key(netuid)
-            { ValidatorBatchSize::<T>::remove(netuid);}
-    }
-
-    pub fn clear_validator_seq_length_for_subnet(netuid: u16){
-        if ValidatorSequenceLength::<T>::contains_key(netuid)
-            {ValidatorSequenceLength::<T>::remove(netuid);}
-    }
-
-    pub fn clear_validator_epoch_length_for_subnet(netuid: u16){
-        if ValidatorEpochLen::<T>::contains_key(netuid)
-            {ValidatorEpochLen::<T>::remove(netuid);}
-    }
-
-    pub fn clear_validator_epoch_per_reset_for_subnet(netuid: u16){
-        if ValidatorEpochsPerReset::<T>::contains_key(netuid)
-            {ValidatorEpochsPerReset::<T>::remove(netuid);}
-    }
-
-    pub fn clear_incentive_pruning_denom_for_subnet(netuid: u16){
-        if IncentivePruningDenominator::<T>::contains_key(netuid)
-            {IncentivePruningDenominator::<T>::remove(netuid);}
-    }
-
-    pub fn clear_stake_pruning_denom_for_subnet(netuid: u16){
-        if StakePruningDenominator::<T>::contains_key(netuid)
-            {StakePruningDenominator::<T>::remove(netuid);}
-    }
-
-    pub fn clear_stake_pruning_min_for_subnet(netuid: u16){
-        if StakePruningMin::<T>::contains_key(netuid)
-            {StakePruningMin::<T>::remove(netuid);}
-    }
-
-    pub fn clear_immunity_period_for_subnet(netuid: u16){
-        if ImmunityPeriod::<T>::contains_key(netuid)
-            {ImmunityPeriod::<T>::remove(netuid);}
-    }
-
-    pub fn clear_activity_cutoff_for_subnet(netuid: u16){
-        if ActivityCutoff::<T>::contains_key(netuid)
-            {ActivityCutoff::<T>::remove(netuid);}
-    }
-
-    pub fn clear_reg_this_interval_for_subnet(netuid: u16){
-        if RegistrationsThisInterval::<T>::contains_key(netuid)
-            {RegistrationsThisInterval::<T>::remove(netuid);}
-    }
-
-    pub fn remove_uids_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Uids<T> as IterableStorageDoubleMap<u16, T::AccountId, u16 >>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { Uids::<T>::remove_prefix(netuid, None); }
-    }
-
-    pub fn remove_keys_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId >>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { Keys::<T>::remove_prefix(netuid, None); }
-    }
-
-    pub fn remove_weights_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Weights<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)>>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { Weights::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_bonds_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Bonds<T> as IterableStorageDoubleMap<u16, u16, Vec<(u16, u16)>>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist { Bonds::<T>::remove_prefix(netuid, None); }
-    }
-
-    pub fn remove_active_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Active<T> as IterableStorageDoubleMap<u16, u16, bool>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Active::<T>::remove_prefix(netuid, None);}
-    }  
-
-    pub fn remove_rank_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Rank<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Rank::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_trust_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Trust<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Trust::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_incentive_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Incentive<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Incentive::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_consensus_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Consensus<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Consensus::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_dividends_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Dividends<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Dividends::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_emission_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <Emission<T> as IterableStorageDoubleMap<u16, u16, u64>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {Emission::<T>::remove_prefix(netuid, None);}
-    }
-
-    pub fn remove_pruning_score_for_subnet(netuid: u16){
-        let mut exist = false;
-        for (_uid_i, _) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {PruningScores::<T>::remove_prefix(netuid, None);}
-        
-    }
-    
-    pub fn remove_all_stakes_for_subnet(netuid: u16){
-      
-        let mut exist = false;
-        for (_uid_i, _) in <S<T> as IterableStorageDoubleMap<u16, u16, u64>>::iter_prefix( netuid ) {
-            exist = true;
-        }
-        if exist {S::<T>::remove_prefix(netuid, None);}
     }
 
 }

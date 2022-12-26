@@ -64,8 +64,32 @@ impl<T: Config> Pallet<T> {
  
         // --- 9. Ok and return.
         Ok(())
-     }
-    
+    }
+
+    /// Increases the amount of stake in the hotkey account by the amount provided
+    ///
+    /// Calling function should make sure the hotkey account exists within the system.
+    /// This function should always increase the total stake, so the operation
+    /// of inserting new stake for a neuron and the increment of the total stake is
+    /// atomic. This is important because at some point the fraction of stake/total stake
+    /// is calculated and this should always <= 1. Having this function be atomic, fills this
+    /// requirement.
+    ///
+    pub fn add_stake_to_neuron_hotkey_account( hotkey: &T::AccountId, amount: u64 ) {
+        
+        // --- 1. Get the previous stake amount on this hotkey.
+        let prev_stake: u64 = Self::get_stake_for_hotkey(hotkey);
+
+        // --- 2. Set new stake amount on account.
+        Stake::<T>::insert(hotkey, prev_stake.saturating_add( amount ) );
+
+        // --- 3. Increase stake counters for networks.
+        Self::add_stake_for_subnet(hotkey, amount);
+
+        // --- 4. Increment total network stake.
+        Self::increase_total_stake( amount );
+    }
+
     
     /// ---- The implementation for the extrinsic remove_stake: Removes stake from a hotkey account and adds it onto a coldkey.
     ///
@@ -128,13 +152,30 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// This adds stake (balance) to a cold key account. It takes the account id of the coldkey account and a Balance as parameters.
-    /// The Balance parameter is a from u64 converted number. This is needed for T::Currency to work.
-    /// Make sure stake is removed from another account before calling this method, otherwise you'll end up with double the value
+    /// Decreases the amount of stake in a hotkey account by the amount provided
+    /// When using this function, it is important to also increase another account by the same value,
+    /// as otherwise value gets lost.
     ///
-    pub fn add_balance_to_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) {
-        T::Currency::deposit_creating(&coldkey, amount); // Infallibe
+    /// A check if there is enough stake in the hotkey account should have been performed
+    /// before this function is called. If not, the node will crap out.
+    ///
+    /// Furthermore, a check to see if the uid is active before this method is called is also required
+    ///
+    pub fn remove_stake_from_hotkey_account( hotkey: &T::AccountId, amount: u64 ) {
+
+        // --- 1. Get previous stake value.
+        let hotkey_stake = Stake::<T>::get(hotkey);
+
+        // --- 2. Insert decreased stake amount.
+        Stake::<T>::insert(&hotkey, hotkey_stake.saturating_sub(amount) );
+
+        // --- 3. Decrease stake from all subnets associated with this hotkey.
+        Self::remove_stake_for_subnet( hotkey );
+
+        // --- 4. Decrease the network total stake.
+        Self::decrease_total_stake(amount);
     }
+
 
     /// Reduces the amount of stake of the entire stake pool by the supplied amount
     ///
@@ -146,6 +187,30 @@ impl<T: Config> Pallet<T> {
         debug_assert!(decrement <= total_stake);
 
         TotalStake::<T>::put(total_stake.saturating_sub(decrement));
+    }
+
+
+    /// Increases the amount of stake of the entire stake pool by the supplied amount
+    ///
+    pub fn increase_total_stake( increment: u64) {
+
+        let total_stake: u64 = TotalStake::<T>::get();
+        // Sanity check
+        debug_assert!(increment <= u64::MAX.saturating_sub(total_stake));
+
+        TotalStake::<T>::put(total_stake.saturating_add(increment));
+    }
+
+    // --- Returns the u64 as a balance.
+    ///
+	pub fn u64_to_balance( input: u64 ) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance> { input.try_into().ok() }
+
+    /// This adds stake (balance) to a cold key account. It takes the account id of the coldkey account and a Balance as parameters.
+    /// The Balance parameter is a from u64 converted number. This is needed for T::Currency to work.
+    /// Make sure stake is removed from another account before calling this method, otherwise you'll end up with double the value
+    ///
+    pub fn add_balance_to_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) {
+        T::Currency::deposit_creating(&coldkey, amount); // Infallibe
     }
 
     /// Checks if the coldkey account has enough balance to be able to withdraw the specified amount.
@@ -173,7 +238,6 @@ impl<T: Config> Pallet<T> {
     /// The internal mechanics can fail. When this happens, this function returns false, otherwise true
     /// The output of this function MUST be checked before writing the amount to the hotkey account
     ///
-    ///
     pub fn remove_balance_from_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) -> bool {
         return match T::Currency::withdraw(&coldkey, amount, WithdrawReasons::except(WithdrawReasons::TIP), ExistenceRequirement::KeepAlive) {
             Ok(_result) => {
@@ -185,71 +249,12 @@ impl<T: Config> Pallet<T> {
         };
     }
 
-    /// Increases the amount of stake in the hotkey account by the amount provided
-    ///
-    /// Calling function should make sure the uid exists within the system
-    /// This function should always increase the total stake, so the operation
-    /// of inserting new stake for a neuron and the increment of the total stake is
-    /// atomic. This is important because at some point the fraction of stake/total stake
-    /// is calculated and this should always <= 1. Having this function be atomic, fills this
-    /// requirement.
-    ///
-    pub fn add_stake_to_neuron_hotkey_account(hotkey: &T::AccountId, amount: u64) {
-        
-        let prev_stake: u64 = Self::get_stake_for_hotkey(hotkey);
-
-        // This should never happen. If a user has this ridiculous amount of stake,
-        // we need to come up with a better solution
-        debug_assert!(u64::MAX.saturating_sub(amount) > prev_stake);
-
-        let new_stake = prev_stake.saturating_add(amount);
-        Self::add_stake_for_hotkey(hotkey, new_stake);
-
-        Self::add_stake_for_subnet(hotkey, amount);
-
-        Self::increase_total_stake(amount);
-
-    }
-
     /// Checks if the hotkey account of the specified account has enough stake to be able to withdraw
     /// the requested amount.
     ///
     pub fn has_enough_stake(hotkey: &T::AccountId, amount: u64) -> bool {
         let stake = Stake::<T>::get(hotkey);
         return stake >= amount;
-    }
-
-    /// Decreases the amount of stake in a hotkey account by the amount provided
-    /// When using this function, it is important to also increase another account by the same value,
-    /// as otherwise value gets lost.
-    ///
-    /// A check if there is enough stake in the hotkey account should have been performed
-    /// before this function is called. If not, the node will crap out.
-    ///
-    /// Furthermore, a check to see if the uid is active before this method is called is also required
-    ///
-    pub fn remove_stake_from_hotkey_account(hotkey: &T::AccountId, amount: u64) {
-
-        let hotkey_stake = Stake::<T>::get(hotkey);
-        // By this point, there should be enough stake in the hotkey account for this to work.
-        debug_assert!(hotkey_stake >= amount);
-        let decreased_stake = hotkey_stake.saturating_sub(amount);
-
-        Stake::<T>::insert(&hotkey, decreased_stake);
-        Self::decrease_total_stake(amount);
-        //
-        Self::remove_stake_for_subnet(hotkey);
-    }
-    
-    /// Increases the amount of stake of the entire stake pool by the supplied amount
-    ///
-    pub fn increase_total_stake( increment: u64) {
-
-        let total_stake: u64 = TotalStake::<T>::get();
-        // Sanity check
-        debug_assert!(increment <= u64::MAX.saturating_sub(total_stake));
-
-        TotalStake::<T>::put(total_stake.saturating_add(increment));
     }
 
     pub fn add_stake_for_subnet( hotkey: &T::AccountId, amount: u64){
@@ -270,6 +275,21 @@ impl<T: Config> Pallet<T> {
                         S::<T>::insert(netuid, neuron_uid, prev_stake+amount);
                     }
                     else { S::<T>::insert(netuid, neuron_uid, amount);}
+            }
+        }
+    }
+
+    pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
+        if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
+            let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
+            //
+            for i in vec_hotkey_subnets{
+                let neuron_uid ;
+                match Self::get_neuron_for_net_and_hotkey(i, &hotkey) {
+                    Ok(k) => neuron_uid = k,
+                    Err(e) => panic!("Error: {:?}", e),
+                } 
+                S::<T>::remove(i, neuron_uid);
             }
         }
     }

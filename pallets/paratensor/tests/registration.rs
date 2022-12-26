@@ -1,4 +1,4 @@
-use pallet_paratensor::{Error, NeuronMetadataOf};
+use pallet_paratensor::{Error, AxonMetadataOf};
 use frame_support::{assert_ok};
 use frame_system::Config;
 use crate::{mock::*};
@@ -322,19 +322,6 @@ fn test_registration_failed_no_signature() {
 }
 
 #[test]
-fn test_registration_get_next_uid() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-		//add network
-		add_network(netuid, 13, 0);
-		assert_eq!(ParatensorModule::get_next_uid(netuid), 0); // We start with id 0
-		//
-		ParatensorModule::increment_subnetwork_n(netuid);
-		assert_eq!(ParatensorModule::get_next_uid(netuid), 1); // One up
-	});
-}
-
-#[test]
 fn test_registration_get_uid_to_prune() {
 	new_test_ext().execute_with(|| {
 		ParatensorModule::set_pruning_score(1,1,100);
@@ -379,14 +366,6 @@ fn test_registration_pruning() {
 		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
 		println!( "subs: {:?}, {:?}", subs, netuid);
 		assert_eq!(subs.contains(&netuid), false);
-		//
-		assert_eq!(ParatensorModule::if_emission_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_weights_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_rank_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_trust_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_incentive_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_consensus_is_set_for_neuron(netuid, neuron_uid), false);
-		assert_eq!(ParatensorModule::if_dividend_is_set_for_neuron(netuid, neuron_uid), false);
 	});
 }
 
@@ -406,7 +385,7 @@ fn test_registration_get_neuron_metadata() {
 		//
 		//let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
 		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
-		let neuron: NeuronMetadataOf = ParatensorModule::get_neuron_metadata(netuid, neuron_uid);
+		let neuron: AxonMetadataOf = ParatensorModule::get_neuron_metadata(netuid, neuron_uid);
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);

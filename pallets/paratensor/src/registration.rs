@@ -120,7 +120,7 @@ impl<T: Config> Pallet<T> {
             // We increment the subnetwork count here but not below.
             subnetwork_uid = current_subnetwork_n;
             Self::increment_subnetwork_n( netuid );
-            
+
         } else {
 
             // --- 11.b Replacement required.
@@ -147,10 +147,11 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    // Sets new neuron information on the network under the specified uid with coldkey and hotkey information.
-    // The function ensures the the global account is created if not already existent.
+    /// --- Sets new neuron information on the network under the specified uid with coldkey and hotkey information.
+    /// The function ensures the the global account is created if not already existent.
+    ///
     pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16 , coldkey: &T::AccountId, hotkey: &T::AccountId ) {
-        NeuronsMetaData::<T>::insert( netuid, uid, NeuronMetadata { version: 0, ip: 0, port: 0, ip_type: 0 } );
+        AxonsMetaData::<T>::insert( netuid, uid, AxonMetadata{ version: 0, ip: 0, port: 0, ip_type: 0 } );
         Active::<T>::insert( netuid, uid, true );
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
@@ -158,8 +159,9 @@ impl<T: Config> Pallet<T> {
         Self::add_hotkey_stake_for_network( netuid, hotkey );
     }
 
-    // Removes a uid from a subnetwork by erasing all its data.
-    // The function sets all terms to default state 0, false, or None.
+    /// --- Removes a uid from a subnetwork by erasing all its data.
+    /// The function sets all terms to default state 0, false, or None.
+    ///
     pub fn prune_uid_from_subnetwork( netuid: u16, uid_to_prune: u16 ) {
         Uids::<T>::remove( netuid, Keys::<T>::get( netuid, uid_to_prune ).clone() );
         Keys::<T>::remove( netuid, uid_to_prune ); 
@@ -173,7 +175,7 @@ impl<T: Config> Pallet<T> {
         Consensus::<T>::remove( netuid, uid_to_prune );
         Incentive::<T>::remove( netuid, uid_to_prune );
         PruningScores::<T>::remove( netuid, uid_to_prune );
-        NeuronsMetaData::<T>::remove( netuid, uid_to_prune );
+        AxonsMetaData::<T>::remove( netuid, uid_to_prune );
     }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
