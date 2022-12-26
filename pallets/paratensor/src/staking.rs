@@ -32,13 +32,16 @@ impl<T: Config> Pallet<T> {
     /// 		- Errors stemming from transaction pallet.
     ///
     ///
-    pub fn do_add_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_added: u64) -> dispatch::DispatchResult
-    {
+    pub fn do_add_stake(
+        origin: T::Origin, 
+        hotkey: T::AccountId, 
+        stake_to_be_added: u64
+    ) -> dispatch::DispatchResult {
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
         let coldkey = ensure_signed( origin )?;
  
         // --- 2. We convert the stake u64 into a balancer.
-        let stake_as_balance = Self::u64_to_balance(stake_to_be_added);
+        let stake_as_balance = Self::u64_to_balance( stake_to_be_added );
         ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
  
         // --- 3. Ensure the callers coldkey has enough stake to perform the transaction.
@@ -50,40 +53,54 @@ impl<T: Config> Pallet<T> {
         // --- 5. Ensure that the hot - cold pairing is correct, the hotkey is associated with this coldkey.
         ensure!( Self::account_belongs_to_coldkey( &hotkey, &coldkey ), Error::<T>::NonAssociatedColdKey );
 
-        // --- 6. Transfer the stake from coldkey to hotkey. Removing first from coldkey and then adding to the hotkey.
-        // This can throw a BalanceWidthdrawError so we remove from the coldkey first before adding to the hotkey.
-        ensure!(Self::remove_balance_from_coldkey_account(&coldkey, stake_as_balance.unwrap()) == true, Error::<T>::BalanceWithdrawalError);
-        Self::add_stake_to_neuron_hotkey_account(&hotkey, stake_to_be_added);
+        // --- 6. Ensure the remove operation from the coldkey is a success.
+        ensure!( Self::remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
+
+        // --- 7. If we reach here, add the balance to the hotkey.
+        Self::add_stake_to_neuron_hotkey_account( &hotkey, stake_to_be_added );
  
-        // --- 7. Emit the staking event.
-        Self::deposit_event(Event::StakeAdded(hotkey, stake_to_be_added));
+        // --- 8. Emit the staking event.
+        Self::deposit_event( Event::StakeAdded( hotkey, stake_to_be_added ) );
  
-        // --- Ok and return.
+        // --- 9. Ok and return.
         Ok(())
      }
     
     
-    /// This function removes stake from a hotkey account and puts into a coldkey account.
-    /// This function should be called through an extrinsic signed with the coldkeypair's private
-    /// key. It takes a hotkey account id and an ammount as parameters.
+    /// ---- The implementation for the extrinsic remove_stake: Removes stake from a hotkey account and adds it onto a coldkey.
     ///
-    /// Generally, this function works as follows
-    /// 1) A Check is performed to see if the hotkey is active (ie, the node using the key is subscribed)
-    /// 2) If these checks pass, inflation is emitted to the nodes' peers
-    /// 3) If the account has enough stake, the requested amount it transferred to the coldkey account
-    /// 4) The total amount of stake is reduced after transfer is complete
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The signature of the caller's coldkey.
     ///
-    /// It throws the following errors if there is something wrong
-    /// - NotRegistered : The suplied hotkey is not in use. This ususally means a node that uses this key has not subscribed yet, or has unsubscribed
-    /// - NonAssociatedColdKey : The supplied hotkey account id is not subscribed using the supplied cold key
-    /// - NotEnoughStaketoWithdraw : The ammount of stake available in the hotkey account is lower than the requested amount
-    /// - CouldNotConvertToBalance : A conversion error occured while converting stake from u64 to Balance
+    /// 	* 'hotkey' (T::AccountId):
+    /// 		- The associated hotkey account.
+    ///
+    /// 	* 'stake_to_be_added' (u64):
+    /// 		- The amount of stake to be added to the hotkey staking account.
+    ///
+    /// # Event:
+    /// 	* StakeRemoved;
+    /// 		- On the successfully removing stake from the hotkey account.
+    ///
+    /// # Raises:
+    /// 	* 'NotRegistered':
+    /// 		- Thrown if the account we are attempting to unstake from is non existent.
+    ///
+    /// 	* 'NonAssociatedColdKey':
+    /// 		- Thrown if the coldkey does not own the hotkey we are unstaking from.
+    ///
+    /// 	* 'NotEnoughStaketoWithdraw':
+    /// 		- Thrown if there is not enough stake on the hotkey to withdwraw this amount. 
+    ///
+    /// 	* 'CouldNotConvertToBalance':
+    /// 		- Thrown if we could not convert this amount to a balance.
+    ///
     ///
     pub fn do_remove_stake(origin: T::Origin, hotkey: T::AccountId, stake_to_be_removed: u64) -> dispatch::DispatchResult {
 
-        // --- 1. We check the transaction is signed by the caller
-        // and retrieve the T::AccountId pubkey information.
-        let coldkey = ensure_signed(origin)?;
+        // --- 1. We check the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
+        let coldkey = ensure_signed( origin )?;
 
         // --- 2. Ensure that the hotkey exists as an active account. Otherwise there is nothing to withdraw
         ensure!( Self::account_exists( &hotkey ), Error::<T>::NotRegistered );
@@ -91,22 +108,23 @@ impl<T: Config> Pallet<T> {
         // --- 3. Ensure that the hot - cold pairing is correct, the hotkey is associated with this coldkey.
         ensure!( Self::account_belongs_to_coldkey( &hotkey, &coldkey ), Error::<T>::NonAssociatedColdKey );
 
-        // --- 4. We check that the hotkey has enough stake to withdraw
-        // and then withdraw from the account and convert to a balance currency object.
-        ensure!(Self::has_enough_stake(&hotkey, stake_to_be_removed), Error::<T>::NotEnoughStaketoWithdraw);
-        let stake_to_be_added_as_currency = Self::u64_to_balance(stake_to_be_removed);
-        ensure!(stake_to_be_added_as_currency.is_some(), Error::<T>::CouldNotConvertToBalance);
+        // --- 4. Ensure that the hotkey has enough stake to withdraw.
+        ensure!( Self::has_enough_stake( &hotkey, stake_to_be_removed ), Error::<T>::NotEnoughStaketoWithdraw );
 
-        // --- 5. We perform the withdrawl by converting the stake to a u64 balance
-        // and deposit the balance into the coldkey account. If the coldkey account
-        // does not exist it is created.
-        Self::remove_stake_from_hotkey_account(&hotkey, stake_to_be_removed);
-        Self::add_balance_to_coldkey_account(&coldkey, stake_to_be_added_as_currency.unwrap());
+        // --- 5. Ensure that we can conver this u64 to a balance.
+        let stake_to_be_added_as_currency = Self::u64_to_balance( stake_to_be_removed );
+        ensure!( stake_to_be_added_as_currency.is_some(), Error::<T>::CouldNotConvertToBalance );
 
-        // --- 6. Emit the unstaking event.
-        Self::deposit_event(Event::StakeRemoved(hotkey, stake_to_be_removed));
+        // --- 6. We remove the balance from the hotkey.
+        Self::remove_stake_from_hotkey_account( &hotkey, stake_to_be_removed );
 
-        // --- Done and ok.
+        // --- 7. We add the balancer to the coldkey.  If the above fails we will not credit this coldkey.
+        Self::add_balance_to_coldkey_account( &coldkey, stake_to_be_added_as_currency.unwrap() );
+
+        // --- 8. Emit the unstaking event.
+        Self::deposit_event( Event::StakeRemoved( hotkey, stake_to_be_removed ) );
+
+        // --- 9. Done and ok.
         Ok(())
     }
 
