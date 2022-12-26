@@ -147,7 +147,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Erases the network (netuid) and all of its parameters.
+    /// Removes the network (netuid) and all of its parameters.
     pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
@@ -159,7 +159,20 @@ impl<T: Config> Pallet<T> {
         // --- 3. Set False the network.
         NetworksAdded::<T>::insert( netuid, false );
 
-        // --- 4. Erase incentive mechanism parameters.
+        // --- 4. Erase all memory associated with the network.
+        Self::erase_all_network_data( netuid );
+
+        // --- 5. Remove subnetworks for all hotkeys.
+        Self::remove_subnet_for_all_hotkeys( netuid );
+
+        // --- 6. Decrement the network counter.
+        TotalNetworks::<T>::mutate(|val| *val -= 1);
+    }
+
+    /// Explicitly erases all data associated with this network.
+    pub fn erase_all_network_data(netuid: u16){
+
+        // --- 1. Remove incentive mechanism memory.
         S::<T>::remove_prefix( netuid, None );
         Uids::<T>::remove_prefix( netuid, None );
         Keys::<T>::remove_prefix( netuid, None );
@@ -174,7 +187,7 @@ impl<T: Config> Pallet<T> {
         Dividends::<T>::remove_prefix( netuid, None );
         PruningScores::<T>::remove_prefix( netuid, None );
 
-        // --- 5. Erase network terms.
+        // --- 2. Erase network parameters.
         Tempo::<T>::remove( netuid );
         Kappa::<T>::remove( netuid );
         Difficulty::<T>::remove( netuid );
@@ -192,12 +205,6 @@ impl<T: Config> Pallet<T> {
         ValidatorSequenceLength::<T>::remove( netuid );
         RegistrationsThisInterval::<T>::remove( netuid );
         IncentivePruningDenominator::<T>::remove( netuid );
-
-        // --- 6. Remove subnetworks for all hotkeys:
-        Self::remove_subnet_for_all_hotkeys( netuid );
-
-        // --- 6. Decrement the network counter.
-        TotalNetworks::<T>::mutate(|val| *val -= 1);
     }
 
     pub fn do_set_emission_values( origin: T::Origin, emission_values: Vec<(u16,u64)>) -> dispatch::DispatchResult{
