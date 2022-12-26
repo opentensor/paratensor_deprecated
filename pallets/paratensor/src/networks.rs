@@ -8,7 +8,7 @@ use frame_support::storage::IterableStorageDoubleMap;
 impl<T: Config> Pallet<T> { 
 
 
-    /// ---- The implementation for the extrinsic do_add_network.
+    /// ---- The implementation for the extrinsic add_network.
     ///
     /// # Args:
     /// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -66,53 +66,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Initializes a new subnetwork under netuid with parameters.
-    pub fn init_new_network( netuid:u16, tempo:u16, modality:u16 ){
-
-        // --- 1. Set network to 0 size.
-        SubnetworkN::<T>::insert( netuid, 0 );
-
-        // --- 2. Set this network uid to alive.
-        NetworksAdded::<T>::insert( netuid, true );
-        
-        // --- 3. Fill tempo memory item.
-        Tempo::<T>::insert( netuid, tempo );
-
-        // --- 4 Fill modality item.
-        NetworkModality::<T>::insert( netuid, modality );
-
-        // --- 5. Increase total network count.
-        TotalNetworks::<T>::mutate( |n| *n += 1 );
-
-        // --- 6. Set all default values **explicitly**.
-        Self::set_default_values_for_all_parameters( netuid );
-    }
-
-    /// Explicitly sets all network parameters to their default values.
-    /// Note: this is required because, although there are defaults, they do not come through on all calls.
-    pub fn set_default_values_for_all_parameters(netuid: u16){
-        // Make network parameters explicit.
-        if !Tempo::<T>::contains_key(netuid) { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
-        if !Kappa::<T>::contains_key(netuid) { Kappa::<T>::insert(netuid, Kappa::<T>::get(netuid));}
-        if !Difficulty::<T>::contains_key(netuid) { Difficulty::<T>::insert(netuid, Difficulty::<T>::get(netuid));}
-        if !MaxAllowedUids::<T>::contains_key(netuid) { MaxAllowedUids::<T>::insert(netuid, MaxAllowedUids::<T>::get(netuid));}
-        if !ImmunityPeriod::<T>::contains_key(netuid) { ImmunityPeriod::<T>::insert(netuid, ImmunityPeriod::<T>::get(netuid));}
-        if !ActivityCutoff::<T>::contains_key(netuid) { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
-        if !EmissionValues::<T>::contains_key(netuid) { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
-        if !StakePruningMin::<T>::contains_key(netuid) { StakePruningMin::<T>::insert(netuid, StakePruningMin::<T>::get(netuid));}
-        if !MaxWeightsLimit::<T>::contains_key(netuid) { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
-        if !ValidatorEpochLen::<T>::contains_key(netuid) { ValidatorEpochLen::<T>::insert(netuid, ValidatorEpochLen::<T>::get(netuid));}
-        if !MinAllowedWeights::<T>::contains_key(netuid) { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid)); }
-        if !ValidatorBatchSize::<T>::contains_key(netuid) { ValidatorBatchSize::<T>::insert(netuid, ValidatorBatchSize::<T>::get(netuid));}
-        if !MaxAllowedMaxMinRatio::<T>::contains_key(netuid) { MaxAllowedMaxMinRatio::<T>::insert(netuid, MaxAllowedMaxMinRatio::<T>::get(netuid));}
-        if !ValidatorEpochsPerReset::<T>::contains_key(netuid) { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
-        if !ValidatorSequenceLength::<T>::contains_key(netuid) { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
-        if !RegistrationsThisInterval::<T>::contains_key(netuid) { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
-        if !IncentivePruningDenominator::<T>::contains_key(netuid) { IncentivePruningDenominator::<T>::insert(netuid, IncentivePruningDenominator::<T>::get(netuid));}
-    }
-    
-
-    /// ---- The implementation for the extrinsic do_remove_network.
+    /// ---- The implementation for the extrinsic remove_network.
     ///
     /// # Args:
     /// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -147,8 +101,30 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
-    /// Removes the network (netuid) and all of its parameters.
-    pub fn remove_network( netuid:u16 ) {
+    /// Initializes a new subnetwork under netuid with parameters.
+    pub fn init_new_network( netuid:u16, tempo:u16, modality:u16 ){
+
+        // --- 1. Set network to 0 size.
+        SubnetworkN::<T>::insert( netuid, 0 );
+
+        // --- 2. Set this network uid to alive.
+        NetworksAdded::<T>::insert( netuid, true );
+        
+        // --- 3. Fill tempo memory item.
+        Tempo::<T>::insert( netuid, tempo );
+
+        // --- 4 Fill modality item.
+        NetworkModality::<T>::insert( netuid, modality );
+
+        // --- 5. Increase total network count.
+        TotalNetworks::<T>::mutate( |n| *n += 1 );
+
+        // --- 6. Set all default values **explicitly**.
+        Self::set_default_values_for_all_parameters( netuid );
+    }
+
+      /// Removes the network (netuid) and all of its parameters.
+      pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
         SubnetworkN::<T>::remove( netuid );
@@ -167,6 +143,30 @@ impl<T: Config> Pallet<T> {
 
         // --- 6. Decrement the network counter.
         TotalNetworks::<T>::mutate(|val| *val -= 1);
+    }
+
+
+    /// Explicitly sets all network parameters to their default values.
+    /// Note: this is required because, although there are defaults, they do not come through on all calls.
+    pub fn set_default_values_for_all_parameters(netuid: u16){
+        // Make network parameters explicit.
+        if !Tempo::<T>::contains_key(netuid) { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
+        if !Kappa::<T>::contains_key(netuid) { Kappa::<T>::insert(netuid, Kappa::<T>::get(netuid));}
+        if !Difficulty::<T>::contains_key(netuid) { Difficulty::<T>::insert(netuid, Difficulty::<T>::get(netuid));}
+        if !MaxAllowedUids::<T>::contains_key(netuid) { MaxAllowedUids::<T>::insert(netuid, MaxAllowedUids::<T>::get(netuid));}
+        if !ImmunityPeriod::<T>::contains_key(netuid) { ImmunityPeriod::<T>::insert(netuid, ImmunityPeriod::<T>::get(netuid));}
+        if !ActivityCutoff::<T>::contains_key(netuid) { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
+        if !EmissionValues::<T>::contains_key(netuid) { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
+        if !StakePruningMin::<T>::contains_key(netuid) { StakePruningMin::<T>::insert(netuid, StakePruningMin::<T>::get(netuid));}
+        if !MaxWeightsLimit::<T>::contains_key(netuid) { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
+        if !ValidatorEpochLen::<T>::contains_key(netuid) { ValidatorEpochLen::<T>::insert(netuid, ValidatorEpochLen::<T>::get(netuid));}
+        if !MinAllowedWeights::<T>::contains_key(netuid) { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid)); }
+        if !ValidatorBatchSize::<T>::contains_key(netuid) { ValidatorBatchSize::<T>::insert(netuid, ValidatorBatchSize::<T>::get(netuid));}
+        if !MaxAllowedMaxMinRatio::<T>::contains_key(netuid) { MaxAllowedMaxMinRatio::<T>::insert(netuid, MaxAllowedMaxMinRatio::<T>::get(netuid));}
+        if !ValidatorEpochsPerReset::<T>::contains_key(netuid) { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
+        if !ValidatorSequenceLength::<T>::contains_key(netuid) { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
+        if !RegistrationsThisInterval::<T>::contains_key(netuid) { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
+        if !IncentivePruningDenominator::<T>::contains_key(netuid) { IncentivePruningDenominator::<T>::insert(netuid, IncentivePruningDenominator::<T>::get(netuid));}
     }
 
     /// Explicitly erases all data associated with this network.
@@ -207,68 +207,90 @@ impl<T: Config> Pallet<T> {
         IncentivePruningDenominator::<T>::remove( netuid );
     }
 
-    pub fn do_set_emission_values( origin: T::Origin, emission_values: Vec<(u16,u64)>) -> dispatch::DispatchResult{
-        /*TO DO:
-        1. check if caller is sudo account
-        2. check if we receive emission rate for all existing networks (not more, not less)
-        3. check if sum of emission rates is equal to 1.
-        5. add emission values  */
-        // TODO( Saeideh ): These todos are no longer needed.
-        // 1. if caller is sudo account
+    /// ---- The implementation for the extrinsic set_emission_values.
+    ///
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- Must be sudo.
+    ///
+   	/// 	* `netuids` (Vec<u16>):
+	/// 		- A vector of network uids values. This must include all netuids.
+	///
+	/// 	* `emission` (Vec<u64>):
+	/// 		- The emission values associated with passed netuids in order.
+    ///
+    /// # Event:
+    /// 	* NetworkRemoved;
+    /// 		- On the successfull removing of this network.
+    ///
+    /// # Raises:
+    /// 	* 'EmissionValuesDoesNotMatchNetworks':
+    /// 		- Attempting to remove a non existent network.
+    ///
+    pub fn do_set_emission_values( 
+        origin: T::Origin, 
+        netuids: Vec<u16>,
+        emission: Vec<u64>
+    ) -> dispatch::DispatchResult {
+
+        // --- 1. Ensure caller is sudo.
         ensure_root( origin )?;
 
-        // 2. check if we have received emission values for all existing networks and not more
-        ensure!(Self::if_emission_values_match(&emission_values), Error::<T>::EmissionValuesDoesNotMatchNetworks);
+        // --- 2. Ensure emission values match up to network uids.
+        ensure!( netuids.len() == emission.len(), Error::<T>::WeightVecNotEqualSize );
 
-        // 3. check if sum of emission rates is equal to 1.
-        ensure!(Self::if_sum_emission_values(&emission_values), Error::<T>::InvalidEmissionValues);
+        // --- 3. Ensure we are setting emission for all networks. 
+        ensure!( netuids.len() as u16 == TotalNetworks::<T>::get(), Error::<T>::NotSettingEnoughWeights );
 
-        // 4. Add emission values for each network
-        Self::add_emission_values(&emission_values);
+        // --- 4. Ensure the passed uids contain no duplicates.
+        ensure!( !Self::has_duplicate_netuids( &netuids ), Error::<T>::DuplicateUids );
 
-        Self::deposit_event(Event::EmissionValuesSet());
+        // --- 5. Ensure that the passed uids are valid for the network.
+        ensure!( !Self::contains_invalid_netuids( &netuids ), Error::<T>::InvalidUid );
+
+        // --- 6. check if sum of emission rates is equal to 1.
+        ensure!( emission.iter().sum::<u64>() as u64 == BlockEmission::<T>::get(), Error::<T>::InvalidEmissionValues);
+
+        // --- 7. Add emission values for each network
+        Self::set_emission_values( &netuids, &emission );
+
+        // --- 8. Add emission values for each network
+        Self::deposit_event( Event::EmissionValuesSet() );
+
+        // --- 9. Ok and return.
         Ok(())
     }
 
-    // helper functions
-    pub fn add_emission_values(emission_values: &Vec<(u16, u64)>){
-        
-        for (netuid_i, emission_i) in emission_values.iter(){
-            EmissionValues::<T>::insert(netuid_i, emission_i);
+    /// Returns true if the items contain duplicates.
+    fn has_duplicate_netuids(netuids: &Vec<u16>) -> bool {
+        let mut parsed: Vec<u16> = Vec::new();
+        for item in netuids {
+            if parsed.contains(&item) { return true; }
+            parsed.push(item.clone());
+        }
+        return false;
+    }
+
+    /// Checks for any invalid netuids on this network.
+    pub fn contains_invalid_netuids( netuids: &Vec<u16> ) -> bool {
+        for netuid in netuids {
+            if !Self::if_subnet_exist( *netuid ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Set emission values on networks.
+    pub fn set_emission_values( netuids: &Vec<u16>, emission: &Vec<u64> ){
+        for (i, netuid_i) in netuids.iter().enumerate() {
+            EmissionValues::<T>::insert( netuid_i, emission[i] );
         }
     }
 
-    pub fn if_sum_emission_values(emission_values: &Vec<(u16, u64)>) -> bool{
-        let mut emission_values_sum: u64 = 0;
-        
-        for (_, emission_i) in emission_values.iter(){ 
-            emission_values_sum = emission_values_sum + emission_i;
-        } 
-        if emission_values_sum == BlockEmission::<T>::get() {return true;}
-        else {return false;}
-    } 
-
-    pub fn if_emission_values_match(emission_values: &Vec<(u16, u64)>) -> bool{ 
-        
-        let tota_nets = TotalNetworks::<T>::get();
-        let mut nets: Vec<u16> = vec![];
-
-        for (netuid_j, _) in emission_values.iter() {nets.push(*netuid_j);} 
-
-        if nets.len() as u16 != tota_nets {return false;}
-        
-        for (uid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16 >>::iter() {
-            if !nets.contains(&uid_i) {return false;}  
-
-        }
-        for (_, val) in nets.iter().enumerate(){
-            if NetworksAdded::<T>::get(val) == false {return false;}
-        }
-        return true;
-    }
-
+    // Checks to see if a subnet exists.
     pub fn if_subnet_exist(netuid: u16) -> bool{
-        return  SubnetworkN::<T>::contains_key(netuid);
+        return NetworksAdded::<T>::get( netuid );
     }
 
     pub fn if_modality_is_valid(modality: u16) -> bool{

@@ -325,8 +325,9 @@ fn test_sudo_test_tempo_pending_emissions_ok() {
         assert_eq!(ParatensorModule::get_emission_value(netuid1), 0);
         assert_eq!(ParatensorModule::get_emission_value(netuid2), 0);
         assert_eq!(ParatensorModule::get_emission_value(netuid3), 0);
-        let emission_values: Vec<(u16, u64)> = vec![(1, 100000000),(2, 400000000), (3, 200000000), (5, 300000000)]; 
-        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_values));
+        let netuids: Vec<u16> = vec![ 1, 2, 3, 5 ]; 
+        let emission: Vec<u64> = vec![ 100000000, 400000000, 200000000, 300000000];         
+        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ));
         assert_eq!(ParatensorModule::get_emission_value(netuid0), 100000000);
         assert_eq!(ParatensorModule::get_emission_value(netuid1), 400000000);
         assert_eq!(ParatensorModule::get_emission_value(netuid2), 200000000);
@@ -348,12 +349,13 @@ pub fn test_sudo_test_pending_emission_ok() {
         let netuid2: u16 = 2;
         let tempo2: u16 = 7;
 
-        let emission_values: Vec<(u16, u64)> = vec![(1, 250000000),(2, 750000000)]; 
+        let netuids: Vec<u16> = vec![ 1, 2 ]; 
+        let emission: Vec<u64> = vec![ 250000000, 750000000];         
 
         add_network(netuid1, tempo1, 0);
         add_network(netuid2, tempo2, 0);
 
-        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_values));
+        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ));
         assert_eq!(ParatensorModule::get_emission_value(netuid1), 250000000);
 
         step_block(3);

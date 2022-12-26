@@ -178,10 +178,9 @@ fn test_network_set_default_value_for_other_parameters() {
 #[test]
 fn test_network_set_emission_ratios_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
-        let emission_values: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
-
-		let call = Call::ParatensorModule(ParatensorCall::sudo_set_emission_values{emission_values});
-
+                let netuids: Vec<u16> = vec![ 1,2 ]; 
+                let emission: Vec<u64> = vec![ 100000000, 900000000 ]; 
+		let call = Call::ParatensorModule(ParatensorCall::sudo_set_emission_values{ netuids, emission });
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Normal,
@@ -193,51 +192,43 @@ fn test_network_set_emission_ratios_dispatch_info_ok() {
 #[test]
 fn test_network_set_emission_ratios_ok() {
 	new_test_ext().execute_with(|| {
-
-        let emission_rateio: Vec<(u16, u64)> = vec![(1,100000000),(2,900000000)]; 
-
-        add_network(1, 13, 0);
-        add_network(2, 8, 0);
-        //
-        assert_ok!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio));
-	});
+                let netuids: Vec<u16> = vec![ 1,2 ]; 
+                let emission: Vec<u64> = vec![ 100000000, 900000000 ]; 
+                add_network(1, 0, 0);
+                add_network(2, 0, 0);
+                assert_ok!( ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ) );
+        });
 }
 
 #[test]
 fn test_network_set_emission_ratios_fail_summation() {
 	new_test_ext().execute_with(|| {
-
-        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
-
-        add_network(1, 13, 0);
-        add_network(2, 8, 0);
-        //
-        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::InvalidEmissionValues.into()) );
+                let netuids: Vec<u16> = vec![ 1, 2 ]; 
+                let emission: Vec<u64> = vec![ 100000000, 910000000 ]; 
+                add_network(1, 0, 0);
+                add_network(2, 0, 0);
+                assert_eq!( ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ), Err(Error::<Test>::InvalidEmissionValues.into()) );
 	});
 }
 
 #[test]
-fn test_network_set_emission_ratios_fail_nets() {
+fn test_network_set_emission_invalid_netuids() {
 	new_test_ext().execute_with(|| {
-
-        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
-
-        add_network(1, 13, 0);
-        //
-        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
+                let netuids: Vec<u16> = vec![ 1, 2 ]; 
+                let emission: Vec<u64> = vec![ 100000000, 900000000 ]; 
+                add_network(1, 0, 0);
+                assert_eq!( ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ), Err(Error::<Test>::NotSettingEnoughWeights.into()) );
 	});
 }
 
 #[test]
 fn test_network_set_emission_ratios_fail_net() {
 	new_test_ext().execute_with(|| {
-
-        let emission_rateio: Vec<(u16, u64)> = vec![(1, 100000000),(2, 90000000)]; 
-
-        add_network(1, 13, 0);
-        add_network(3, 3, 0);
-        //
-        assert_eq!(ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), emission_rateio), Err(Error::<Test>::EmissionValuesDoesNotMatchNetworks.into()) );
+                let netuids: Vec<u16> = vec![ 1, 2 ]; 
+                let emission: Vec<u64> = vec![ 100000000, 900000000 ]; 
+                add_network(1, 0, 0);
+                add_network(3, 0, 0);
+                assert_eq!( ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission ), Err(Error::<Test>::InvalidUid.into()) );
 	});
 }
 

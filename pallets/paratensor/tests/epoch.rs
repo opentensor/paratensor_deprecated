@@ -79,6 +79,7 @@ fn test_10_graph() {
 		// each with 1 stake and self weights.
 		let n: usize = 10;
 		let netuid: u16 = 0;
+		add_network(netuid, 0, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, n as u16 ); 
 		for i in 0..10 {
 			add_node(
@@ -314,6 +315,8 @@ fn test_16384_graph_sparse() {
 }
 
 fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16>, epochs: u16, random_weights: bool, random_seed: u64, sparse: bool, debug: bool) {
+	// Create the network
+	add_network(netuid, 0, 0);
 	// Register uids
 	ParatensorModule::set_max_allowed_uids( netuid, n );
 	for key in 0..n {

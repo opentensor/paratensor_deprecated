@@ -1061,23 +1061,31 @@ pub mod pallet {
 			Self::do_remove_network(origin, netuid)
 		} 
 
-		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
-
-		/// ---- Sudo set this networks emission values.
+		/// ---- Sudo set emission values for all networks.
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
-		/// 	* `emission_values` (u16, u64):
-		/// 		- A vector of (netuid, emission values) tuples.
+		/// 	* `netuids` (Vec<u16>):
+		/// 		- A vector of network uids values. This must include all netuids.
+		///
+		/// 	* `emission` (Vec<u64>):
+		/// 		- The emission values associated with passed netuids in order.
 		/// 
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_set_emission_values(
 			origin: OriginFor<T>,
-			emission_values: Vec<(u16, u64)>
-		) -> DispatchResult{
-			Self::do_set_emission_values( origin,  emission_values)
+			netuids: Vec<u16>,
+			emission: Vec<u64>,
+		) -> DispatchResult {
+			Self::do_set_emission_values( 
+				origin,
+				netuids,
+				emission
+			)
 		}
+
+		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
 
 		/// ---- Sudo set this network's bonds moving average.
 		/// Args:
