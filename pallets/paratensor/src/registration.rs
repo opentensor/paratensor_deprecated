@@ -82,7 +82,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
         // --- 3. Ensure we are not exceeding the max allowed registrations per block.
-        ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registratations_per_block(), Error::<T>::TooManyRegistrationsThisBlock );
+        ensure!( Self::get_registrations_this_block( netuid ) <= Self::get_max_registratations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
 
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
@@ -130,14 +130,12 @@ impl<T: Config> Pallet<T> {
             Self::decrement_subnets_for_hotkey( netuid, &Keys::<T>::get( netuid, subnetwork_uid ) );
             Self::prune_uid_from_subnetwork( subnetwork_uid, netuid );
         }
-
         
         // --- 12. Sets the neuron information on the network under the specified uid with coldkey and hotkey.
         // The function ensures the the global account is created if not already existent.
-        Self::fill_new_neuron_account_in_subnetwork( netuid, subnetwork_uid, &coldkey, &hotkey);
+        Self::fill_new_neuron_account_in_subnetwork( netuid, subnetwork_uid, &hotkey, current_block_number );
 
         // --- 13. Record the registration and increment block and interval counters.
-        BlockAtRegistration::<T>::insert( netuid, subnetwork_uid, current_block_number );
         RegistrationsThisInterval::<T>::mutate( netuid, |val| *val += 1 );
         RegistrationsThisBlock::<T>::mutate( netuid, |val| *val += 1 );
     
@@ -151,11 +149,13 @@ impl<T: Config> Pallet<T> {
     /// --- Sets new neuron information on the network under the specified uid with coldkey and hotkey information.
     /// The function ensures the the global account is created if not already existent.
     ///
-    pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16 , coldkey: &T::AccountId, hotkey: &T::AccountId ) {
-        AxonsMetaData::<T>::insert( netuid, uid, AxonMetadata{ version: 0, ip: 0, port: 0, ip_type: 0 } );
-        Active::<T>::insert( netuid, uid, true );
-        Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
-        Uids::<T>::insert( netuid, hotkey.clone(), uid );
+    pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16, hotkey: &T::AccountId, current_block_number: u64 ) {
+        AxonsMetaData::<T>::insert( netuid, uid, AxonMetadata{ version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null Axon info.
+        Active::<T>::insert( netuid, uid, true ); // Set to active by default.
+        Keys::<T>::insert( netuid, uid, hotkey.clone() ); // Make hotkey - uid association.
+        Uids::<T>::insert( netuid, hotkey.clone(), uid ); // Make uid - hotkey association.
+        PruningScores::<T>::insert( netuid, uid, u16::MAX ); // Set to infinite pruning score.
+        BlockAtRegistration::<T>::insert( netuid, uid, current_block_number ); // Fill block at registration.
         Self::increment_subnets_for_hotkey( netuid, hotkey );
         Self::add_hotkey_stake_for_network( netuid, hotkey );
     }
@@ -189,12 +189,24 @@ impl<T: Config> Pallet<T> {
     /// Determine which peer to prune from the network by finding the element with the lowest pruning score.
     /// This function will always return an element to prune.
     pub fn get_neuron_to_prune(netuid: u16) -> u16 {
+        let mut min_block_at_registration: u64 = u64::MAX; // Far Future.
         let mut min_score : u16 = u16::MAX;
         let mut uid_with_min_score = 0;
-        for (uid_i, pruning_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
-            if min_score > pruning_score { 
+        for (neuron_uid_i, pruning_score) in <PruningScores<T> as IterableStorageDoubleMap<u16, u16, u16 >>::iter_prefix( netuid ) {
+            let block_at_registration: u64 = Self::get_neuron_block_at_registration( netuid, neuron_uid_i );
+            if min_score == pruning_score {
+                // Break ties with block at registration.
+                if min_block_at_registration > block_at_registration{
+                    min_score = pruning_score; 
+                    min_block_at_registration = block_at_registration;
+                    uid_with_min_score = neuron_uid_i;
+                }
+            }
+            // Find min pruning score.
+            else if min_score > pruning_score { 
                 min_score = pruning_score; 
-                uid_with_min_score = uid_i;
+                min_block_at_registration = block_at_registration;
+                uid_with_min_score = neuron_uid_i;
             }
         }
         // We replace the pruning score here with u16 max to ensure that all peers always have a 

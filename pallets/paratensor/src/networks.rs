@@ -3,7 +3,6 @@ use frame_support::{sp_std::vec};
 use sp_std::vec::Vec;
 use crate::system::ensure_root;
 use frame_support::storage::IterableStorageMap;
-use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> { 
 
@@ -48,7 +47,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
 
         // --- 2. Ensure this subnetwork does not already exist.
-        ensure!( !Self::if_subnet_exist(netuid), Error::<T>::NetworkExist );
+        ensure!( !Self::if_subnet_exist( netuid ), Error::<T>::NetworkExist );
 
         // --- 3. Ensure the modality is valid.
         ensure!( Self::if_modality_is_valid( modality ), Error::<T>::InvalidModality );
@@ -89,7 +88,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
 
         // --- 2. Ensure the network to be removed exists.
-        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
+        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
 
         // --- 3. Explicitly erase the network and all its parameters.
         Self::remove_network( netuid );
@@ -134,8 +133,8 @@ impl<T: Config> Pallet<T> {
         // --- 2. Remove network modality storage.
         NetworkModality::<T>::remove( netuid );
 
-        // --- 3. Set False the network.
-        NetworksAdded::<T>::insert( netuid, false );
+        // --- 3. Remove netuid from added networks.
+        NetworksAdded::<T>::remove( netuid );
 
         // --- 4. Erase all memory associated with the network.
         Self::erase_all_network_data( netuid );
@@ -153,22 +152,22 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn set_default_values_for_all_parameters(netuid: u16){
         // Make network parameters explicit.
-        if !Tempo::<T>::contains_key(netuid) { Tempo::<T>::insert(netuid, Tempo::<T>::get(netuid));}
-        if !Kappa::<T>::contains_key(netuid) { Kappa::<T>::insert(netuid, Kappa::<T>::get(netuid));}
-        if !Difficulty::<T>::contains_key(netuid) { Difficulty::<T>::insert(netuid, Difficulty::<T>::get(netuid));}
-        if !MaxAllowedUids::<T>::contains_key(netuid) { MaxAllowedUids::<T>::insert(netuid, MaxAllowedUids::<T>::get(netuid));}
-        if !ImmunityPeriod::<T>::contains_key(netuid) { ImmunityPeriod::<T>::insert(netuid, ImmunityPeriod::<T>::get(netuid));}
-        if !ActivityCutoff::<T>::contains_key(netuid) { ActivityCutoff::<T>::insert(netuid, ActivityCutoff::<T>::get(netuid));}
-        if !EmissionValues::<T>::contains_key(netuid) { EmissionValues::<T>::insert(netuid, EmissionValues::<T>::get(netuid));}   
-        if !StakePruningMin::<T>::contains_key(netuid) { StakePruningMin::<T>::insert(netuid, StakePruningMin::<T>::get(netuid));}
-        if !MaxWeightsLimit::<T>::contains_key(netuid) { MaxWeightsLimit::<T>::insert(netuid, MaxWeightsLimit::<T>::get(netuid));}
-        if !ValidatorEpochLen::<T>::contains_key(netuid) { ValidatorEpochLen::<T>::insert(netuid, ValidatorEpochLen::<T>::get(netuid));}
-        if !MinAllowedWeights::<T>::contains_key(netuid) { MinAllowedWeights::<T>::insert(netuid, MinAllowedWeights::<T>::get(netuid)); }
-        if !ValidatorBatchSize::<T>::contains_key(netuid) { ValidatorBatchSize::<T>::insert(netuid, ValidatorBatchSize::<T>::get(netuid));}
-        if !MaxAllowedMaxMinRatio::<T>::contains_key(netuid) { MaxAllowedMaxMinRatio::<T>::insert(netuid, MaxAllowedMaxMinRatio::<T>::get(netuid));}
-        if !ValidatorEpochsPerReset::<T>::contains_key(netuid) { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
-        if !ValidatorSequenceLength::<T>::contains_key(netuid) { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
-        if !RegistrationsThisInterval::<T>::contains_key(netuid) { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
+        if !Tempo::<T>::contains_key( netuid ) { Tempo::<T>::insert( netuid, Tempo::<T>::get( netuid ));}
+        if !Kappa::<T>::contains_key( netuid ) { Kappa::<T>::insert( netuid, Kappa::<T>::get( netuid ));}
+        if !Difficulty::<T>::contains_key( netuid ) { Difficulty::<T>::insert( netuid, Difficulty::<T>::get( netuid ));}
+        if !MaxAllowedUids::<T>::contains_key( netuid ) { MaxAllowedUids::<T>::insert( netuid, MaxAllowedUids::<T>::get( netuid ));}
+        if !ImmunityPeriod::<T>::contains_key( netuid ) { ImmunityPeriod::<T>::insert( netuid, ImmunityPeriod::<T>::get( netuid ));}
+        if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
+        if !EmissionValues::<T>::contains_key( netuid ) { EmissionValues::<T>::insert( netuid, EmissionValues::<T>::get( netuid ));}   
+        if !StakePruningMin::<T>::contains_key( netuid ) { StakePruningMin::<T>::insert( netuid, StakePruningMin::<T>::get( netuid ));}
+        if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
+        if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
+        if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
+        if !ValidatorBatchSize::<T>::contains_key( netuid ) { ValidatorBatchSize::<T>::insert( netuid, ValidatorBatchSize::<T>::get( netuid ));}
+        if !MaxAllowedMaxMinRatio::<T>::contains_key( netuid ) { MaxAllowedMaxMinRatio::<T>::insert( netuid, MaxAllowedMaxMinRatio::<T>::get( netuid ));}
+        if !ValidatorEpochsPerReset::<T>::contains_key( netuid ) { ValidatorEpochsPerReset::<T>::insert( netuid, ValidatorEpochsPerReset::<T>::get( netuid ));}
+        if !ValidatorSequenceLength::<T>::contains_key( netuid ) { ValidatorSequenceLength::<T>::insert( netuid, ValidatorSequenceLength::<T>::get( netuid ));}
+        if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
     }
 
     /// Explicitly erases all data associated with this network.

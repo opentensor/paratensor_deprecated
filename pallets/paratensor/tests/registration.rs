@@ -104,7 +104,7 @@ fn test_registration_too_many_registrations_per_block() {
 		
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
-		ParatensorModule::set_max_registrations_per_block( 10 );
+		ParatensorModule::set_max_registrations_per_block( netuid, 10 );
 
 		let block_number: u64 = 0;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
@@ -136,87 +136,6 @@ fn test_registration_too_many_registrations_per_block() {
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(9), netuid, block_number, nonce9, work9, 9, 9));
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(10), netuid, block_number, nonce10, work10, 10, 10);
 		assert_eq!( result, Err(Error::<Test>::TooManyRegistrationsThisBlock.into()) );
-	});
-}
-
-#[test]
-fn test_registration_defaults() {
-	new_test_ext().execute_with(|| { 
-		let netuid: u16 = 1;
-		add_network(netuid, 12, 0);
-		//
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 100 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 2 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 100 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
-		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 2 ));
-		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 3 ));
-		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 2 ));
-		ParatensorModule::set_max_registrations_per_block( 2 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 3 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 2 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 2 ); 
-	});
-}
-
-#[test]
-fn test_registration_difficulty_adjustment() {
-	new_test_ext().execute_with(|| { /* uncomment when epoch impl and setting difficulty is done. */
-		/*let netuid: u16 = 1;
-
-		//add network
-		add_network(netuid, 12, 0);
-		
-		assert_ok!(ParatensorModule::sudo_set_adjustment_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
-		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval( <<Test as Config>::Origin>::root(), netuid, 1 ));
-		assert_ok!(ParatensorModule::sudo_set_difficulty( <<Test as Config>::Origin>::root(), netuid, 2 ));
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
-		assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), 1 );
-		assert_eq!( ParatensorModule::get_adjustment_interval(netuid), 1 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
-
-		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 0, 1243324);
-		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 0, 2521352);
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(0), netuid, 0, nonce, work, 0, 0));
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(1), netuid, 0, nonce1, work1, 1, 1));
-		
-		assert_eq!( ParatensorModule::get_registrations_this_interval(netuid), 2 );
-		assert_eq!( ParatensorModule::get_registrations_this_block(), 2 );
-
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
-
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 2 );
-		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 2, 2413);
-		let (nonce3, work3): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 2, 1252352313);
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(2), netuid, 2, nonce2, work2, 2, 2));
-		//assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(3), netuid, 2, nonce3, work3, 3, 3));
-		
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 20000 );
-		let (nonce4, work4): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 3, 124124);
-		let (nonce5, work5): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, 3, 123123124124);
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(4), netuid, 3, nonce4, work4, 4, 4));
-		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(5), netuid, 3, nonce5, work5, 5, 5));
-
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 40000 );
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 20000 );
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 );
-		step_block ( 1 );
-		assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), 10000 ); */
-
 	});
 }
 
@@ -473,8 +392,12 @@ fn test_full_pass_through() {
 		assert_eq!( ParatensorModule::get_max_allowed_uids( netuid0 ), 2 );
 		
 		// Set the max registration per block.
-		ParatensorModule::set_max_registrations_per_block( 3 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(), 3 );
+		ParatensorModule::set_max_registrations_per_block( netuid0, 3 );
+		ParatensorModule::set_max_registrations_per_block( netuid1, 3 );
+		ParatensorModule::set_max_registrations_per_block( netuid2, 3 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid0), 3 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid1), 3 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid2), 3 );
 
 		// Check that no one has registered yet.
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 0);

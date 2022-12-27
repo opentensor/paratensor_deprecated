@@ -320,7 +320,7 @@ impl<T: Config> Pallet<T> {
         let mut block_at_registration: Vec<u64> = vec![ 0; n ];
         for neuron_uid in 0..n {
             if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                block_at_registration[ neuron_uid ] = BlockAtRegistration::<T>::get( netuid, neuron_uid as u16 );
+                block_at_registration[ neuron_uid ] = Self::get_neuron_block_at_registration( netuid, neuron_uid as u16 );
             }
         }
         block_at_registration

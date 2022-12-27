@@ -119,13 +119,15 @@ pub mod pallet {
         pub ip_type: u8,
 	}
 
-	/// ===============================
-	/// ==== Global Params Storage ====
-	/// ===============================
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
+
+
+	/// ===============================
+	/// ==== Global Params Storage ====
+	/// ===============================
 
 	#[pallet::type_value]
 	pub fn DefaultBlockEmission<T: Config>() -> u64 {1000000000}
@@ -138,8 +140,6 @@ pub mod pallet {
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] /// ---- StorageItem Total issuance on chain.
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-	#[pallet::storage] /// ---- StorageItem Global Used Work.
-    pub  type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
 
 	/// =========================
 	/// ==== Global Accounts ====
@@ -148,12 +148,44 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
+	#[pallet::storage] /// --- Total number of Existing Global Accounts
+	pub type TotalGlobalAccounts<T> = StorageValue<_, u64, ValueQuery>;
 	#[pallet::storage] /// --- SingleMap hotkey --> Stake
     pub type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
 	#[pallet::storage] /// --- SingleMap hotkey --> Owning Coldkey
     pub type GlobalAccounts<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
-	#[pallet::storage] /// --- Total number of Existing Global Accounts
-	pub type TotalGlobalAccounts<T> = StorageValue<_, u64, ValueQuery>;
+
+	/// =====================================
+	/// ==== Difficulty / Registrations =====
+	/// =====================================
+
+	#[pallet::type_value] 
+	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
+	#[pallet::type_value]
+	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
+	#[pallet::type_value]
+	pub fn DefaultDifficulty<T: Config>() -> u64 { T::InitialDifficulty::get() }
+	#[pallet::type_value]
+	pub fn DefaultMinDifficulty<T: Config>() -> u64 { 1 }
+	#[pallet::type_value]
+	pub fn DefaultMaxDifficulty<T: Config>() -> u64 { u64::MAX }
+	#[pallet::type_value] 
+	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
+
+	#[pallet::storage] /// ---- StorageItem Global Used Work.
+    pub type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
+	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
+	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	pub type MinDifficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMinDifficulty<T> >;
+	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	pub type MaxDifficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMaxDifficulty<T> >;
+	#[pallet::storage] /// ---- SingleMap netuid -->  Block at last adjustment.
+	pub type LastAdjustmentBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
+	#[pallet::storage] /// --- SingleMap netuid --> Registration this Block.
+	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
+	#[pallet::storage] /// --- StorageItem Global Max Registration Per Block.
+	pub type MaxRegistrationsPerBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	/// ==============================
 	/// ==== Subnetworks Storage =====
@@ -182,7 +214,6 @@ pub mod pallet {
 	/// ==============================
 	/// ==== Subnetwork Features =====
 	/// ==============================
-
 	#[pallet::type_value]
 	pub fn DefaultEmissionValues<T: Config>() ->  u64 { 0 }
 	#[pallet::type_value]
@@ -190,26 +221,22 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
-	pub fn DefaultRegistrationsThisBlock<T: Config>() ->  u16 { 0}
+	pub fn DefaultTempo<T: Config>() -> u16 { T::InitialTempo::get() }
 	#[pallet::type_value]
 	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
-	#[pallet::type_value] 
-	pub fn DefaultMaxRegistrationsPerBlock<T: Config>() -> u16 { T::InitialMaxRegistrationsPerBlock::get() }
 
+	#[pallet::storage] /// --- SingleMap netuid --> Block of last mechanism step. TODO(const)
+	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
+	#[pallet::storage] /// ---- SingleMap netuid --> Tempo
+	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
 	#[pallet::storage] /// --- SingleMap netuid --> EmissionValues
 	pub type EmissionValues<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
 	#[pallet::storage] /// --- SingleMap netuid --> Pending Emission
 	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
 	#[pallet::storage] /// --- SingleMap netuid --> Blocks since last step.
 	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
-	#[pallet::storage] /// --- SingleMap netuid --> Registration this Block.
-	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
-	#[pallet::storage] /// --- SingleMap netuid --> Block of last mechanism step. TODO(const)
-	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
 	#[pallet::storage] /// --- SingleMap netuid --> validator Exclude Quantile
 	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
-	#[pallet::storage] /// --- StorageItem Global Max Registration Per Block
-	pub type MaxRegistrationsPerBlock<T> = StorageValue<_, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam storage ====
@@ -217,86 +244,79 @@ pub mod pallet {
 	
 	/// ---- SingleMap netuid --> Hyper-parameter MinAllowedWeights
 	#[pallet::type_value] 
-	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
+	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
-	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
+	pub fn DefaultRho<T: Config>() -> u16 { T::InitialRho::get() }
 	#[pallet::type_value]
-	pub fn DefaultBondsMovingAverage<T: Config>() -> u64 { T::InitialBondsMovingAverage::get() }
-	#[pallet::type_value] 
-	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
-	#[pallet::type_value] 
-	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
-	#[pallet::type_value] 
-	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
-	#[pallet::type_value]
-	pub fn DefaultTempo<T: Config>() -> u16 {T::InitialTempo::get()}
-	#[pallet::type_value]
-	pub fn DefaultDifficulty<T: Config>() -> u64 {T::InitialDifficulty::get()}
-	#[pallet::type_value]
-	pub fn DefaultRho<T: Config>() -> u16 {T::InitialRho::get()}
-	#[pallet::type_value]
-	pub fn DefaultKappa<T: Config>() -> u16 {T::InitialKappa::get()}
+	pub fn DefaultKappa<T: Config>() -> u16 { T::InitialKappa::get() }
 	#[pallet::type_value] 
 	pub fn DefaultMaxAllowedUids<T: Config>() -> u16 { T::InitialMaxAllowedUids::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorBatchSize<T: Config>() -> u16 { T::InitialValidatorBatchSize::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
-	#[pallet::type_value] 
-	pub fn DefaultStakePruningMin<T: Config>() -> u16 { T::InitialStakePruningMin::get() }
 	#[pallet::type_value] 
 	pub fn DefaultImmunityPeriod<T: Config>() -> u16 { T::InitialImmunityPeriod::get() }
 	#[pallet::type_value] 
 	pub fn DefaultActivityCutoff<T: Config>() -> u16 { T::InitialActivityCutoff::get() }
 	#[pallet::type_value] 
-	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
+	pub fn DefaultMaxWeightsLimit<T: Config>() -> u16 { T::InitialMaxWeightsLimit::get() }
+	#[pallet::type_value] 
+	pub fn DefaultStakePruningMin<T: Config>() -> u16 { T::InitialStakePruningMin::get() }
+	#[pallet::type_value] 
+	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
+	#[pallet::type_value] 
+	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
+	#[pallet::type_value]
+	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
+	#[pallet::type_value]
+	pub fn DefaultBondsMovingAverage<T: Config>() -> u64 { T::InitialBondsMovingAverage::get() }
+	#[pallet::type_value] 
+	pub fn DefaultValidatorBatchSize<T: Config>() -> u16 { T::InitialValidatorBatchSize::get() }
+	#[pallet::type_value] 
+	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
+	#[pallet::type_value] 
+	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
+	#[pallet::type_value] 
+	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
+	#[pallet::type_value] 
+	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
+
+	#[pallet::storage] /// ---- SingleMap netuid --> Rho
+	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
+	#[pallet::storage] /// --- SingleMap Network UID ---> Kappa
+	pub type Kappa<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultKappa<T> >;
+	#[pallet::storage] 	/// ---- SingleMap netuid --> uid, we use to record uids to prune at next epoch.
+    pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+	#[pallet::storage] /// ---- SingleMap netuid --> Registration This Interval
+	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+	#[pallet::storage] /// --- SingleMap Network UID ---> Max Allowed Uids
+	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
+	#[pallet::storage] 	/// --- SingleMap Network UID ---> Immunity Period
+	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
+	#[pallet::storage] /// --- SingleMap netuid --> Activity Cutoff
+	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
+	#[pallet::storage] /// --- SingleMap Network UID ---> Stake Pruning Min
+	pub type StakePruningMin<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningMin<T> >;
+	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MaxWeightsLimit
+	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
+	#[pallet::storage] /// --- SingleMap Network UID ---> Validator Epoch Length
+	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MinAllowedWeights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Adjustment Interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Bonds Moving Average
 	pub type BondsMovingAverage<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBondsMovingAverage<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid -->  Target Registration Per Interval
-	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MaxWeightsLimit
-	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> MaxAllowedMaxMinRatio TODO(const): should be moved to max clip ratio.
-	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Tempo
-	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
-	#[pallet::storage] 	/// ---- SingleMap netuid --> Difficulty
-	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Rho
-	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Kappa
-	pub type Kappa<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultKappa<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Max Allowed Uids
-	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
 	#[pallet::storage] /// --- SingleMap Network UID ---> Validator Batch Size
 	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
 	#[pallet::storage] /// --- SingleMap Network UID ---> Validaotr Sequence Length
 	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Validator Epoch Length
-	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
+	#[pallet::storage] /// ---- SingleMap netuid --> MaxAllowedMaxMinRatio TODO(const): should be moved to max clip ratio.
+	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
 	#[pallet::storage] 	/// ---- SingleMap Network UID ---> Valdiator Epochs Per Reset
 	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Stake Pruning Min
-	pub type StakePruningMin<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningMin<T> >;
-	#[pallet::storage] 	/// --- SingleMap Network UID ---> Immunity Period
-	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] /// --- SingleMap netuid --> Activity Cutoff
-	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
-	#[pallet::storage] 	/// ---- SingleMap netuid --> uid, we use to record uids to prune at next epoch.
-    pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] /// ---- SingleMap netuid --> Registration This Interval
-	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
+	#[pallet::storage] /// ---- SingleMap netuid -->  Target Registration Per Interval
+	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 	#[pallet::storage] /// ---- DoubleMap netuid --> uid --> Block Registration
-	pub(super) type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
+	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
@@ -304,60 +324,60 @@ pub mod pallet {
 
 	/// ---- DoubleMap netuid --> uid --> last_update
 	#[pallet::type_value] 
+	pub fn DefaultRank<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultStake<T:Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultTrust<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultEmission<T:Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultIncentive<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultConsensus<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
 	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
-	#[pallet::type_value] 
-	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
-	#[pallet::type_value] 
-	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
-	#[pallet::type_value] 
-	pub fn DefaultActive<T:Config>() -> bool { false }
-	#[pallet::type_value] 
-	pub fn DefaultStake<T:Config>() -> u64 {0 }
-	#[pallet::type_value] 
-	pub fn DefaultRank<T:Config>() -> u16 {0 }
-	#[pallet::type_value] 
-	pub fn DefaultTrust<T:Config>() -> u16 {0 }
-	#[pallet::type_value] 
-	pub fn DefaultIncentive<T:Config>() -> u16 { 0}
-	#[pallet::type_value] 
-	pub fn DefaultConsensus<T:Config>() -> u16 {0 }
 	#[pallet::type_value] 
 	pub fn DefaultDividends<T: Config>() -> u16 { 0 }
 	#[pallet::type_value] 
+	pub fn DefaultActive<T:Config>() -> bool { false }
+	#[pallet::type_value] 
+	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
+	#[pallet::type_value] 
+	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
+	#[pallet::type_value] 
 	pub fn DefaultPruningScore<T: Config>() -> u16 { T::InitialPruningScore::get() }
 	#[pallet::type_value] 
-	pub fn DefaultEmission<T:Config>() -> u64 {0 }
+	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> LastUpdate
-	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Axon Metadata (version, ip address, port, ip type)
-	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> hotkey
-	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> hotkey --> uid
-	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Weights
-    pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Bonds
-    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Activity
-	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Stake
     pub(super) type S<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultStake<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Rank
 	pub(super) type Rank<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultRank<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> hotkey --> uid
+	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Axon Metadata (version, ip address, port, ip type)
+	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Activity
+	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> hotkey
+	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Emission 
+	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Incentive
 	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Consensus
 	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Dividends
 	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Emission 
-	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> LastUpdate
+	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Bonds
+    pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
+	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Weights
+    pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Pruning Score
 	pub(super) type PruningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPruningScore<T> >;
 	
@@ -589,6 +609,10 @@ pub mod pallet {
 		/// 		- The number of the block we are initializing.
 		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
 		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
+
+			// Adjust difficulties.
+			Self::adjust_difficulty();
+
 			/*TO DO:
 			1. calculate pending emission for each network
 			2. check if (current_block_number + 1) % tempo ==0 for any network, then call epoch with pending emission for this network
@@ -604,9 +628,6 @@ pub mod pallet {
 					}
 					let pending_emission = EmissionValues::<T>::get(netuid_i);
 					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
-					//
-					RegistrationsThisBlock::<T>::insert(netuid_i, 0);
-					RegistrationsThisInterval::<T>::insert(netuid_i, 0);
 				}
 			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
 			// A network drains it's emission if the (current_block_number + 1) % tempo == 0.

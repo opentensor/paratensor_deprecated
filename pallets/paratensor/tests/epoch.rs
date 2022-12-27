@@ -385,7 +385,7 @@ fn test_active_stake() {
 		add_network(netuid, tempo, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, n );
 		assert_eq!(ParatensorModule::get_max_allowed_uids(netuid), n);
-		ParatensorModule::set_max_registrations_per_block( n );
+		ParatensorModule::set_max_registrations_per_block( netuid, n );
 		// === Register [validator1, validator2, server1, server2]
 		for key in 0..n as u64 {
 			let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000);
@@ -514,7 +514,7 @@ fn test_outdated_weights() {
 		let mut block_number: u64 = 0;
 		add_network(netuid, tempo, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, n );
-		ParatensorModule::set_max_registrations_per_block( n+1 ); // should be n, but RegistrationsThisBlock is not reset (TODO: Saeideh)
+		ParatensorModule::set_max_registrations_per_block( netuid, n+1 ); // should be n, but RegistrationsThisBlock is not reset (TODO: Saeideh)
 		// === Register [validator1, validator2, server1, server2]
 		for key in 0..n as u64 {
 			let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000);
@@ -609,7 +609,7 @@ fn test_zero_weights() {
 		let mut block_number: u64 = 0;
 		add_network(netuid, tempo, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, n );
-		ParatensorModule::set_max_registrations_per_block( n+1 ); // should be n, but RegistrationsThisBlock is not reset (TODO: Saeideh)
+		ParatensorModule::set_max_registrations_per_block( netuid, n+1 ); // should be n, but RegistrationsThisBlock is not reset (TODO: Saeideh)
 		// === Register [validator, server]
 		for key in 0..n as u64 {
 			let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000);

@@ -78,7 +78,7 @@ fn test_dividends_with_run_to_block() {
 		add_network(netuid, 13, 0);
 
 		// Register neuron, this will set a self weight
-		ParatensorModule::set_max_registrations_per_block( 3 );
+		ParatensorModule::set_max_registrations_per_block( netuid, 3 );
 		ParatensorModule::set_max_allowed_uids(1, 5);
 		
 		register_ok_neuron( netuid, 0, coldkey_account_id, 2112321);
