@@ -14,8 +14,8 @@ use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays}
 fn test_add_stake_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
 		let hotkey = 0;
-		let ammount_staked = 5000;
-        let call = Call::ParatensorModule(ParatensorCall::add_stake{hotkey, ammount_staked});
+		let amount_staked = 5000;
+        let call = Call::ParatensorModule(ParatensorCall::add_stake{hotkey, amount_staked});
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Normal,
@@ -183,10 +183,8 @@ fn test_add_stake_err_not_enough_belance() {
 fn test_remove_stake_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
         let hotkey = 0;
-		let ammount_unstaked = 5000;
-
-		let call = Call::ParatensorModule(ParatensorCall::remove_stake{hotkey, ammount_unstaked});
-
+		let amount_unstaked = 5000;
+		let call = Call::ParatensorModule(ParatensorCall::remove_stake{hotkey, amount_unstaked});
 		assert_eq!(call.get_dispatch_info(), DispatchInfo {
 			weight: 0,
 			class: DispatchClass::Normal,

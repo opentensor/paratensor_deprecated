@@ -54,12 +54,10 @@ impl<T: Config> Pallet<T> {
     pub fn get_difficulty( netuid: u16 ) -> U256 { U256::from( Self::get_difficulty_as_u64(netuid) ) }    
     pub fn get_registrations_this_block( netuid:u16 ) -> u16 { RegistrationsThisBlock::<T>::get(netuid) }
     pub fn get_max_allowed_max_min_ratio( netuid: u16 ) -> u16{ MaxAllowedMaxMinRatio::<T>::get(netuid) }
-    pub fn get_stake_pruning_denominator( netuid: u16) -> u16 { StakePruningDenominator::<T>::get(netuid) }
     pub fn get_validator_epochs_per_reset( netuid: u16 )-> u16 {ValidatorEpochsPerReset::<T>::get(netuid) }
     pub fn get_validator_sequence_length( netuid: u16 ) -> u16 { ValidatorSequenceLength::<T>::get(netuid) }
     pub fn get_validator_exclude_quantile( netuid: u16 ) -> u16 { ValidatorExcludeQuantile::<T>::get(netuid) }
     pub fn get_registrations_this_interval( netuid: u16 ) -> u16 { RegistrationsThisInterval::<T>::get(netuid) }  
-    pub fn get_incentive_pruning_denominator( netuid: u16 ) -> u16 { IncentivePruningDenominator::<T>::get(netuid) }
     pub fn get_neuron_stake_for_subnetwork( netuid: u16, neuron_uid: u16) -> u64 { S::<T>::get(netuid, neuron_uid) }
     pub fn get_target_registrations_per_interval( netuid: u16 ) -> u16 { TargetRegistrationsPerInterval::<T>::get(netuid) }
 
@@ -73,7 +71,7 @@ impl<T: Config> Pallet<T> {
     /// =========================
 	/// ==== Hotkey Accounts ====
 	/// =========================
-    
+
     /// Returns true if this hotkey has an active account. 
     pub fn account_exists( hotkey: &T::AccountId ) -> bool { return GlobalAccounts::<T>::contains_key( hotkey ) }
 

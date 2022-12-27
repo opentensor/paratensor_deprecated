@@ -110,8 +110,6 @@ parameter_types! {
 	pub const InitialImmunityPeriod: u16 = 2;
 	pub const InitialMaxAllowedUids: u16 = 2;
 	pub const InitialBondsMovingAverage: u64 = 500_000;
-	pub const InitialIncentivePruningDenominator: u16 = 1;
-	pub const InitialStakePruningDenominator: u16 = 1;
 	pub const InitialStakePruningMin: u16 = 0;
 	pub const InitialFoundationDistribution: u64 = 0;
 
@@ -152,8 +150,6 @@ impl pallet_paratensor::Config for Test {
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
-	type InitialIncentivePruningDenominator = InitialIncentivePruningDenominator;
-	type InitialStakePruningDenominator = InitialStakePruningDenominator;
 	type InitialStakePruningMin = InitialStakePruningMin;
 	type InitialImmunityPeriod = InitialImmunityPeriod;
 	type InitialActivityCutoff = InitialActivityCutoff;

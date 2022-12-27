@@ -478,8 +478,6 @@ parameter_types! {
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
 	pub const ParatensorInitialAdjustmentInterval: u16 = 100;
 	pub const ParatensorInitialTargetRegistrationsPerInterval: u16 = 2;
-	pub const ParatensorInitialIncentivePruningDenominator: u16 = 1;
-	pub const ParatensorInitialStakePruningDenominator: u16 = 1;
 	pub const ParatensorInitialImmunityPeriod: u16 = 200;
 	pub const ParatensorInitialActivityCutoff: u16 = 5000;
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
@@ -509,8 +507,6 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialDifficulty = ParatensorInitialDifficulty;
 	type InitialAdjustmentInterval = ParatensorInitialAdjustmentInterval;
 	type InitialTargetRegistrationsPerInterval = ParatensorInitialTargetRegistrationsPerInterval;
-	type InitialIncentivePruningDenominator = ParatensorInitialIncentivePruningDenominator;
-	type InitialStakePruningDenominator = ParatensorInitialStakePruningDenominator;
 	type InitialImmunityPeriod = ParatensorInitialImmunityPeriod;
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;

@@ -246,28 +246,6 @@ fn test_sudo_set_validator_epochs_per_reset() {
 }
 
 #[test]
-fn test_sudo_set_incentive_pruning_denominator() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let incentive_pruning_denominator: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_incentive_pruning_denominator(<<Test as Config>::Origin>::root(), netuid, incentive_pruning_denominator));
-        assert_eq!(ParatensorModule::get_incentive_pruning_denominator(netuid), incentive_pruning_denominator);
-    });
-}
-
-#[test]
-fn test_sudo_set_stake_pruning_denominator() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let stake_pruning_denominator: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_stake_pruning_denominator(<<Test as Config>::Origin>::root(), netuid, stake_pruning_denominator));
-        assert_eq!(ParatensorModule::get_stake_pruning_denominator(netuid), stake_pruning_denominator);
-    });
-}
-
-#[test]
 fn test_sudo_set_immunity_period() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;

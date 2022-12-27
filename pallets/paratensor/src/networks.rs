@@ -169,7 +169,6 @@ impl<T: Config> Pallet<T> {
         if !ValidatorEpochsPerReset::<T>::contains_key(netuid) { ValidatorEpochsPerReset::<T>::insert(netuid, ValidatorEpochsPerReset::<T>::get(netuid));}
         if !ValidatorSequenceLength::<T>::contains_key(netuid) { ValidatorSequenceLength::<T>::insert(netuid, ValidatorSequenceLength::<T>::get(netuid));}
         if !RegistrationsThisInterval::<T>::contains_key(netuid) { RegistrationsThisInterval::<T>::insert(netuid, RegistrationsThisInterval::<T>::get(netuid));}
-        if !IncentivePruningDenominator::<T>::contains_key(netuid) { IncentivePruningDenominator::<T>::insert(netuid, IncentivePruningDenominator::<T>::get(netuid));}
     }
 
     /// Explicitly erases all data associated with this network.
@@ -208,7 +207,6 @@ impl<T: Config> Pallet<T> {
         ValidatorEpochsPerReset::<T>::remove( netuid );
         ValidatorSequenceLength::<T>::remove( netuid );
         RegistrationsThisInterval::<T>::remove( netuid );
-        IncentivePruningDenominator::<T>::remove( netuid );
     }
 
     /// ---- The implementation for the extrinsic set_emission_values.

@@ -9,6 +9,7 @@ use frame_system::{ensure_signed};
 use sp_std::vec::Vec;
 use frame_support::storage::IterableStorageDoubleMap;
 
+
 const LOG_TARGET: &'static str = "runtime::paratensor::registration";
 
 impl<T: Config> Pallet<T> {
@@ -285,7 +286,7 @@ impl<T: Config> Pallet<T> {
         return seal_hash;
     }
 
-      // Helper function for creating nonce and work.
+    // Helper function for creating nonce and work.
     pub fn create_work_for_block_number( netuid:u16, block_number: u64, start_nonce: u64 ) -> (u64, Vec<u8>) {
         let difficulty: U256 = Self::get_difficulty(netuid);
         let mut nonce: u64 = start_nonce;
@@ -297,6 +298,7 @@ impl<T: Config> Pallet<T> {
         let vec_work: Vec<u8> = Self::hash_to_vec( work );
         return (nonce, vec_work)
     }
+
     pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
         
         let stake = Stake::<T>::get(&hotkey);
