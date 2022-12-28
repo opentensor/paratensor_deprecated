@@ -466,9 +466,72 @@ fn test_full_pass_through() {
 		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 0 ).unwrap(), hotkey2 );
 		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 0 ).unwrap(), hotkey2 );
 		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 0 ).unwrap(), hotkey2 );
+	});
+}
 
+
+
+#[test]
+fn test_bulk_register() {
+	new_test_ext().execute_with(|| {
+		// Add a network.
+		let netuid: u16 = 0;
+        add_network(netuid, 0, 0);
+
+		// Bulk values.
+		let hotkeys: Vec<u64> = vec![ 0,1,2,3,4,5,6,7,8,9,10 ];
+		let coldkeys: Vec<u64> = vec![ 0,1,2,3,4,5,6,7,8,9,10 ];
+	
+		// Call bulk register with false sudo.
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::signed(0), netuid, hotkeys.clone(), coldkeys.clone()), Err(DispatchError::BadOrigin.into()) );
+
+		// Lets register some other nodes normally.
+		ParatensorModule::set_max_allowed_uids( netuid, 2 );
+		register_ok_neuron( netuid, 11, 11, 39420842 );
+    	register_ok_neuron( netuid, 12, 12, 12412392 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 11 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 12 );
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 2);
+
+		// Lets try to bulk register on a non existent network.
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 1, hotkeys.clone(), coldkeys.clone()), Err(Error::<Test>::NetworkDoesNotExist.into()) );
 		
+		// Lets try to bulk register with hot.len() != cold.len()
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 0,1,2,3 ], vec![ 0,1,2,3,4 ]), Err(Error::<Test>::WeightVecNotEqualSize.into()) );
 
+		// Lets try to bulk register too many uids. (there are only 2 slots.)
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 0,1,2,3,4 ], vec![ 0,1,2,3,4 ]), Err(Error::<Test>::NotSettingEnoughWeights.into()) );
+
+		// Lets try to bulk register duplicate hotkeys.
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 0, 0 ], vec![ 0,1 ]), Err(Error::<Test>::DuplicateUids.into()) );
+
+		// Lets try to bulk register on a coldkey pair which is already taken.
+		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 11,12 ], vec![ 0,1 ]), Err(Error::<Test>::NonAssociatedColdKey.into()) );
+
+		// Lets register bulk successfully (0,1) --> (11, 12)
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 11 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 12 );
+		assert_ok!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 0,1 ], vec![ 0,1 ]) );
+
+		// Check uids are correct.
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 1 );
+		
+		// Check coldkey -- hotkey pairing.
+		assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &0 ), 0 );
+		assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &1 ), 1 );
+
+		// Lets register bulk a huge set.
+		let hotkeys: Vec<u64> = (0..4096).collect();
+		let coldkeys: Vec<u64> = (0..4096).collect();
+		ParatensorModule::set_max_allowed_uids( netuid, 4096 );
+		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 2 );
+		assert_ok!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, hotkeys.clone(), coldkeys.clone() ) );
+		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 4096 );
+		for i in 0..4096 {
+			assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, i as u16 ).unwrap(), i as u64 );
+			assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &(i as u64) ), i as u64  );
+		}
 
 	});
 }

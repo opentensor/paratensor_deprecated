@@ -1,11 +1,11 @@
 use super::*;
-use sp_runtime::sp_std::if_std;
 use substrate_fixed::types::I110F18;
 use frame_support::storage::IterableStorageMap;
 
 impl<T: Config> Pallet<T> { 
 
-
+    /// Adjusts the network difficulty of every active network. Reseting state parameters.
+    ///
     pub fn adjust_difficulty() {
         for ( netuid, _ )  in <NetworksAdded<T> as IterableStorageMap<u16, bool>>::iter(){
             let last_adjustment_block: u64 = Self::get_last_adjustment_block( netuid );

@@ -144,7 +144,6 @@ pub mod pallet {
 	/// =========================
 	/// ==== Global Accounts ====
 	/// =========================
-
 	#[pallet::type_value] 
 	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
@@ -158,7 +157,6 @@ pub mod pallet {
 	/// =====================================
 	/// ==== Difficulty / Registrations =====
 	/// =====================================
-
 	#[pallet::type_value] 
 	pub fn DefaultLastAdjustmentBlock<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
@@ -190,7 +188,6 @@ pub mod pallet {
 	/// ==============================
 	/// ==== Subnetworks Storage =====
 	/// ==============================
-
 	#[pallet::type_value] 
 	pub fn DefaultN<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
@@ -240,9 +237,7 @@ pub mod pallet {
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam storage ====
-	/// =======================================
-	
-	/// ---- SingleMap netuid --> Hyper-parameter MinAllowedWeights
+	/// =======================================	
 	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
@@ -321,8 +316,6 @@ pub mod pallet {
 	/// =======================================
 	/// ==== Subnetwork Consensus Storage  ====
 	/// =======================================
-
-	/// ---- DoubleMap netuid --> uid --> last_update
 	#[pallet::type_value] 
 	pub fn DefaultRank<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
@@ -417,7 +410,10 @@ pub mod pallet {
 		/// --- Event created when a new neuron account has been registered to 
 		/// the chain.
 		NeuronRegistered(u16),
-		
+
+		/// --- Event created when multiple uids have been concurrently registered.
+		BulkNeuronsRegistered(u16, u16),
+
 		/// --- Event created when max allowed uids has been set for a subnetwor.
 		MaxAllowedUidsSet(u16, u16),
 
@@ -899,6 +895,8 @@ pub mod pallet {
 			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
 
+		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
+
 		/// ---- Sudo add a network to the network set.
 		/// # Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -985,7 +983,41 @@ pub mod pallet {
 			)
 		}
 
-		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
+
+		/// ---- Sudo create and load network.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` ( u16 ):
+		/// 		- The network we are intending on performing the bulk creation on.
+		///
+		/// 	* `n` ( u16 ):
+		/// 		- Network size.
+		///
+		/// 	* `uids` ( Vec<u16> ):
+		/// 		- List of uids to set keys under.
+		///
+		/// 	* `hotkeys` ( Vec<T::AccountId> ):
+		/// 		- List of hotkeys to register on account.
+		///
+		/// 	* `coldkeys` ( Vec<T::AccountId> ):
+		/// 		- List of coldkeys related to hotkeys.
+		/// 
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_bulk_register(
+			origin: OriginFor<T>,
+			netuid: u16,
+			hotkeys: Vec<T::AccountId>,
+			coldkeys: Vec<T::AccountId>
+		) -> DispatchResult {
+			Self::do_bulk_register( 
+				origin,
+				netuid,
+				hotkeys,
+				coldkeys
+			)
+		}
 
 		/// ---- Sudo set this network's bonds moving average.
 		/// Args:
