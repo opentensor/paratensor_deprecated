@@ -389,88 +389,61 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// --- Event created when a new network is added
 		NetworkAdded(u16, u16),
-
 		/// --- Event created when a network is removed
 		NetworkRemoved(u16),
-
 		/// --- Event created when stake has been transfered from 
 		/// the a coldkey account onto the hotkey staking account.
 		StakeAdded(T::AccountId, u64),
-
 		/// --- Event created when stake has been removed from 
 		/// the hotkey staking account onto the coldkey account.
 		StakeRemoved(T::AccountId, u64),
-
 		/// ---- Event created when a caller successfully set's their weights on a subnetwork.
 		WeightsSet(u16, u16),
-
 		/// ---- Event created when Tempo is set
 		TempoSet(u16),
-
 		/// --- Event created when a new neuron account has been registered to 
 		/// the chain.
 		NeuronRegistered(u16),
-
 		/// --- Event created when multiple uids have been concurrently registered.
 		BulkNeuronsRegistered(u16, u16),
-
 		/// --- Event created when max allowed uids has been set for a subnetwor.
 		MaxAllowedUidsSet(u16, u16),
-
 		/// --- Event created when total stake increased
 		TotalStakeIncreased(u64),
-
 		/// --- Event created when the max weight limit has been set.
 		MaxWeightLimitSet( u16, u16 ),
-
 		/// --- Event created when the difficulty has been set for a subnet.
 		DifficultySet(u16, u64),
-
 		/// --- Event created when the adjustment interval is set for a subnet.
 		AdjustmentIntervalSet(u16, u16),
-
 		/// --- Event created when registeration per interval is set for a subnet.
 		RegistrationPerIntervalSet(u16, u16),
-
 		/// --- Event created when an activity cutoff is set for a subnet.
 		ActivityCutoffSet(u16, u16),
-
 		/// --- Event created when Rho value is set
 		RhoSet(u16),
-
 		/// --- Event created when kappa is set for a subnet.
 		KappaSet(u16, u16),
-
 		/// --- Event created when minimun aloowed weight is set for a subnet.
 		MinAllowedWeightSet(u16, u16),
-
 		/// --- Event created when max allowded max min ratio is set for a subnet.
 		MaxAllowedMaxMinRatioSet(u16, u16),
-
 		/// --- Event created when validator batch size is set for a subnet.
 		ValidatorBatchSizeSet(u16, u16),
-
 		/// --- Event created when validator sequence length i set for a subnet.
 		ValidatorSequenceLengthSet(u16, u16),
-
 		/// --- Event created when validator epoch per reset is set for a subnet.
 		ValidatorEpochPerResetSet(u16, u16),
-
 		/// --- Event created when immunity period is set for a subnet
 		ImmunityPeriodSet(u16, u16),
-
 		/// --- Event created when bonds moving average is set for a subnet
 		BondsMovingAverageSet(u16, u64),
-
 		/// --- Event thrown when bonds have been reset for a subnet.
 		ResetBonds(u16),
-
 		/// --- Event created when the validator exclude quantile has been set for a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ),
-
 		/// --- Event created when the axon server information is added to the network.
 		AxonServed(u16),
-
 		/// --- Event created when emission ratios fr all networks is set
 		EmissionValuesSet(),
 	}
@@ -482,113 +455,82 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Network does not exist
 		NetworkDoesNotExist,
-
 		/// Network already exist
 		NetworkExist,
-
 		/// --- Thrown when an invalid modality attempted on serve.
 		InvalidModality,
-
 		/// ---- Thrown when the user tries to serve an axon which is not of type
 	    /// 4 (IPv4) or 6 (IPv6).
 		InvalidIpType,
-
 		/// --- Thrown when an invalid IP address is passed to the serve function.
 		InvalidIpAddress,
-		
 		/// Error names should be descriptive.
 		NoneValue,
-
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
-
 		/// ---- Thrown when the caller requests setting or removing data from
 		/// a neuron which does not exist in the active set.
 		NotRegistered,
-
 		/// ---- Thrown when a stake, unstake or subscribe request is made by a coldkey
 		/// which is not associated with the hotkey account. 
 		/// See: fn add_stake and fn remove_stake.
 		NonAssociatedColdKey,
-
 		/// ---- Thrown when the caller requests removing more stake then there exists 
 		/// in the staking account. See: fn remove_stake.
 		NotEnoughStaketoWithdraw,
-
 		///  ---- Thrown when the caller requests adding more stake than there exists
 		/// in the cold key account. See: fn add_stake
 		NotEnoughBalanceToStake,
-
 		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
 		/// amount could not be withdrawn from the coldkey account
 		BalanceWithdrawalError,
-		
 		/// ---- Thrown when the caller attempts to set the weight keys
 		/// and values but these vectors have different size.
 		WeightVecNotEqualSize,
-
 		/// ---- Thrown when the caller attempts to set weights with duplicate uids
 		/// in the weight matrix.
 		DuplicateUids,
-
 		/// ---- Thrown when a caller attempts to set weight to at least one uid that
 		/// does not exist in the metagraph.
 		InvalidUid,
-
 		/// ---- Thrown when the dispatch attempts to set weights on chain with fewer elements 
 		/// than are allowed.
 		NotSettingEnoughWeights,
-
 		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
 		/// max value is more than MaxAllowedMaxMinRatio.
 		MaxAllowedMaxMinRatioExceeded,
-
 		/// ---- Thrown when registrations this block exceeds allowed number.
 		TooManyRegistrationsThisBlock,
-
 		/// ---- Thrown when the caller requests registering a neuron which 
 		/// already exists in the active set.
 		AlreadyRegistered,
-
 		/// ---- Thrown if the supplied pow hash block is in the future or negative
 		InvalidWorkBlock,
-
 		/// ---- Thrown when the caller attempts to use a repeated work.
 		WorkRepeated,
-
 		/// ---- Thrown if the supplied pow hash block does not meet the network difficulty.
 		InvalidDifficulty,
-
 		/// ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		InvalidSeal,
-
 		/// ---  Thrown if the vaule is invalid for MaxAllowedUids
 		MaxAllowedUIdsNotAllowed,
-
 		/// ---- Thrown when the dispatch attempts to convert between a u64 and T::balance 
 		/// but the call fails.
 		CouldNotConvertToBalance,
-
 		/// --- thrown when the caller requests adding stake for a hotkey to the 
 		/// total stake which already added
 		StakeAlreadyAdded,
-
 		/// ---- Thrown when the dispatch attempts to set weights on chain with where any normalized
 		/// weight is more than MaxWeightLimit.
 		MaxWeightExceeded,
-
 		/// ---- Thrown when the caller attempts to set a storage value outside of its allowed range.
 		StorageValueOutOfRange,
-
 		// --- Thrown when tempo has not set
 		TempoHasNotSet,
-
 		// --- Thrown when tempo is not valid
 		InvalidTempo,
-
 		// --- Thrown when number or recieved emission rates does not match number of networks
 		EmissionValuesDoesNotMatchNetworks,
-
 		// --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		InvalidEmissionValues,
 	}
