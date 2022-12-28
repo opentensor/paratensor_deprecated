@@ -191,7 +191,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
         // --- 3. Ensure we are not exceeding the max allowed registrations per block.
-        ensure!( Self::get_registrations_this_block( netuid ) <= Self::get_max_registratations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
+        ensure!( Self::get_registrations_this_block( netuid ) < Self::get_max_registratations_per_block( netuid ), Error::<T>::TooManyRegistrationsThisBlock );
 
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );

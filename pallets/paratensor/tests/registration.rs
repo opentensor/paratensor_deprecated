@@ -105,6 +105,7 @@ fn test_registration_too_many_registrations_per_block() {
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		ParatensorModule::set_max_registrations_per_block( netuid, 10 );
+		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid), 10 );
 
 		let block_number: u64 = 0;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
@@ -125,15 +126,25 @@ fn test_registration_too_many_registrations_per_block() {
 		
 		// Subscribe and check extrinsic output
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(0), netuid, block_number, nonce0, work0, 0, 0));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 1 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(1), netuid, block_number, nonce1, work1, 1, 1));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 2 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(2), netuid, block_number, nonce2, work2, 2, 2));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 3 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(3), netuid, block_number, nonce3, work3, 3, 3));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 4 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(4), netuid, block_number, nonce4, work4, 4, 4));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 5 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(5), netuid, block_number, nonce5, work5, 5, 5));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 6 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(6), netuid, block_number, nonce6, work6, 6, 6));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 7 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(7), netuid, block_number, nonce7, work7, 7, 7));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 8 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(8), netuid, block_number, nonce8, work8, 8, 8));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 9 );
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(9), netuid, block_number, nonce9, work9, 9, 9));
+		assert_eq!( ParatensorModule::get_registrations_this_block(netuid), 10 );
 		let result = ParatensorModule::register(<<Test as Config>::Origin>::signed(10), netuid, block_number, nonce10, work10, 10, 10);
 		assert_eq!( result, Err(Error::<Test>::TooManyRegistrationsThisBlock.into()) );
 	});

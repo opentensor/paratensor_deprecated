@@ -4,6 +4,43 @@ use frame_support::storage::IterableStorageMap;
 
 impl<T: Config> Pallet<T> { 
 
+    pub fn block_step() {
+        // Adjust difficulties.
+		Self::adjust_difficulty();
+		// Distribute emission.
+		Self::distribute_emission();
+        // Run epochs.
+        Self::run_epochs();
+    }
+
+    /// Runs each network epoch function based on tempo.
+    ///
+    pub fn run_epochs() {
+        let block_number = Self::get_current_block_as_u64();  
+        for ( netuid_i, tempo_i )  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
+            if ( block_number + 1 ) % ( tempo_i as u64 + 1 ) == 0 {
+                // We are going to drain this pending emission because the modulo tempo is zero.
+                let net_emission:u64 = PendingEmission::<T>::get( netuid_i );
+                // Distribute the emission through the epoch.
+                Self::epoch( netuid_i, net_emission, true );
+                // drain the pending emission at this step.
+                PendingEmission::<T>::mutate( netuid_i, |val| *val *= 0 );
+            } 
+        }
+    }
+
+    /// Distributes pending emission onto each network based on the emission vector.
+    ///
+    pub fn distribute_emission() {
+        for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ 
+            if PendingEmission::<T>::contains_key(netuid_i) == false {
+                PendingEmission::<T>::insert(netuid_i, 0);
+            }
+            let pending_emission = EmissionValues::<T>::get(netuid_i);
+            PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
+        }
+    }
+
     /// Adjusts the network difficulty of every active network. Reseting state parameters.
     ///
     pub fn adjust_difficulty() {

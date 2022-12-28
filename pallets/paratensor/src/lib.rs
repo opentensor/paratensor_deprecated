@@ -27,7 +27,7 @@ mod staking;
 mod weights;
 mod networks;
 mod serving; 
-mod difficulty;
+mod block_step;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -604,41 +604,8 @@ pub mod pallet {
 		/// 	* 'n': (T::BlockNumber):
 		/// 		- The number of the block we are initializing.
 		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
-		fn on_initialize( _n: BlockNumberFor<T> ) -> Weight {
-
-			// Adjust difficulties.
-			Self::adjust_difficulty();
-
-			/*TO DO:
-			1. calculate pending emission for each network
-			2. check if (current_block_number + 1) % tempo ==0 for any network, then call epoch with pending emission for this network
-			3. if (current_block_number + 1) % tempo == 0 then check pending_emission for the network. if pending_emission for the network ==0, 
-				we do not need to run epoch for the network 
-			4. Reset RegistrationsThisBlock and RegistrationsThisBlock for all networks. */
-			let current_block_number = Self::get_current_block_as_u64();  
-
-				/* Emissions per networks : net 1 ---> 100,000 ; net 2 --> 3000,000 ; .... ==> sum = 10^9 rao */
-				for (netuid_i, _) in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){ //we gonna distribute 10^9 rao
-					if PendingEmission::<T>::contains_key(netuid_i) == false {
-						PendingEmission::<T>::insert(netuid_i, 0);
-					}
-					let pending_emission = EmissionValues::<T>::get(netuid_i);
-					PendingEmission::<T>::mutate(netuid_i, |val| *val += pending_emission);
-				}
-			// 2. Optionally drain the pending emission onto subnetworks by calling the epoch function.
-			// A network drains it's emission if the (current_block_number + 1) % tempo == 0.
-			// Skip epoch when current_block_number == 0, hence (current_block_number + 1)
-			for (netuid_i, tempo_i)  in <Tempo<T> as IterableStorageMap<u16, u16>>::iter() {
-				if ( current_block_number + 1 ) % ( tempo_i as u64 + 1 ) == 0 {
-					// We are going to drain this pending emission because the modulo tempo is zero.
-					let net_emission:u64 = PendingEmission::<T>::get(netuid_i);
-					// Distribute the emission through the epoch.
-					Self::epoch(netuid_i, net_emission, true);
-					// drain the pending emission at this step.
-					PendingEmission::<T>::mutate(netuid_i, |val| *val *= 0);
-				} 
-			}
-			// Block initialize Done.
+		fn on_initialize( _block_number: BlockNumberFor<T> ) -> Weight {
+			Self::block_step();
 			return 0; 
 		}
 	}
