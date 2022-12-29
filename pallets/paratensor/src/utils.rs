@@ -52,7 +52,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_last_mechanism_step_block() -> u64 { LastMechansimStepBlock::<T>::get() }
     pub fn get_activity_cutoff( netuid: u16 ) -> u16 { ActivityCutoff::<T>::get( netuid ) }
     pub fn get_pending_emission( netuid:u16 ) -> u64{ PendingEmission::<T>::get( netuid ) }
-    pub fn get_stake_pruning_min(netuid: u16) -> u16 { StakePruningMin::<T>::get( netuid ) }
     pub fn get_max_weight_limit( netuid: u16) -> u16 { MaxWeightsLimit::<T>::get( netuid ) }    
     pub fn get_max_allowed_uids( netuid: u16 ) -> u16  { MaxAllowedUids::<T>::get( netuid ) }
     pub fn get_min_allowed_weights( netuid:u16 ) -> u16 { MinAllowedWeights::<T>::get( netuid ) }
@@ -63,7 +62,6 @@ impl<T: Config> Pallet<T> {
     pub fn get_blocks_since_last_step(netuid:u16 ) -> u64 { BlocksSinceLastStep::<T>::get( netuid ) }
     pub fn get_difficulty( netuid: u16 ) -> U256 { U256::from( Self::get_difficulty_as_u64( netuid ) ) }    
     pub fn get_registrations_this_block( netuid:u16 ) -> u16 { RegistrationsThisBlock::<T>::get( netuid ) }
-    pub fn get_max_allowed_max_min_ratio( netuid: u16 ) -> u16{ MaxAllowedMaxMinRatio::<T>::get( netuid ) }
     pub fn get_validator_epochs_per_reset( netuid: u16 )-> u16 {ValidatorEpochsPerReset::<T>::get( netuid ) }
     pub fn get_validator_sequence_length( netuid: u16 ) -> u16 { ValidatorSequenceLength::<T>::get( netuid ) }
     pub fn get_validator_exclude_quantile( netuid: u16 ) -> u16 { ValidatorExcludeQuantile::<T>::get( netuid ) }

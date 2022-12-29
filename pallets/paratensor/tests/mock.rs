@@ -98,7 +98,6 @@ parameter_types! {
 	pub const InitialMinAllowedWeights: u16 = 0;
 	pub const InitialEmissionValue: u16 = 0;
 	pub const InitialMaxWeightsLimit: u16 = u16::MAX;
-	pub const InitialMaxAllowedMaxMinRatio: u16 = 0;
 	pub BlockWeights: limits::BlockWeights = limits::BlockWeights::simple_max(1024);
 	pub const ExistentialDeposit: Balance = 1;
 	pub const TransactionByteFee: Balance = 100;
@@ -117,6 +116,7 @@ parameter_types! {
 	pub const InitialValidatorSequenceLen: u16 = 10;
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
+	pub const InitialValidatorExcludeQuantile: u16 = 10;
 
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
@@ -127,8 +127,6 @@ parameter_types! {
 	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const InitialPruningScore : u16 = u16::MAX;
-	pub const InitialValidatorExcludeQuantile: u16 = 10;
-
 }
 impl pallet_paratensor::Config for Test {
 	type Event = Event;
@@ -138,7 +136,6 @@ impl pallet_paratensor::Config for Test {
 	type InitialMinAllowedWeights = InitialMinAllowedWeights;
 	type InitialEmissionValue  = InitialEmissionValue;
 	type InitialMaxWeightsLimit = InitialMaxWeightsLimit;
-	type InitialMaxAllowedMaxMinRatio = InitialMaxAllowedMaxMinRatio;
 	type InitialTempo = InitialTempo;
 	type InitialDifficulty = InitialDifficulty;
 	type InitialAdjustmentInterval = InitialAdjustmentInterval;

@@ -469,7 +469,6 @@ parameter_types! {
 	pub const ParatensorInitialMinAllowedWeights: u16 = 0;
 	pub const ParatensorInitialEmissionValue: u16 = 0;
 	pub const ParatensorInitialMaxWeightsLimit: u16 = u16::MAX;
-	pub const ParatensorInitialMaxAllowedMaxMinRatio: u16 = 0;
 	pub const ParatensorInitialValidatorBatchSize: u16 = 10;
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
@@ -498,7 +497,6 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialMinAllowedWeights = ParatensorInitialMinAllowedWeights;
 	type InitialEmissionValue = ParatensorInitialEmissionValue;
 	type InitialMaxWeightsLimit = ParatensorInitialMaxWeightsLimit;
-	type InitialMaxAllowedMaxMinRatio = ParatensorInitialMaxAllowedMaxMinRatio;
 	type InitialValidatorBatchSize = ParatensorInitialValidatorBatchSize;
 	type InitialValidatorSequenceLen = ParatensorInitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;

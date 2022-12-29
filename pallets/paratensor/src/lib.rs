@@ -36,7 +36,7 @@ pub mod pallet {
 	/// ==== Pallet Imports ====
 	/// ========================
 	use frame_support::pallet_prelude::{DispatchResult, StorageMap, StorageValue, ValueQuery};
-	use frame_support::{pallet_prelude::*, Identity, IterableStorageMap};
+	use frame_support::{pallet_prelude::*, Identity};
 	use frame_system::{pallet_prelude::*};
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
@@ -61,8 +61,6 @@ pub mod pallet {
 		type InitialEmissionValue: Get<u16>;
 		#[pallet::constant] /// Initial max weight limit.
 		type InitialMaxWeightsLimit: Get<u16>;
-		#[pallet::constant] /// Tempo for each network TODO(const)
-		type InitialMaxAllowedMaxMinRatio: Get<u16>;
 		#[pallet::constant] /// Tempo for each network
 		type InitialTempo: Get<u16>;
 		#[pallet::constant] /// Initial Difficulty.
@@ -267,8 +265,6 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
 	#[pallet::type_value] 
-	pub fn DefaultMaxAllowedMaxMinRatio<T: Config>() -> u16 { T::InitialMaxAllowedMaxMinRatio::get() }
-	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
@@ -304,8 +300,6 @@ pub mod pallet {
 	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
 	#[pallet::storage] /// --- SingleMap Network UID ---> Validaotr Sequence Length
 	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> MaxAllowedMaxMinRatio TODO(const): should be moved to max clip ratio.
-	pub type MaxAllowedMaxMinRatio<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxAllowedMaxMinRatio<T> >;
 	#[pallet::storage] 	/// ---- SingleMap Network UID ---> Valdiator Epochs Per Reset
 	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Target Registration Per Interval
@@ -426,8 +420,6 @@ pub mod pallet {
 		KappaSet(u16, u16),
 		/// --- Event created when minimun aloowed weight is set for a subnet.
 		MinAllowedWeightSet(u16, u16),
-		/// --- Event created when max allowded max min ratio is set for a subnet.
-		MaxAllowedMaxMinRatioSet(u16, u16),
 		/// --- Event created when validator batch size is set for a subnet.
 		ValidatorBatchSizeSet(u16, u16),
 		/// --- Event created when validator sequence length i set for a subnet.
@@ -496,9 +488,6 @@ pub mod pallet {
 		/// ---- Thrown when the dispatch attempts to set weights on chain with fewer elements 
 		/// than are allowed.
 		NotSettingEnoughWeights,
-		/// ---- Thrown when the dispatch attempts to set weights on chain with where the normalized
-		/// max value is more than MaxAllowedMaxMinRatio.
-		MaxAllowedMaxMinRatioExceeded,
 		/// ---- Thrown when registrations this block exceeds allowed number.
 		TooManyRegistrationsThisBlock,
 		/// ---- Thrown when the caller requests registering a neuron which 
@@ -1142,30 +1131,6 @@ pub mod pallet {
 			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			MinAllowedWeights::<T>::insert(netuid, min_allowed_weights);
 			Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
-			Ok(())
-		}
-
-		/// ---- Sudo set max_allowed_max_min_ratio.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set max_allowed_max_min_ratio  on.
-		///
-		/// 	* `max_allowed_max_min_ratio` (u16):
-		/// 		- The network max_allowed_max_min_ratio hyper-parameter.
-		///	
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_max_min_ratio( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			max_allowed_max_min_ratio: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			MaxAllowedMaxMinRatio::<T>::insert(netuid, max_allowed_max_min_ratio);
-			Self::deposit_event( Event::MaxAllowedMaxMinRatioSet( netuid, max_allowed_max_min_ratio) );
 			Ok(())
 		}
 

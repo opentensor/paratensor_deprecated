@@ -174,26 +174,6 @@ fn test_sudo_set_min_allowed_weights_fail() {
 }
 
 #[test]
-fn test_sudo_set_max_allowed_max_min_ratio() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let max_min_ratio: u16 = 10;
-        add_network(netuid, 10, 0);
-        assert_ok!(ParatensorModule::sudo_set_max_allowed_max_min_ratio(<<Test as Config>::Origin>::root(), netuid, max_min_ratio));
-        assert_eq!(ParatensorModule::get_max_allowed_max_min_ratio(netuid), max_min_ratio);
-    });
-}
-
-#[test]
-fn test_sudo_set_max_allowed_max_min_ratio_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let max_min_ratio: u16 = 10;
-        assert_eq!(ParatensorModule::sudo_set_max_allowed_max_min_ratio(<<Test as Config>::Origin>::root(), netuid, max_min_ratio), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
 fn test_sudo_set_validator_batch_size() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;

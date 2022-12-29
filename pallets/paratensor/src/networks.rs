@@ -164,7 +164,6 @@ impl<T: Config> Pallet<T> {
         if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
         if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
         if !ValidatorBatchSize::<T>::contains_key( netuid ) { ValidatorBatchSize::<T>::insert( netuid, ValidatorBatchSize::<T>::get( netuid ));}
-        if !MaxAllowedMaxMinRatio::<T>::contains_key( netuid ) { MaxAllowedMaxMinRatio::<T>::insert( netuid, MaxAllowedMaxMinRatio::<T>::get( netuid ));}
         if !ValidatorEpochsPerReset::<T>::contains_key( netuid ) { ValidatorEpochsPerReset::<T>::insert( netuid, ValidatorEpochsPerReset::<T>::get( netuid ));}
         if !ValidatorSequenceLength::<T>::contains_key( netuid ) { ValidatorSequenceLength::<T>::insert( netuid, ValidatorSequenceLength::<T>::get( netuid ));}
         if !RegistrationsThisInterval::<T>::contains_key( netuid ) { RegistrationsThisInterval::<T>::insert( netuid, RegistrationsThisInterval::<T>::get( netuid ));}
@@ -202,7 +201,6 @@ impl<T: Config> Pallet<T> {
         ValidatorEpochLen::<T>::remove( netuid );
         MinAllowedWeights::<T>::remove( netuid );
         ValidatorBatchSize::<T>::remove( netuid );
-        MaxAllowedMaxMinRatio::<T>::remove( netuid );
         ValidatorEpochsPerReset::<T>::remove( netuid );
         ValidatorSequenceLength::<T>::remove( netuid );
         RegistrationsThisInterval::<T>::remove( netuid );
@@ -284,12 +282,18 @@ impl<T: Config> Pallet<T> {
         return false;
     }
 
-    /// Set emission values for the passed networks. networks.
+    /// Set emission values for the passed networks. 
     ///
     pub fn set_emission_values( netuids: &Vec<u16>, emission: &Vec<u64> ){
         for (i, netuid_i) in netuids.iter().enumerate() {
-            EmissionValues::<T>::insert( netuid_i, emission[i] );
+            Self::set_emission_for_network( *netuid_i, emission[i] ); 
         }
+    }
+
+    /// Set the emission on a single network.
+    ///
+    pub fn set_emission_for_network( netuid: u16, emission: u64 ){
+        EmissionValues::<T>::insert( netuid, emission );
     }
 
     /// Returns true if the subnetwork exists.
