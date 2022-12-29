@@ -122,11 +122,9 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
-
 	/// ===============================
 	/// ==== Global Params Storage ====
 	/// ===============================
-
 	#[pallet::type_value]
 	pub fn DefaultBlockEmission<T: Config>() -> u64 {1000000000}
 	#[pallet::type_value] 
@@ -191,7 +189,7 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultModality<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
-	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![] }
+	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![ ] }
 	#[pallet::type_value]
 	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
 
@@ -430,8 +428,6 @@ pub mod pallet {
 		ImmunityPeriodSet(u16, u16),
 		/// --- Event created when bonds moving average is set for a subnet
 		BondsMovingAverageSet(u16, u64),
-		/// --- Event thrown when bonds have been reset for a subnet.
-		ResetBonds(u16),
 		/// --- Event created when the validator exclude quantile has been set for a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ),
 		/// --- Event created when the axon server information is added to the network.
@@ -1253,8 +1249,6 @@ pub mod pallet {
 			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
 			Ok(())
 		}
-		/*TO DO: impl reset_bonds in epoch,  
-		sudo_set_validator_exclude_quantile function  */ 
 		
 		// --- SUDO functions to manage NETWORKS ---
 
@@ -1280,30 +1274,6 @@ pub mod pallet {
 			ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
 		    ValidatorExcludeQuantile::<T>::insert(netuid, validator_exclude_quantile );
 			Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
-			Ok(())
-		}
-
-		/*TO DO: impl reset_bonds in epoch,  
-		sudo_set_validator_exclude_quantile function  */ 
-
-
-		/// ---- Sudo reset bonds on a network.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network to reset bonds on.
-		///	
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_reset_bonds(
-			origin: OriginFor<T>,
-			netuid: u16
-		)-> DispatchResult {
-			ensure_root( origin )?;
-			// TODO (const) This function should be implemented
-			// Self::reset_bonds(netuid);
-			Self::deposit_event( Event::ResetBonds(netuid) );
 			Ok(())
 		}
 

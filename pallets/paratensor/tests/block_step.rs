@@ -51,7 +51,5 @@ fn test_block_step_multi(){
     assert_eq!( ParatensorModule::get_emission_value( netuid ), ParatensorModule::get_block_emission()  );
     step_block( 1 );
     assert_eq!( ParatensorModule::get_pending_emission( netuid ), ParatensorModule::get_block_emission()  );
-
-    // TODO(const): expand here for networks with no elements.
     });
 }
