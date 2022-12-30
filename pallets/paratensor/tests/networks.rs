@@ -106,12 +106,8 @@ fn test_remove_network_for_all_hotkeys() {
         register_ok_neuron( 1, 55, 66, 0);
         register_ok_neuron( 1, 77, 88, 65536);
         assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 2);
-        assert_ne!(ParatensorModule::get_subnets_for_hotkey(55), test); 
-        assert_ne!(ParatensorModule::get_subnets_for_hotkey(77), test); 
         assert_ok!(ParatensorModule::do_remove_network(<<Test as Config>::Origin>::root(), netuid));
         assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 0);
-        assert_eq!(ParatensorModule::get_subnets_for_hotkey(55), test); 
-        assert_eq!(ParatensorModule::get_subnets_for_hotkey(77), test); 
 });}
 
 #[test]

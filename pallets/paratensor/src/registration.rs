@@ -3,7 +3,6 @@ use frame_support::{ pallet_prelude::DispatchResult};
 use sp_std::convert::TryInto;
 use sp_core::{H256, U256};
 use crate::system::ensure_root;
-use sp_runtime::sp_std::if_std;
 use sp_io::hashing::sha2_256;
 use sp_io::hashing::keccak_256;
 use frame_system::{ensure_signed};
@@ -99,8 +98,6 @@ impl<T: Config> Pallet<T> {
             Uids::<T>::insert( netuid, h.clone(), uid_i as u16 ); // Make uid - hotkey association.
             PruningScores::<T>::insert( netuid, uid_i as u16, u16::MAX ); // Set to infinite pruning score.
             BlockAtRegistration::<T>::insert( netuid, uid_i as u16, current_block_number ); // Fill block at registration.
-            Self::increment_subnets_for_hotkey( netuid, h );
-            Self::add_hotkey_stake_for_network( netuid, h );
         }
 
         // --- 8. Increase subnetwork n to amount of hotkeys.
@@ -241,7 +238,6 @@ impl<T: Config> Pallet<T> {
             // --- 12.b Replacement required.
             // We take the neuron with the lowest pruning score here.
             subnetwork_uid = Self::get_neuron_to_prune( netuid );
-            Self::decrement_subnets_for_hotkey( netuid, &Keys::<T>::get( netuid, subnetwork_uid ) );
             Self::prune_uid_from_subnetwork( subnetwork_uid, netuid );
         }
         
@@ -275,8 +271,8 @@ impl<T: Config> Pallet<T> {
 
                 // --- 4. First checkt to see if this hotkey is already registered on this network.
                 // If we are not registered we trivially fail the requirement.
-                if !Uids::<T>::contains_key( netuid_b, hotkey ) { return false; }
-                let uid_b: u16 = Uids::<T>::get( netuid_b, hotkey ).unwrap();
+                if !Self::is_hotkey_registered( netuid_b, hotkey ) { return false; }
+                let uid_b: u16 = Self::get_neuron_for_net_and_hotkey( netuid_b, hotkey ).unwrap();
 
                 // --- 5. Next, count how many keys on the connected network have a better prunning score than
                 // our target network.
@@ -308,8 +304,6 @@ impl<T: Config> Pallet<T> {
         Uids::<T>::insert( netuid, hotkey.clone(), uid ); // Make uid - hotkey association.
         PruningScores::<T>::insert( netuid, uid, u16::MAX ); // Set to infinite pruning score.
         BlockAtRegistration::<T>::insert( netuid, uid, current_block_number ); // Fill block at registration.
-        Self::increment_subnets_for_hotkey( netuid, hotkey );
-        Self::add_hotkey_stake_for_network( netuid, hotkey );
     }
 
     /// --- Removes a uid from a subnetwork by erasing all its data.
@@ -462,17 +456,4 @@ impl<T: Config> Pallet<T> {
         let vec_work: Vec<u8> = Self::hash_to_vec( work );
         return (nonce, vec_work)
     }
-
-    pub fn add_hotkey_stake_for_network(netuid: u16,  hotkey: &T::AccountId){
-        
-        let stake = Stake::<T>::get(&hotkey);
-        let uid_to_prune ;
-        match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey) {
-            Ok(k) => uid_to_prune = k,
-            Err(e) => panic!("Error: {:?}", e),
-        } 
-        //
-        S::<T>::insert(netuid, uid_to_prune, stake);
-    }
-
 }

@@ -2,7 +2,6 @@ use super::*;
 use frame_support::{sp_std::vec};
 use sp_std::vec::Vec;
 use crate::system::ensure_root;
-use frame_support::storage::IterableStorageMap;
 
 impl<T: Config> Pallet<T> { 
 
@@ -139,10 +138,7 @@ impl<T: Config> Pallet<T> {
         // --- 4. Erase all memory associated with the network.
         Self::erase_all_network_data( netuid );
 
-        // --- 5. Remove subnetworks for all hotkeys.
-        Self::remove_subnet_for_all_hotkeys( netuid );
-
-        // --- 6. Decrement the network counter.
+        // --- 5. Decrement the network counter.
         TotalNetworks::<T>::mutate(|val| *val -= 1);
     }
 
@@ -398,38 +394,4 @@ impl<T: Config> Pallet<T> {
     pub fn if_tempo_is_valid(tempo: u16) -> bool {
         tempo < u16::MAX
     }
-
-    pub fn remove_subnet_for_all_hotkeys(netuid: u16){
-
-        let mut vec_new_hotkey_subnets : Vec<u16>;
-
-        for (hotkey_i, vec)  in <Subnets<T> as IterableStorageMap<T::AccountId, Vec<u16>>>::iter() {
-            vec_new_hotkey_subnets = vec.clone();
-            //hotkey_to_be_updated.push(hotkey_i.clone());
-            for (i, val) in vec.iter().enumerate(){
-                if *val == netuid{
-                    vec_new_hotkey_subnets.remove(i);
-                }
-            }
-            Subnets::<T>::insert(hotkey_i, vec_new_hotkey_subnets)
-        }
-        /* check if the hotkey is deregistred from all networks, 
-        if so, then we need to transfer stake from hotkey to cold key */
-        for (hotkey_i, _)  in <Subnets<T> as IterableStorageMap<T::AccountId, Vec<u16>>>::iter() {
-            let vec_subnets_for_pruning_hotkey: Vec<u16> = Subnets::<T>::get(&hotkey_i); // a list of subnets that hotkey is registered on.
-            if vec_subnets_for_pruning_hotkey.len() == 0 { 
-                // we need to remove all stakes since this hotkey is not staked in any other networks
-                    // These funds are deposited back into the coldkey account so that no funds are destroyed. 
-                    //
-                    let coldkey_to_add_stake = GlobalAccounts::<T>::get(&hotkey_i);
-                    let stake_to_remove = Stake::<T>::get(&hotkey_i);
-                    Self::add_balance_to_coldkey_account( &coldkey_to_add_stake, Self::u64_to_balance(stake_to_remove).unwrap());
-                    Self::decrease_total_stake( stake_to_remove );
-                    Self::remove_global_stake(&hotkey_i);
-                    //
-                    Subnets::<T>::remove(hotkey_i);
-            }
-        }
-    }
-
 }

@@ -59,8 +59,6 @@ fn test_add_stake_ok_no_emission() {
 		// Check if total stake has increased accordingly.
 		assert_eq!(ParatensorModule::get_total_stake(), 10000);
 
-        // Check if stake has added for each subnetwork that hotkey is regostered on
-        assert_eq!(ParatensorModule::get_hotkey_stake_for_subnet(netuid, &hotkey_account_id), 10000);
 	});
 }
 
@@ -223,7 +221,6 @@ fn test_remove_stake_ok_no_emission() {
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_account_id), amount as u128);
 		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_account_id), 0);
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
-		assert_eq!(ParatensorModule::get_hotkey_stake_for_subnet(netuid, &hotkey_account_id), 0);
 	});
 }
 

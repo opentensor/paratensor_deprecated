@@ -199,8 +199,6 @@ pub mod pallet {
 	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
 	#[pallet::storage] /// --- SingleMap: netuid --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
 	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
-	#[pallet::storage] /// --- SingleMap: Hotkey --> A Vector of Network UIDs // a list of subnets that each hotkey is registered on.
-	pub type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;	
 	#[pallet::storage] /// --- SingleMap: Network UID -> If network is added.
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] /// --- DoubleMap: netuid -> netuid -> prunning score.

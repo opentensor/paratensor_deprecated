@@ -81,10 +81,6 @@ fn test_registration_ok() {
 		//check if hotkey is added to the Hotkeys
 		assert_eq!(ParatensorModule::get_coldkey_for_hotkey(&hotkey_account_id), coldkey_account_id);
 
-		// Check the list of neworks that uid has registered 
-		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
-		assert_eq!(subs.contains(&netuid), true);
-
 		// Check if the neuron has added to the Keys
 		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
 		
@@ -292,10 +288,6 @@ fn test_registration_pruning() {
 		let hotkey_account_id2 = 3;
 		let coldkey_account_id2 = 669;
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id2), netuid, block_number, nonce2, work2, hotkey_account_id2, coldkey_account_id2));
-		//
-		let subs = ParatensorModule::get_subnets_for_hotkey(hotkey_account_id);
-		println!( "subs: {:?}, {:?}", subs, netuid);
-		assert_eq!(subs.contains(&netuid), false);
 	});
 }
 

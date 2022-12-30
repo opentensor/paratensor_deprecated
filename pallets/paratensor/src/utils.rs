@@ -73,7 +73,6 @@ impl<T: Config> Pallet<T> {
 
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { return SubnetworkN::<T>::get( netuid ) }
     pub fn get_coldkey_for_hotkey( hotkey:  &T::AccountId ) ->  T::AccountId { GlobalAccounts::<T>::get( hotkey ) }
-    pub fn get_subnets_for_hotkey( hotkey: T::AccountId) -> Vec<u16> { Subnets::<T>::get(hotkey) }
     pub fn get_hotkey_for_net_and_neuron( netuid: u16, neuron_uid: u16) ->  Result<T::AccountId, DispatchError> { Keys::<T>::try_get(netuid, neuron_uid).map_err(|_err| Error::<T>::NotRegistered.into()) }
     pub fn get_neuron_for_net_and_hotkey( netuid: u16, hotkey: &T::AccountId) -> Result<u16, DispatchError> { return Uids::<T>::try_get(netuid, &hotkey).map_err(|_err| Error::<T>::NotRegistered.into()) }
 
@@ -116,16 +115,6 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-
-    pub fn remove_global_stake(hotkey: &T::AccountId){
-        if Stake::<T>::contains_key(&hotkey){
-            Stake::<T>::remove(&hotkey);
-        }
-    }
-
- 
-    pub fn is_uid_active(netuid: u16, neuron_uid: u16) ->bool { Active::<T>::get(netuid, neuron_uid) }
-    pub fn deactive_neuron(netuid: u16, neuron_uid: u16) { Active::<T>::remove(netuid, neuron_uid) }
     
     /// ==============================
 	/// ==== Subnetworks Accounts ====
@@ -138,9 +127,6 @@ impl<T: Config> Pallet<T> {
         }
         return number_of_subnets;
     }
-    //pub fn is_subnetwork_uid_active( netuid:u16, uid: u16 ) -> bool { return uid < SubnetworkN::<T>::get( netuid ) }
-    //pub fn get_subnetwork_uid( netuid:u16, hotkey: &T::AccountId ) -> u16 { return Uids::<T>::get( netuid, hotkey ) }
-
     pub fn increment_subnetwork_n( netuid:u16 ) {
         SubnetworkN::<T>::insert( netuid, SubnetworkN::<T>::take( netuid ) + 1 );
     }
@@ -158,40 +144,6 @@ impl<T: Config> Pallet<T> {
         Self::decrement_subnetwork_n( netuid );
     }
 
-    pub fn increment_subnets_for_hotkey(netuid: u16, hotkey: &T::AccountId){
-        let mut vec_new_hotkey_subnets = vec![];
-        if Subnets::<T>::contains_key(&hotkey){ //update the list of subnets that hotkey is registered on
-            vec_new_hotkey_subnets = Subnets::<T>::take(&hotkey);
-            vec_new_hotkey_subnets.push(netuid);
-            Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
-        } else {
-            vec_new_hotkey_subnets.push(netuid); 
-            Subnets::<T>::insert(&hotkey, vec_new_hotkey_subnets); 
-        }
-    }
-    pub fn decrement_subnets_for_hotkey( netuid: u16, hotkey: &T::AccountId ) {
-        let mut new_hotkey_subnets: Vec<u16> = vec![];
-        let old_hotkey_subnets: Vec<u16> = Subnets::<T>::take(&hotkey);
-        for netuid_i in old_hotkey_subnets.iter() {
-            if *netuid_i != netuid {
-                new_hotkey_subnets.push( *netuid_i );
-            }
-        }
-        Subnets::<T>::insert( &hotkey, new_hotkey_subnets ); 
-    }
-    //check if horkey is registered on any network
-    pub fn is_hotkey_registered_any(hotkey:  &T::AccountId)-> bool {
-        return Subnets::<T>::contains_key( hotkey )
-    }
-
-    pub fn get_hotkey_stake_for_subnet(netuid: u16, hotkey:  &T::AccountId) -> u64{
-        let neuron_uid;
-        match Self::get_neuron_for_net_and_hotkey(netuid, hotkey) {
-            Ok(k) => neuron_uid = k,
-            Err(e) => panic!("Error: {:?}", e),
-        }
-        S::<T>::get(netuid, neuron_uid)
-    }
 
     pub fn is_uid_exist(netuid: u16, uid: u16) -> bool {
         return  Keys::<T>::contains_key(netuid, uid);

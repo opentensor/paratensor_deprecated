@@ -28,6 +28,7 @@ fn test_1_graph() {
 		let hotkey: u64 = 0;
 		let uid: u16 = 0;
 		let stake_amount: u64 = 1;
+		add_network(netuid, 0, 0);
 		ParatensorModule::set_max_allowed_uids( netuid, 1 ); 
 		ParatensorModule::add_balance_to_coldkey_account( &coldkey, stake_amount as u128 );
  		ParatensorModule::set_stake_for_testing( &hotkey, stake_amount );

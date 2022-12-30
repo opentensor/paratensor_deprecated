@@ -83,10 +83,7 @@ impl<T: Config> Pallet<T> {
         // --- 2. Set new stake amount on account.
         Stake::<T>::insert(hotkey, prev_stake.saturating_add( amount ) );
 
-        // --- 3. Increase stake counters for networks.
-        Self::add_stake_for_subnet(hotkey, amount);
-
-        // --- 4. Increment total network stake.
+        // --- 3. Increment total network stake.
         Self::increase_total_stake( amount );
     }
 
@@ -169,10 +166,7 @@ impl<T: Config> Pallet<T> {
         // --- 2. Insert decreased stake amount.
         Stake::<T>::insert(&hotkey, hotkey_stake.saturating_sub(amount) );
 
-        // --- 3. Decrease stake from all subnets associated with this hotkey.
-        Self::remove_stake_for_subnet( hotkey );
-
-        // --- 4. Decrease the network total stake.
+        // --- 3. Decrease the network total stake.
         Self::decrease_total_stake(amount);
     }
 
@@ -255,43 +249,6 @@ impl<T: Config> Pallet<T> {
     pub fn has_enough_stake(hotkey: &T::AccountId, amount: u64) -> bool {
         let stake = Stake::<T>::get(hotkey);
         return stake >= amount;
-    }
-
-    pub fn add_stake_for_subnet( hotkey: &T::AccountId, amount: u64){
-        if Subnets::<T>::contains_key(&hotkey){
-            let vec_new_hotkey_subnets = Subnets::<T>::get(&hotkey);
-                for i in vec_new_hotkey_subnets{
-
-                    let netuid = i;
-                    let neuron_uid ;
-                    match Self::get_neuron_for_net_and_hotkey(netuid, hotkey) {
-                        Ok(k) => neuron_uid = k,
-                        Err(e) => panic!("Error: {:?}", e),
-                    } 
-
-                    if S::<T>::contains_key(netuid, neuron_uid){
-
-                        let prev_stake = S::<T>::get(netuid, neuron_uid);
-                        S::<T>::insert(netuid, neuron_uid, prev_stake+amount);
-                    }
-                    else { S::<T>::insert(netuid, neuron_uid, amount);}
-            }
-        }
-    }
-
-    pub fn remove_stake_for_subnet(hotkey: &T::AccountId){
-        if Subnets::<T>::contains_key(&hotkey){ //the list of subnets that hotkey is registered on
-            let vec_hotkey_subnets = Subnets::<T>::get(&hotkey);
-            //
-            for i in vec_hotkey_subnets{
-                let neuron_uid ;
-                match Self::get_neuron_for_net_and_hotkey(i, &hotkey) {
-                    Ok(k) => neuron_uid = k,
-                    Err(e) => panic!("Error: {:?}", e),
-                } 
-                S::<T>::remove(i, neuron_uid);
-            }
-        }
     }
 
     pub fn get_stake_of_neuron_hotkey_account(hotkey: &T::AccountId) -> u64 {
