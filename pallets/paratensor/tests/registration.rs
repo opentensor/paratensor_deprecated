@@ -480,8 +480,6 @@ fn test_full_pass_through() {
 	});
 }
 
-
-
 #[test]
 fn test_bulk_register() {
 	new_test_ext().execute_with(|| {
@@ -544,5 +542,74 @@ fn test_bulk_register() {
 			assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &(i as u64) ), i as u64  );
 		}
 
+	});
+}
+
+#[test]
+fn test_network_connection_requirement() {
+	new_test_ext().execute_with(|| {
+		// Add a networks and connection requirements.
+		let netuid_a: u16 = 0;
+		let netuid_b: u16 = 1;
+		add_network(netuid_a, 10, 0);
+		add_network(netuid_b, 10, 0);
+
+		// Bulk values.
+		let hotkeys: Vec<u64> = vec![ 0,1,2,3,4,5,6,7,8,9,10 ];
+		let coldkeys: Vec<u64> = vec![ 0,1,2,3,4,5,6,7,8,9,10 ];
+
+		// Add a connection requirement between the A and B. A requires B.
+		ParatensorModule::add_connection_requirement( netuid_a, netuid_b, u16::MAX );
+		ParatensorModule::set_max_registrations_per_block( netuid_a, 10 ); // Enough for the below tests.
+		ParatensorModule::set_max_registrations_per_block( netuid_b, 10 ); // Enough for the below tests.
+		ParatensorModule::set_max_allowed_uids( netuid_a, 10 ); // Enough for the below tests.
+		ParatensorModule::set_max_allowed_uids( netuid_b, 10 ); // Enough for the below tests.
+
+		// Attempt registration on A fails because the hotkey is not registered on network B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 3942084);
+		assert_eq!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[0] ), netuid_a, 0, nonce, work, hotkeys[0], coldkeys[0]), Err(Error::<Test>::DidNotPassConnectedNetworkRequirement.into()) );
+		
+		// Attempt registration on B passes because there is no exterior requirement.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 5942084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[0] ), netuid_b, 0, nonce, work, hotkeys[0], coldkeys[0]) );
+
+		// Attempt registration on A passes because this key is in the top 100 of keys on network B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 6942084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[0] ), netuid_a, 0, nonce, work, hotkeys[0], coldkeys[0]) );
+
+		// Lets attempt the key registration on A. Fails because we are not in B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 6942084);
+		assert_eq!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[1] ), netuid_a, 0, nonce, work, hotkeys[1], coldkeys[1]), Err(Error::<Test>::DidNotPassConnectedNetworkRequirement.into()) );
+
+		// Lets register the next key on B. Passes, np.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 7942084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[1] ), netuid_b, 0, nonce, work, hotkeys[1], coldkeys[1]) );
+
+		// Lets make the connection requirement harder. Top 0th percentile.
+		ParatensorModule::add_connection_requirement( netuid_a, netuid_b, 0 );
+
+		// Attempted registration passes because the prunning score for hotkey_1 is the top keys on network B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 8942084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[1] ), netuid_a, 0, nonce, work, hotkeys[1], coldkeys[1]) );
+
+		// Lets register key 3 with lower prunning score.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 9942084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[2] ), netuid_b, 0, nonce, work, hotkeys[2], coldkeys[2]) );
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[1] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[0] ).unwrap(), 0); // Set prunning score to 0.
+
+		// Lets register key 4 with higher prunining score.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 10142084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[3] ), netuid_b, 0, nonce, work, hotkeys[3], coldkeys[3]) );
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 1); // Set prunning score to 1.
+
+		// Attempted register of key 3 fails because of bad prunning score on B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 11142084);
+		assert_eq!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[2] ), netuid_a, 0, nonce, work, hotkeys[2], coldkeys[2]), Err(Error::<Test>::DidNotPassConnectedNetworkRequirement.into()) );	
+
+		// Attempt to register key 4 passes because of best prunning score on B.
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 12142084);
+		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[3] ), netuid_a, 0, nonce, work, hotkeys[3], coldkeys[3]) );
 	});
 }

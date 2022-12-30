@@ -127,6 +127,7 @@ parameter_types! {
 	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const InitialPruningScore : u16 = u16::MAX;
+	pub const InitialRegistrationRequirement: u16 = u16::MAX; // Top 100%
 }
 impl pallet_paratensor::Config for Test {
 	type Event = Event;

@@ -202,7 +202,10 @@ pub mod pallet {
 	#[pallet::storage] /// --- SingleMap: Hotkey --> A Vector of Network UIDs // a list of subnets that each hotkey is registered on.
 	pub type Subnets<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Vec<u16>, ValueQuery, DefaultHotkeys<T> >;	
 	#[pallet::storage] /// --- SingleMap: Network UID -> If network is added.
-	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;
+	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
+	#[pallet::storage] /// --- DoubleMap: netuid -> netuid -> prunning score.
+	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
+
 
 	/// ==============================
 	/// ==== Subnetwork Features =====
@@ -434,6 +437,10 @@ pub mod pallet {
 		AxonServed(u16),
 		/// --- Event created when emission ratios fr all networks is set
 		EmissionValuesSet(),
+		/// --- Event created when a network connection requirement is added.
+		NetworkConnectionAdded( u16, u16, u16 ),
+		/// --- Event created when a network connection requirement is removed.
+		NetworkConnectionRemoved( u16, u16 )
 	}
 	
 	/// ================
@@ -441,6 +448,8 @@ pub mod pallet {
 	/// ================
 	#[pallet::error]
 	pub enum Error<T> {
+		/// --- Thrown if we are attempting to create an invalid connection requirement.
+		InvalidConnectionRequirement,
 		/// Network does not exist
 		NetworkDoesNotExist,
 		/// Network already exist
@@ -518,6 +527,9 @@ pub mod pallet {
 		EmissionValuesDoesNotMatchNetworks,
 		// --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		InvalidEmissionValues,
+		// --- Thrown when a hotkey attempts to register into a network without passing the 
+		// registration requirment from another network.
+		DidNotPassConnectedNetworkRequirement,
 	}
 
 	/// ================
@@ -911,6 +923,50 @@ pub mod pallet {
 				hotkeys,
 				coldkeys
 			)
+		}
+
+		/// ---- Sudo add a network connect requirement.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid_a` (u16):
+		/// 		- The network we are adding the requirment to (parent network)
+		///
+		/// 	* `netuid_b` (u16):
+		/// 		- The network we the requirement refers to (child network)
+		///
+		/// 	* `requirement` (u16):
+		/// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
+		///
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_add_network_connection_requirement( 
+			origin:OriginFor<T>, 
+			netuid_a: u16,
+			netuid_b: u16,
+			requirement: u16,
+		) -> DispatchResult { 
+			Self::do_sudo_add_network_connection_requirement( origin, netuid_a, netuid_b, requirement )
+		}
+
+		/// ---- Sudo remove a network connection requirement.
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid_a` (u16):
+		/// 		- The network we are removing the requirment from.
+		///
+		/// 	* `netuid_b` (u16):
+		/// 		- The required network connection to remove.
+		///   
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_remove_network_connection_requirement( 
+			origin:OriginFor<T>, 
+			netuid_a: u16,
+			netuid_b: u16,
+		) -> DispatchResult { 
+			Self::do_sudo_remove_network_connection_requirement( origin, netuid_a, netuid_b )
 		}
 
 		/// ---- Sudo set this network's bonds moving average.

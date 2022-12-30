@@ -259,6 +259,28 @@ fn test_sudo_validator_exclude_quantile() {
     });
 }
 
+#[test]
+fn test_sudo_set_network_connection_requirement() {
+	new_test_ext().execute_with(|| {
+        let netuid_a: u16 = 1;
+        let netuid_b: u16 = 2;
+        let requirement: u16 = u16::MAX;
+        assert_eq!( ParatensorModule::sudo_add_network_connection_requirement(<<Test as Config>::Origin>::signed(0), netuid_a, netuid_b, requirement),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_add_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, netuid_b, requirement),  Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        add_network( netuid_a, 10, 0 );
+        assert_eq!( ParatensorModule::sudo_add_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, netuid_a, requirement),  Err(Error::<Test>::InvalidConnectionRequirement.into()) );
+        assert_eq!( ParatensorModule::sudo_add_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, netuid_b, requirement),  Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        add_network( netuid_b, 10, 0 );
+        assert_ok!( ParatensorModule::sudo_add_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, netuid_b, requirement));
+        assert_eq!( ParatensorModule::get_network_connection_requirement( netuid_a, netuid_b ), requirement);
+        assert_eq!( ParatensorModule::sudo_remove_network_connection_requirement(<<Test as Config>::Origin>::signed(0), netuid_a, netuid_b),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_remove_network_connection_requirement(<<Test as Config>::Origin>::root(), 5 as u16, 5 as u16),  Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::sudo_remove_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, 5 as u16),  Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_ok!( ParatensorModule::sudo_remove_network_connection_requirement(<<Test as Config>::Origin>::root(), netuid_a, netuid_b) );
+        assert_eq!( ParatensorModule::network_connection_requirement_exists( netuid_a, netuid_b ), false );
+    });
+}
+
 /// -------- tests for PendingEmissionValues --------
 #[test]
 fn test_sudo_test_tempo_pending_emissions_ok() {

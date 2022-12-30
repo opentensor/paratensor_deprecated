@@ -196,3 +196,4 @@ new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
         assert_eq!(ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid, 120000) , Err(Error::<Test>::NetworkDoesNotExist.into()) );
 });}
+
