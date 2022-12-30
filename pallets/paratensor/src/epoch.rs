@@ -193,7 +193,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W (mask+norm): {:?}", weights.clone() );}}
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
-        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &stake );
+        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &stake, n );
         inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R: {:?}", ranks.clone() );}}
 
@@ -205,7 +205,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W (threshold): {:?}", clipped_weights.clone() );}}
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
-        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &stake );
+        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &stake, n );
         if debug { if_std! { println!( "T: {:?}", trust.clone() );}}
 
         // Compute consensus.
@@ -417,7 +417,7 @@ pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
 /// Return true when vector sum is zero.
 #[allow(dead_code)]
 pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
-    let vector_sum: I32F32 = vector.iter().sum();
+    let vector_sum: I32F32 = sum( &vector );
     vector_sum == I32F32::from_num( 0 )
 }
 
@@ -497,28 +497,30 @@ pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
     }
 }
 
+/// Apply mask to vector, mask=true will mask out, i.e. set to 0.
 #[allow(dead_code)]
-// Apply mask to vector, mask=true will mask out set to 0
 pub fn inplace_mask_vector( mask: &Vec<bool>, vector: &mut Vec<I32F32> ) {
     if mask.len() == 0 { return }
     assert_eq!( mask.len(), vector.len() );
+    let zero: I32F32 = I32F32::from_num( 0.0 );
     for i in 0..mask.len() {
         if mask[i] {
-            vector[i] = I32F32::from_num( 0.0 );
+            vector[i] = zero;
         }
     }
 }
 
+/// Apply mask to matrix, mask=true will mask out, i.e. set to 0.
 #[allow(dead_code)]
-// Apply mask to matrix, mask=true will mask out set to 0
 pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>> ) {
     if mask.len() == 0 { return }
     if mask[0].len() == 0 { return }
     assert_eq!( mask.len(), matrix.len() );
+    let zero: I32F32 = I32F32::from_num( 0.0 );
     for i in 0..mask.len() {
         for j in 0..mask[i].len() {
             if mask[i][j] {
-                matrix[i][j] = I32F32::from_num( 0.0 );
+                matrix[i][j] = zero;
             }
         }
     }
@@ -529,8 +531,9 @@ pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
     if matrix.len() == 0 { return }
     if matrix[0].len() == 0 { return }
     assert_eq!( matrix.len(), matrix[0].len() );
+    let zero: I32F32 = I32F32::from_num( 0.0 );
     for i in 0..matrix.len() {
-        matrix[i][i] = I32F32::from_num( 0.0 );
+        matrix[i][i] = zero;
     }
 }
 
@@ -548,6 +551,7 @@ pub fn diag_mask_sparse( sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u
     result
 }
 
+/// Remove cells from sparse matrix where the mask function of two vectors is true.
 #[allow(dead_code)]
 pub fn vec_mask_sparse_matrix( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, first_vector: &Vec<u64>, second_vector: &Vec<u64>, mask_fn: &dyn Fn(u64, u64) -> bool) -> Vec<Vec<(u16, I32F32)>> {
     let n: usize = sparse_matrix.len();
@@ -562,8 +566,8 @@ pub fn vec_mask_sparse_matrix( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, first_ve
     result
 }
 
+/// Row-wise matrix-vector hadamard product.
 #[allow(dead_code)]
-/// matrix-vector hadamard product
 pub fn hadamard( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<Vec<I32F32>> {
     if matrix.len() == 0 { return vec![ vec![] ] }
     if matrix[0].len() == 0 { return vec![ vec![] ] }
@@ -576,8 +580,8 @@ pub fn hadamard( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<Vec<I3
     result
 }
 
+/// Row-wise sparse matrix-vector hadamard product.
 #[allow(dead_code)]
-/// sparse matrix-vector hadamard product
 pub fn sparse_hadamard( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<Vec<(u16, I32F32)>> {
     let mut result: Vec<Vec<(u16, I32F32)>> = sparse_matrix.clone();
     for (i, sparse_row) in result.iter_mut().enumerate() {
@@ -588,11 +592,13 @@ pub fn sparse_hadamard( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I3
     result
 }
 
+/// Row-wise matrix-vector product, column-wise sum: result_j = SUM(i) vector_i * matrix_ij.
 #[allow(dead_code)]
 pub fn matmul( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
     if matrix.len() == 0 { return vec![] }
     if matrix[0].len() == 0 { return vec![] }
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    assert!( matrix.len() == vector.len() );
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); matrix[0].len() ];
     for i in 0..matrix.len() {
         for j in 0..matrix[i].len() {
             // Compute ranks: r_j = SUM(i) w_ij * s_i
@@ -604,24 +610,28 @@ pub fn matmul( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> 
     result
 }
 
+/// Column-wise matrix-vector product, row-wise sum: result_i = SUM(j) vector_j * matrix_ij.
 #[allow(dead_code)]
 pub fn matmul_transpose( matrix: &Vec<Vec<I32F32>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
     if matrix.len() == 0 { return vec![] }
     if matrix[0].len() == 0 { return vec![] }
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); vector.len() ];
+    assert!( matrix[0].len() == vector.len() );
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); matrix.len() ];
     for i in 0..matrix.len() {
         for j in 0..matrix[i].len() {
             // Compute dividends: d_j = SUM(i) b_ji * inc_i
             // result_j = SUM(i) vector_i * matrix_ji
-            result[j] += vector[i] * matrix[j][i];
+            // result_i = SUM(j) vector_j * matrix_ij
+            result[i] += vector[j] * matrix[i][j];
         }
     }
     result
 }
 
+/// Row-wise sparse_matrix-vector product, column-wise sum: result_j = SUM(i) vector_i * matrix_ij.
 #[allow(dead_code)]
-pub fn sparse_matmul( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
-    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); sparse_matrix.len() ];
+pub fn sparse_matmul( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32>, columns: u16 ) -> Vec<I32F32> {
+    let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); columns as usize ];
     for (i, sparse_row) in sparse_matrix.iter().enumerate() {
         for (j, value) in sparse_row.iter() {
             // Compute ranks: r_j = SUM(i) w_ij * s_i
@@ -633,6 +643,7 @@ pub fn sparse_matmul( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F
     result
 }
 
+/// Column-wise sparse_matrix-vector product, row-wise sum: result_i = SUM(j) vector_j * matrix_ij.
 #[allow(dead_code)]
 pub fn sparse_matmul_transpose( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector: &Vec<I32F32> ) -> Vec<I32F32> {
     let mut result: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); sparse_matrix.len() ];
@@ -647,6 +658,8 @@ pub fn sparse_matmul_transpose( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, vector:
     result
 }
 
+/// Set sparse matrix values below threshold to lower, and equal-above to upper.
+/// Does not add missing elements (0 value assumed) when lower!=0.
 #[allow(dead_code)]
 pub fn sparse_clip( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<(u16, I32F32)>> {
     let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; sparse_matrix.len() ];
@@ -663,6 +676,7 @@ pub fn sparse_clip( sparse_matrix: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32, 
     result
 }
 
+/// Set matrix values below threshold to lower, and equal-above to upper.
 #[allow(dead_code)]
 pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32) -> Vec<Vec<I32F32>> {
     // Check Nill length. 
@@ -680,6 +694,7 @@ pub fn clip( x: &Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F
     result
 }
 
+/// Set inplace matrix values below threshold to lower, and equal-above to upper.
 #[allow(dead_code)]
 pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32, lower: I32F32 ) {
     for i in 0..x.len() {
@@ -745,7 +760,7 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
     let mut sparse_threshold_result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; w.len() ]; 
     for ( uid_i, weights_i ) in w.iter().enumerate() {
         for (uid_j, weight_ij) in weights_i.iter() { 
-            if *weight_ij > threshold {
+            if *weight_ij >= threshold {
                 sparse_threshold_result [ uid_i as usize ].push( ( *uid_j, *weight_ij ));
             }
         }
@@ -756,72 +771,747 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 #[cfg(test)]
 mod tests {
     use substrate_fixed::types::I32F32;
-    use crate::epoch::{sum, normalize, inplace_normalize, matmul};
+    use crate::epoch;
 
     fn assert_float_compare(a: I32F32, b: I32F32, epsilon: I32F32 ) {
-        assert!( I32F32::abs( a - b ) < epsilon, "a({:?}) != b({:?})", a, b);
+        assert!( I32F32::abs( a - b ) <= epsilon, "a({:?}) != b({:?})", a, b);
     }
     
     fn assert_vec_compare(va: &Vec<I32F32>, vb: &Vec<I32F32>, epsilon: I32F32) {
         assert!(va.len() == vb.len());
         for i in 0..va.len(){
-            assert!( I32F32::abs( va[i] - vb[i] ) < epsilon, "a_{:?}({:?}) != b_{:?}({:?})", i, va[i], i, vb[i]);
+            assert_float_compare(va[i], vb[i], epsilon);
         }  
+    }
+    
+    fn assert_mat_compare(ma: &Vec<Vec<I32F32>>, mb: &Vec<Vec<I32F32>>, epsilon: I32F32) {
+        assert!(ma.len() == mb.len());
+        for row in 0..ma.len() {
+            assert!(ma[row].len() == mb[row].len());
+            for col in 0..ma[row].len() {
+                assert_float_compare(ma[row][col], mb[row][col], epsilon)
+            }
+        }
+    }
+    
+    fn assert_sparse_mat_compare(ma: &Vec<Vec<(u16, I32F32)>>, mb: &Vec<Vec<(u16, I32F32)>>, epsilon: I32F32) {
+        assert!(ma.len() == mb.len());
+        for row in 0..ma.len() {
+            assert!(ma[row].len() == mb[row].len());
+            for j in 0..ma[row].len() {
+                assert!(ma[row][j].0 == mb[row][j].0); // u16
+                assert_float_compare(ma[row][j].1, mb[row][j].1, epsilon) // I32F32
+            }
+        }
+    }
+
+    fn vec_to_fixed(vector: &Vec<f32>) -> Vec<I32F32> {
+        vector.iter().map( | x | I32F32::from_num( *x ) ).collect()
+    }
+
+    #[test]
+    fn test_vec_to_fixed() {
+        let vector: Vec<f32> = vec![ 0., 1., 2., 3.];
+        let target: Vec<I32F32> = vec![I32F32::from_num(0.), I32F32::from_num(1.), I32F32::from_num(2.), I32F32::from_num(3.)];
+        let result = vec_to_fixed(&vector);
+        assert_vec_compare(&result, &target, I32F32::from_num(0));
+    }
+
+    /// Reshape vector to matrix with specified number of rows, cast to I32F32.
+    fn vec_to_mat_fixed(vector: &Vec<f32>, rows: usize, transpose: bool) -> Vec<Vec<I32F32>> {
+        assert!( vector.len() % rows == 0, "Vector of len {:?} cannot reshape to {rows} rows.", vector.len());
+        let cols: usize = vector.len() / rows;
+        let mut mat: Vec<Vec<I32F32>> = vec![];
+        if transpose {
+            for col in 0..cols as usize {
+                let mut vals: Vec<I32F32> = vec![];
+                for row in 0..rows as usize {
+                    vals.push( I32F32::from_num( vector[row * cols + col]) );
+                }
+                mat.push(vals);
+            }
+        }
+        else {
+            for row in 0..rows as usize {
+                mat.push( vector[row * cols .. (row + 1) * cols].iter().map( | v | I32F32::from_num( *v ) ).collect() );
+            }
+        }
+        mat
+    }
+
+    #[test]
+    fn test_vec_to_mat_fixed() {
+        let vector: Vec<f32> = vec![ 0., 1., 2.,
+                                    0., 10., 100.];
+        let target: Vec<Vec<I32F32>> = vec![vec![I32F32::from_num(0.), I32F32::from_num(1.), I32F32::from_num(2.)], 
+                                            vec![I32F32::from_num(0.), I32F32::from_num(10.), I32F32::from_num(100.)] ];
+        let mat = vec_to_mat_fixed(&vector, 2, false);
+        assert_mat_compare(&mat, &target, I32F32::from_num(0));
+    }
+
+    /// Reshape vector to sparse matrix with specified number of input rows, cast f32 to I32F32.
+    fn vec_to_sparse_mat_fixed(vector: &Vec<f32>, rows: usize, transpose: bool) -> Vec<Vec<(u16, I32F32)>> {
+        assert!( vector.len() % rows == 0, "Vector of len {:?} cannot reshape to {rows} rows.", vector.len());
+        let cols: usize = vector.len() / rows;
+        let mut mat: Vec<Vec<(u16, I32F32)>> = vec![];
+        if transpose {
+            for col in 0..cols as usize {
+                let mut row_vec: Vec<(u16, I32F32)> = vec![];
+                for row in 0..rows as usize {
+                    if vector[row * cols + col] > 0. {
+                        row_vec.push( (row as u16, I32F32::from_num(vector[row * cols + col])) );
+                    }
+                }
+                mat.push(row_vec);
+            }
+        }
+        else {
+            for row in 0..rows as usize {
+                let mut row_vec: Vec<(u16, I32F32)> = vec![];
+                for col in 0..cols as usize {
+                    if vector[row * cols + col] > 0. {
+                        row_vec.push( (col as u16, I32F32::from_num(vector[row * cols + col])) );
+                    }
+                }
+                mat.push(row_vec);
+            }
+        }
+        mat
+    }
+
+    #[test]
+    fn test_vec_to_sparse_mat_fixed() {
+        let vector: Vec<f32> = vec![ 0., 1., 2.,
+                                    0., 10., 100.];
+        let target: Vec<Vec<(u16, I32F32)>> = vec![ vec![(1 as u16, I32F32::from_num(1.)), (2 as u16, I32F32::from_num(2.))], 
+                                                    vec![(1 as u16, I32F32::from_num(10.)), (2 as u16, I32F32::from_num(100.))] ];
+        let mat = vec_to_sparse_mat_fixed(&vector, 2, false);
+        assert_sparse_mat_compare(&mat, &target, I32F32::from_num(0));
+        let vector: Vec<f32> = vec![ 0.,
+                                     0.];
+        let target: Vec<Vec<(u16, I32F32)>> = vec![ vec![], 
+                                                    vec![] ];
+        let mat = vec_to_sparse_mat_fixed(&vector, 2, false);
+        assert_sparse_mat_compare(&mat, &target, I32F32::from_num(0));
+        let vector: Vec<f32> = vec![ 0., 1., 2.,
+                                    0., 10., 100.];
+        let target: Vec<Vec<(u16, I32F32)>> = vec![ vec![],
+                                                    vec![(0 as u16, I32F32::from_num(1.)), (1 as u16, I32F32::from_num(10.))], 
+                                                    vec![(0 as u16, I32F32::from_num(2.)), (1 as u16, I32F32::from_num(100.))] ];
+        let mat = vec_to_sparse_mat_fixed(&vector, 2, true);
+        assert_sparse_mat_compare(&mat, &target, I32F32::from_num(0));
+        let vector: Vec<f32> = vec![ 0.,
+                                     0.];
+        let target: Vec<Vec<(u16, I32F32)>> = vec![ vec![] ];
+        let mat = vec_to_sparse_mat_fixed(&vector, 2, true);
+        assert_sparse_mat_compare(&mat, &target, I32F32::from_num(0));
     }
 
     #[test]
     fn test_math_sum() {
-        assert!( sum(&vec![]) == I32F32::from_num(0));
-        assert!( sum(&vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(41));
-        assert!( sum(&vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(39));
+        assert!( epoch::sum(&vec![]) == I32F32::from_num(0));
+        assert!( epoch::sum(&vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(41));
+        assert!( epoch::sum(&vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(39));
     }
 
     #[test]
     fn test_math_normalize() {
         let epsilon: I32F32 = I32F32::from_num(0.0001);
         let x: Vec<I32F32> = vec![]; 
-        let y: Vec<I32F32> = normalize(&x);
+        let y: Vec<I32F32> = epoch::normalize(&x);
         assert_vec_compare( &x, &y, epsilon);
         let x: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
-        let y: Vec<I32F32> = normalize(&x);
+        let y: Vec<I32F32> = epoch::normalize(&x);
         assert_vec_compare( &y, &vec![ I32F32::from_num(0.0243902437),  I32F32::from_num(0.243902439),  I32F32::from_num(0.7317073171)], epsilon );
-        assert_float_compare( sum( &y ), I32F32::from_num(1.0), epsilon);
+        assert_float_compare( epoch::sum( &y ), I32F32::from_num(1.0), epsilon);
         let x: Vec<I32F32> = vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
-        let y: Vec<I32F32> = normalize(&x);
+        let y: Vec<I32F32> = epoch::normalize(&x);
         assert_vec_compare( &y, &vec![ I32F32::from_num(-0.0256410255),  I32F32::from_num(0.2564102563),  I32F32::from_num(0.769230769)], epsilon );
-        assert_float_compare( sum( &y ), I32F32::from_num(1.0), epsilon );
+        assert_float_compare( epoch::sum( &y ), I32F32::from_num(1.0), epsilon );
     }
 
     #[test]
     fn test_math_inplace_normalize() {
         let epsilon: I32F32 = I32F32::from_num(0.0001);
         let mut x1: Vec<I32F32> = vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
-        inplace_normalize(&mut x1);
+        epoch::inplace_normalize(&mut x1);
         assert_vec_compare( &x1, &vec![ I32F32::from_num(0.0243902437),  I32F32::from_num(0.243902439),  I32F32::from_num(0.7317073171)], epsilon );
         let mut x2: Vec<I32F32> = vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
-        inplace_normalize(&mut x2);
+        epoch::inplace_normalize(&mut x2);
         assert_vec_compare( &x2, &vec![ I32F32::from_num(-0.0256410255),  I32F32::from_num(0.2564102563),  I32F32::from_num(0.769230769)], epsilon );
     }
 
     #[test]
+    fn test_math_inplace_row_normalize() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let vector:Vec<f32> = vec![ 0., 1., 2., 3., 4., 
+                                    0., 10., 100., 1000., 10000., 
+                                    0., 0., 0., 0., 0., 
+                                    1., 1., 1., 1., 1.];
+        let mut mat = vec_to_mat_fixed(&vector, 4, false);
+        epoch::inplace_row_normalize(&mut mat);
+        let target:Vec<f32> = vec![ 0., 0.1, 0.2, 0.3, 0.4, 
+                                    0., 0.0009, 0.009, 0.09, 0.9, 
+                                    0., 0., 0., 0., 0., 
+                                    0.2, 0.2, 0.2, 0.2, 0.2 ];
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 4, false), epsilon);
+    }
+
+    #[test]
+    fn test_math_inplace_row_normalize_sparse() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let vector:Vec<f32> = vec![ 0., 1., 0., 2., 0., 3., 4., 
+                                    0., 1., 0., 2., 0., 3., 0., 
+                                    1., 0., 0., 2., 0., 3., 4., 
+                                    0., 10., 0., 100., 1000., 0., 10000., 
+                                    0., 0., 0., 0., 0., 0., 0., 
+                                    1., 1., 1., 1., 1., 1., 1.];
+        let mut mat = vec_to_sparse_mat_fixed(&vector, 6, false);
+        epoch::inplace_row_normalize_sparse(&mut mat);
+        let target:Vec<f32> = vec![ 0., 0.1, 0., 0.2, 0., 0.3, 0.4, 
+                                    0., 0.166666, 0., 0.333333, 0., 0.5, 0., 
+                                    0.1, 0., 0., 0.2, 0., 0.3, 0.4, 
+                                    0., 0.0009, 0., 0.009, 0.09, 0., 0.9, 
+                                    0., 0., 0., 0., 0., 0., 0., 
+                                    0.142857, 0.142857, 0.142857, 0.142857, 0.142857, 0.142857, 0.142857];
+        assert_sparse_mat_compare(&mat, &vec_to_sparse_mat_fixed(&target, 6, false), epsilon);
+        let vector:Vec<f32> = vec![ 0., 0., 0., 0.,
+                                    0., 0., 0., 0., 
+                                    0., 0., 0., 0.];
+        let target:Vec<f32> = vec![ 0., 0., 0., 0.,
+                                    0., 0., 0., 0.,
+                                    0., 0., 0., 0.];
+        let mut mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        epoch::inplace_row_normalize_sparse(&mut mat);
+        assert_sparse_mat_compare(&mat, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_col_normalize() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let vector:Vec<f32> = vec![ 0., 1., 2., 3., 4., 
+                                    0., 10., 100., 1000., 10000., 
+                                    0., 0., 0., 0., 0., 
+                                    1., 1., 1., 1., 1.];
+        let mut mat = vec_to_mat_fixed(&vector, 4, true);
+        epoch::inplace_col_normalize(&mut mat);
+        let target:Vec<f32> = vec![ 0., 0.1, 0.2, 0.3, 0.4, 
+                                    0., 0.0009, 0.009, 0.09, 0.9, 
+                                    0., 0., 0., 0., 0., 
+                                    0.2, 0.2, 0.2, 0.2, 0.2 ];
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 4, true), epsilon);
+    }
+
+    #[test]
+    fn test_math_inplace_col_normalize_sparse() {
+        let epsilon: I32F32 = I32F32::from_num(0.0001);
+        let vector:Vec<f32> = vec![ 0., 1., 0., 2., 0., 3., 4., 
+                                    0., 1., 0., 2., 0., 3., 0., 
+                                    1., 0., 0., 2., 0., 3., 4., 
+                                    0., 10., 0., 100., 1000., 0., 10000., 
+                                    0., 0., 0., 0., 0., 0., 0., 
+                                    1., 1., 1., 1., 1., 1., 1.];
+        let mut mat = vec_to_sparse_mat_fixed(&vector, 6, true);
+        epoch::inplace_col_normalize_sparse(&mut mat);
+        let target:Vec<f32> = vec![ 0., 0.1, 0., 0.2, 0., 0.3, 0.4, 
+                                    0., 0.166666, 0., 0.333333, 0., 0.5, 0., 
+                                    0.1, 0., 0., 0.2, 0., 0.3, 0.4, 
+                                    0., 0.0009, 0., 0.009, 0.09, 0., 0.9, 
+                                    0., 0., 0., 0., 0., 0., 0., 
+                                    0.142857, 0.142857, 0.142857, 0.142857, 0.142857, 0.142857, 0.142857];
+        assert_sparse_mat_compare(&mat, &vec_to_sparse_mat_fixed(&target, 6, true), epsilon);
+        let vector:Vec<f32> = vec![ 0., 0., 0., 0.,
+                                    0., 0., 0., 0., 
+                                    0., 0., 0., 0.];
+        let target:Vec<f32> = vec![ 0., 0., 0., 0.,
+                                    0., 0., 0., 0.,
+                                    0., 0., 0., 0.];
+        let mut mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        epoch::inplace_col_normalize_sparse(&mut mat);
+        assert_sparse_mat_compare(&mat, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_mask_vector() {
+        let mask:Vec<bool> = vec![ false, false, false ];
+        let mut vector:Vec<I32F32> = vec_to_fixed(&vec![ 0., 1., 2.]);
+        let target:Vec<I32F32> = vec_to_fixed(&vec![ 0., 1., 2.]);
+        epoch::inplace_mask_vector(&mask, &mut vector);
+        assert_vec_compare(&vector, &target, I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![ false, true, false ];
+        let mut vector:Vec<I32F32> = vec_to_fixed(&vec![ 0., 1., 2.]);
+        let target:Vec<I32F32> = vec_to_fixed(&vec![ 0., 0., 2.]);
+        epoch::inplace_mask_vector(&mask, &mut vector);
+        assert_vec_compare(&vector, &target, I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![ true, true, true ];
+        let mut vector:Vec<I32F32> = vec_to_fixed(&vec![ 0., 1., 2.]);
+        let target:Vec<I32F32> = vec_to_fixed(&vec![ 0., 0., 0.]);
+        epoch::inplace_mask_vector(&mask, &mut vector);
+        assert_vec_compare(&vector, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_mask_matrix() {
+        let mask:Vec<Vec<bool>> = vec![ vec![false, false, false], 
+                                        vec![false, false, false], 
+                                        vec![false, false, false]];
+        let vector:Vec<f32> = vec![ 0., 1., 2., 
+                                    3., 4., 5., 
+                                    6., 7., 8.];
+        let mut mat = vec_to_mat_fixed(&vector, 3, false);
+        epoch::inplace_mask_matrix(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&vector, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<Vec<bool>> = vec![ vec![true, false, false], 
+                                        vec![false, true, false], 
+                                        vec![false, false, true]];
+        let target:Vec<f32> = vec![ 0., 1., 2., 
+                                    3., 0., 5., 
+                                    6., 7., 0.];
+        let mut mat = vec_to_mat_fixed(&vector, 3, false);
+        epoch::inplace_mask_matrix(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<Vec<bool>> = vec![ vec![true, true, true], 
+                                        vec![true, true, true], 
+                                        vec![true, true, true]];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mut mat = vec_to_mat_fixed(&vector, 3, false);
+        epoch::inplace_mask_matrix(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_diag_mask() {
+        let vector:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let target:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.];
+        let mut mat = vec_to_mat_fixed(&vector, 3, false);
+        epoch::inplace_diag_mask(&mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_diag_mask_sparse() {
+        let vector:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let target:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let result = epoch::diag_mask_sparse(&mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let vector:Vec<f32> = vec![ 1., 0., 0., 
+                                    0., 5., 0., 
+                                    0., 0., 9.];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let result = epoch::diag_mask_sparse(&mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let vector:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let result = epoch::diag_mask_sparse(&mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_vec_mask_sparse_matrix() {
+        let vector:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let target:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let first_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let second_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let result = epoch::vec_mask_sparse_matrix(&mat, &first_vector, &second_vector, &|a, b| a == b);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let target:Vec<f32> = vec![ 1., 0., 0., 
+                                    4., 5., 0., 
+                                    7., 8., 9.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let first_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let second_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let result = epoch::vec_mask_sparse_matrix(&mat, &first_vector, &second_vector, &|a, b| a < b);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let vector:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
+        let first_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let second_vector: Vec<u64> = vec![ 1, 2, 3 ];
+        let result = epoch::vec_mask_sparse_matrix(&mat, &first_vector, &second_vector, &|a, b| a == b);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_hadamard() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3., 4.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_mat_fixed(&matrix, 4, false);
+        let result = epoch::hadamard(&matrix, &vector);
+        let target:Vec<f32> = vec![ 1., 2., 3., 
+                                    8., 10., 12., 
+                                    21., 24., 27.,
+                                    40., 44., 48.];
+        let target = vec_to_mat_fixed(&target, 4, false);
+        assert_mat_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_sparse_hadamard() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3., 4.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_hadamard(&matrix, &vector);
+        let target:Vec<f32> = vec![ 1., 2., 3., 
+                                    8., 10., 12., 
+                                    21., 24., 27.,
+                                    40., 44., 48.];
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_hadamard(&matrix, &vector);
+        let target:Vec<f32> = vec![ 0., 2., 3., 
+                                    8., 0., 12., 
+                                    21., 24., 0.,
+                                    40., 44., 48.];
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_hadamard(&matrix, &vector);
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
     fn test_math_matmul() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3., 4.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_mat_fixed(&matrix, 4, false);
+        let result = epoch::matmul(&matrix, &vector);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 70., 80., 90. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_matmul_transpose() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_mat_fixed(&matrix, 4, false);
+        let result = epoch::matmul_transpose(&matrix, &vector);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 14., 32., 50., 68. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_sparse_matmul() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3., 4.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul(&matrix, &vector, 3);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 70., 80., 90. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul(&matrix, &vector, 3);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 69., 70., 63. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul(&matrix, &vector, 3);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 0., 0., 0. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_sparse_matmul_transpose() {
+        let vector:Vec<I32F32> = vec_to_fixed( &vec![ 1., 2., 3.] );
+        let matrix:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul_transpose(&matrix, &vector);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 14., 32., 50., 68. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul_transpose(&matrix, &vector);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 13., 22., 23., 68. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+        let matrix:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let result = epoch::sparse_matmul_transpose(&matrix, &vector);
+        let target: Vec<I32F32> = vec_to_fixed( &vec![ 0., 0., 0., 0. ] );
+        assert_vec_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_sparse_clip() {
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_sparse_mat_fixed(&matrix, 4, false);
+        let target:Vec<f32> = vec![ 0., 1., 1., 
+                                    1., 1., 1., 
+                                    1., 100., 100.,
+                                    100., 100., 100.];
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_clip(&matrix, I32F32::from_num(8), I32F32::from_num(100), I32F32::from_num(1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_clip() {
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let matrix = vec_to_mat_fixed(&matrix, 4, false);
+        let target:Vec<f32> = vec![ 1., 1., 1., 
+                                    1., 1., 1., 
+                                    1., 100., 100.,
+                                    100., 100., 100.];
+        let target = vec_to_mat_fixed(&target, 4, false);
+        let result = epoch::clip(&matrix, I32F32::from_num(8), I32F32::from_num(100), I32F32::from_num(1));
+        assert_mat_compare(&result, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_clip() {
+        let matrix:Vec<f32> = vec![ 0., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let mut matrix = vec_to_mat_fixed(&matrix, 4, false);
+        let target:Vec<f32> = vec![ 1., 1., 1., 
+                                    1., 1., 1., 
+                                    1., 100., 100.,
+                                    100., 100., 100.];
+        let target = vec_to_mat_fixed(&target, 4, false);
+        epoch::inplace_clip(&mut matrix, I32F32::from_num(8), I32F32::from_num(100), I32F32::from_num(1));
+        assert_mat_compare(&matrix, &target, I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_mat_ema() {
+        let old: Vec<f32> = vec![   1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let new: Vec<f32> = vec![   10., 20., 30., 
+                                    40., 50., 60., 
+                                    70., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![1.9, 3.8, 5.7, 
+                                    7.6, 9.5, 11.4, 
+                                    13.3, 15.2, 17.1,
+                                    19., 20.9, 22.8];
+        let old = vec_to_mat_fixed(&old, 4, false);
+        let new = vec_to_mat_fixed(&new, 4, false);
+        let target = vec_to_mat_fixed(&target, 4, false);
+        let result = epoch::mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let new: Vec<f32> = vec![   10., 20., 30., 
+                                    40., 50., 60., 
+                                    70., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let old = vec_to_mat_fixed(&old, 4, false);
+        let new = vec_to_mat_fixed(&new, 4, false);
+        let target = vec_to_mat_fixed(&target, 4, false);
+        let result = epoch::mat_ema(&new, &old, I32F32::from_num(0));
+        assert_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let new: Vec<f32> = vec![   10., 20., 30., 
+                                    40., 50., 60., 
+                                    70., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![10., 20., 30., 
+                                    40., 50., 60., 
+                                    70., 80., 90.,
+                                    100., 110., 120.];
+        let old = vec_to_mat_fixed(&old, 4, false);
+        let new = vec_to_mat_fixed(&new, 4, false);
+        let target = vec_to_mat_fixed(&target, 4, false);
+        let result = epoch::mat_ema(&new, &old, I32F32::from_num(1));
+        assert_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+    }
+
+    #[test]
+    fn test_math_sparse_mat_ema() {
+        let old: Vec<f32> = vec![   1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.,
+                                    10., 11., 12.];
+        let new: Vec<f32> = vec![   10., 20., 30., 
+                                    40., 50., 60., 
+                                    70., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![1.9, 3.8, 5.7, 
+                                    7.6, 9.5, 11.4, 
+                                    13.3, 15.2, 17.1,
+                                    19., 20.9, 22.8];
+        let old = vec_to_sparse_mat_fixed(&old, 4, false);
+        let new = vec_to_sparse_mat_fixed(&new, 4, false);
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   0., 2., 3., 
+                                    4., 0., 6., 
+                                    7., 8., 0.,
+                                    10., 11., 12.];
+        let new: Vec<f32> = vec![   10., 20., 0., 
+                                    40., 0., 60., 
+                                    0., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![1., 3.8, 2.7, 
+                                    7.6, 0., 11.4, 
+                                    6.3, 15.2, 9.,
+                                    19., 20.9, 22.8];
+        let old = vec_to_sparse_mat_fixed(&old, 4, false);
+        let new = vec_to_sparse_mat_fixed(&new, 4, false);
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let new: Vec<f32> = vec![   10., 20., 0., 
+                                    40., 0., 60., 
+                                    0., 80., 90.,
+                                    100., 110., 120.];
+        let target: Vec<f32> = vec![1., 2., 0., 
+                                    4., 0., 6., 
+                                    0., 8., 9.,
+                                    10., 11., 12.];
+        let old = vec_to_sparse_mat_fixed(&old, 4, false);
+        let new = vec_to_sparse_mat_fixed(&new, 4, false);
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let new: Vec<f32> = vec![   0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let target: Vec<f32> = vec![0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let old = vec_to_sparse_mat_fixed(&old, 4, false);
+        let new = vec_to_sparse_mat_fixed(&new, 4, false);
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+        let old: Vec<f32> = vec![   1., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let new: Vec<f32> = vec![   0., 0., 0., 
+                                    0., 2., 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let target: Vec<f32> = vec![0.9, 0., 0., 
+                                    0., 0.2, 0., 
+                                    0., 0., 0.,
+                                    0., 0., 0.];
+        let old = vec_to_sparse_mat_fixed(&old, 4, false);
+        let new = vec_to_sparse_mat_fixed(&new, 4, false);
+        let target = vec_to_sparse_mat_fixed(&target, 4, false);
+        let result = epoch::sparse_mat_ema(&new, &old, I32F32::from_num(0.1));
+        assert_sparse_mat_compare(&result, &target, I32F32::from_num( 0.000001 ));
+    }
+
+    #[test]
+    fn test_math_matmul2() {
         let epsilon: I32F32 = I32F32::from_num(0.0001);
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ]; 3 ]; 
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(6),  I32F32::from_num(6)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(9),  I32F32::from_num(9),  I32F32::from_num(9)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(6),  I32F32::from_num(6)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(9),  I32F32::from_num(9),  I32F32::from_num(9)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(-1.0);3 ]; 3 ]; 
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(-6),  I32F32::from_num(-6),  I32F32::from_num(-6)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(-9),  I32F32::from_num(-9),  I32F32::from_num(-9)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(1.0); 3] ), &vec![ I32F32::from_num(-3),  I32F32::from_num(-3),  I32F32::from_num(-3)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(-6),  I32F32::from_num(-6),  I32F32::from_num(-6)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(3.0); 3] ), &vec![ I32F32::from_num(-9),  I32F32::from_num(-9),  I32F32::from_num(-9)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(-1.0); 3] ), &vec![ I32F32::from_num(3),  I32F32::from_num(3),  I32F32::from_num(3)], epsilon );
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1.0);3 ], vec![ I32F32::from_num(2.0); 3], vec![ I32F32::from_num(3.0);3 ] ]; 
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(12),  I32F32::from_num(12),  I32F32::from_num(12)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(12),  I32F32::from_num(12),  I32F32::from_num(12)], epsilon );
         let w: Vec<Vec<I32F32>> = vec![ vec![ I32F32::from_num(1), I32F32::from_num(2), I32F32::from_num(3) ]; 3 ]; 
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
-        assert_vec_compare( &matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(12),  I32F32::from_num(18)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(0.0); 3] ), &vec![ I32F32::from_num(0.0),  I32F32::from_num(0.0),  I32F32::from_num(0.0)], epsilon );
+        assert_vec_compare( &epoch::matmul( &w, &vec![ I32F32::from_num(2.0); 3] ), &vec![ I32F32::from_num(6),  I32F32::from_num(12),  I32F32::from_num(18)], epsilon );
     }
 
 }
