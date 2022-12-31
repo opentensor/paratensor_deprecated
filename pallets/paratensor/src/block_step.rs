@@ -55,7 +55,7 @@ impl<T: Config> Pallet<T> {
                 // --- 5. Run the mechanism for this network updating consensus parameters
                 // and returns the tao_emission, a positive valued u64. The sum of these value 
                 // should equal pending_emission.
-                let tao_emission: Vec<u64> = Self::epoch_sparse( netuid_i, pending_emission, true );
+                let tao_emission: Vec<u64> = Self::epoch( netuid_i, pending_emission, true );
 
                 // --- 6. We now distribute the tao emission onto the subnetwork hotkey staking accounts.
                 // The remainder will be added back onto the pending emission for this network
