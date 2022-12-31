@@ -31,7 +31,8 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let mut stake: Vec<I32F32> = Self::get_stake( netuid );
+        let orig_stake: Vec<I32F32> = Self::get_stake( netuid );
+        let mut stake: Vec<I32F32> = orig_stake.clone();
         inplace_mask_vector( &inactive, &mut stake );
         inplace_normalize( &mut stake );
         if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
@@ -111,8 +112,7 @@ impl<T: Config> Pallet<T> {
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &stake ) { // no active stake
-                // TODO(taco): calling get_stake is costly. We should be using the above value.
-                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                let mut unmasked_stake: Vec<I32F32> = orig_stake.clone(); // do not mask inactive
                 inplace_normalize( &mut unmasked_stake );
                 normalized_emission = unmasked_stake;
             }
@@ -139,8 +139,7 @@ impl<T: Config> Pallet<T> {
             Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
         }  
 
-        // NOTE(taco): returning the tao emission here which will be distributed 
-        // at a higher level.
+        // Returning the tao emission here which will be distributed at a higher level.
         // Translate the emission into u64 values to be returned.
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
@@ -168,7 +167,8 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive: {:?}", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let mut stake: Vec<I32F32> = Self::get_stake( netuid );
+        let orig_stake: Vec<I32F32> = Self::get_stake( netuid );
+        let mut stake: Vec<I32F32> = orig_stake.clone();
         if debug { if_std! { println!( "S: {:?}", stake.clone() );}}
         inplace_mask_vector( &inactive, &mut stake ); // mask inactive stake
         if debug { if_std! { println!( "S (mask): {:?}", stake.clone() );}}
@@ -252,8 +252,7 @@ impl<T: Config> Pallet<T> {
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &stake ) { // no active stake
-                // TODO(taco): we should be using the value from above to save making this call twice.
-                let mut unmasked_stake: Vec<I32F32> = Self::get_stake( netuid ); // do not mask inactive
+                let mut unmasked_stake: Vec<I32F32> = orig_stake.clone(); // do not mask inactive
                 inplace_normalize( &mut unmasked_stake );
                 normalized_emission = unmasked_stake;
             }
@@ -280,8 +279,7 @@ impl<T: Config> Pallet<T> {
             Self::set_bonds( netuid, i, ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect())
         }  
 
-                // NOTE(taco): returning the tao emission here which will be distributed 
-        // at a higher level.
+        // Returning the tao emission here which will be distributed at a higher level.
         // Translate the emission into u64 values to be returned.
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
