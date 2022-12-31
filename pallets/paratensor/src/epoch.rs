@@ -7,7 +7,7 @@ use substrate_fixed::types::I32F32;
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
-    pub fn epoch( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
+    pub fn epoch_dense( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
   
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
@@ -144,7 +144,7 @@ impl<T: Config> Pallet<T> {
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
 
-    pub fn epoch_sparse( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
+    pub fn epoch( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
         if debug { if_std! { println!( "n: {:?}", n );}}
@@ -178,9 +178,6 @@ impl<T: Config> Pallet<T> {
         // Block at registration vector (block when each neuron was most recently registered).
         let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
         if debug { if_std! { println!( "Block at registration: {:?}", block_at_registration.clone() );}}
-
-        // Updated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
-        // let updated: Vec<Vec<bool>> = block_at_registration.iter().map(| registered | last_update.iter().map(| updated | registered < updated ).collect() ).collect();
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );

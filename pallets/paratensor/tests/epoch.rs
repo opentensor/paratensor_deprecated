@@ -350,10 +350,10 @@ fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16
 	let start = Instant::now();
 	for _ in 0..epochs {
 		if sparse {
-			ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug );
+			ParatensorModule::epoch( netuid, 1_000_000_000, debug );
 		}
 		else {
-			ParatensorModule::epoch( netuid, 1_000_000_000, debug );
+			ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug );
 		}
 	}
 	let duration = start.elapsed();
@@ -402,8 +402,8 @@ fn test_active_stake() {
 		for uid in 0..(n/2) as u64 {
 			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, ((n/2)..n).collect(), vec![ u16::MAX / (n/2); (n/2) as usize ]));
 		}
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in 0..n as u16 {
 			// println!( "\n{uid}" );
@@ -426,8 +426,8 @@ fn test_active_stake() {
 		run_to_block( activity_cutoff + 2 ); // run to block where validator (uid 0, 1) weights become outdated
 		// === Update uid 0 weights
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ u16::MAX / (n/2); (n/2) as usize ]));
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 5002; activity_cutoff: 5000
 			Last update: [5002, 1, 0, 0]; Inactive: [false, true, true, true]
 			S: [1, 1, 1, 1]; S (mask): [1, 0, 0, 0]; S (mask+norm): [1, 0, 0, 0]
@@ -466,8 +466,8 @@ fn test_active_stake() {
 		// === Update uid 1 weights as well
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(1), netuid, ((n/2)..n).collect(), vec![ u16::MAX / (n/2); (n/2) as usize ]));
 		run_to_block( activity_cutoff + 3 ); // run to block where validator (uid 0, 1) weights become outdated
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 5003; activity_cutoff: 5000
 			Last update: [5002, 5002, 0, 0]; Inactive: [false, false, true, true]
 			S: [1, 1, 1, 1]; S (mask): [1, 1, 0, 0]; S (mask+norm): [0.5, 0.5, 0, 0]
@@ -533,8 +533,8 @@ fn test_outdated_weights() {
 		for uid in ((n/2) as u64)..n as u64 {
 			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, vec![ uid as u16 ], vec![ u16::MAX ])); // server self-weight
 		}
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 1; activity_cutoff: 5000
 			Last update: [1, 1, 1, 1]; Inactive: [false, false, false, false]
 			S: [1, 1, 1, 1]; S (mask): [1, 1, 1, 1]; S (mask+norm): [0.25, 0.25, 0.25, 0.25]
@@ -566,8 +566,8 @@ fn test_outdated_weights() {
 		run_to_block( 2 ); // run to next block to outdate weights and bonds set on deregistered uid
 		// === Update weights from only uid=0
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ 2 * (u16::MAX / 3), u16::MAX / 3 ]));
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/* 	current_block: 2; activity_cutoff: 5000
 			Last update: [2, 1, 1, 1]; Inactive: [false, false, false, false]
 			Block at registration: [0, 0, 0, 1]
@@ -623,8 +623,8 @@ fn test_zero_weights() {
 		}
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), n);
 		// === No weights
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 0; activity_cutoff: 5000; Last update: [0, 0]; Inactive: [false, false]
 			S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 0]
 			W: [[], []]; W (diagmask): [[], []]; W (diag+outdatemask): [[], []]; W (mask+norm): [[], []]
@@ -643,8 +643,8 @@ fn test_zero_weights() {
 		for uid in ((n/2) as u64)..n as u64 {
 			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, vec![ uid as u16 ], vec![ u16::MAX ])); // server self-weight
 		}
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 1; activity_cutoff: 5000; Last update: [0, 1]; Inactive: [false, false]
 			S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 0]
 			W: [[], [(1, 1)]]
@@ -669,8 +669,8 @@ fn test_zero_weights() {
 			let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, new_key as u64 * 1_000_000);
 			assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(new_key as u64), netuid, block_number, nonce, work, new_key as u64, new_key as u64));
 		}
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 2; activity_cutoff: 5000; Last update: [2, 1]; Inactive: [false, false]; 
 		S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 2]; 
 		W: [[(1, 1)], []]; W (diagmask): [[(1, 1)], []]; W (diag+outdatemask): [[], []]; W (mask+norm): [[], []]; 
@@ -689,8 +689,8 @@ fn test_zero_weights() {
 		for uid in 0..(n/2) as u64 {
 			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, ((n/2)..n).collect(), vec![ u16::MAX / (n/2); (n/2) as usize]));
 		}
-		if sparse { ParatensorModule::epoch_sparse( netuid, 1_000_000_000, debug ); }
-		else { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000, debug ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000, debug ); }
 		/*	current_block: 3; activity_cutoff: 5000; Last update: [3, 1]; Inactive: [false, false]; 
 		S: [1, 0]; S (mask): [1, 0]; S (mask+norm): [1, 0]; Block at registration: [0, 2]; 
 		W: [[(1, 1)], []]; W (diagmask): [[(1, 1)], []]; W (diag+outdatemask): [[(1, 1)], []]; W (mask+norm): [[(1, 1)], []]; 
