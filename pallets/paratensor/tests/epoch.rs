@@ -1,11 +1,10 @@
-use crate::{mock::*};
-#[cfg(feature = "no_std")]
-use ndarray::{ndarray::Array1, ndarray::Array2, ndarray::arr1};
-use rand::{Rng, thread_rng, SeedableRng, seq::SliceRandom, distributions::Uniform};
-use rand::rngs::StdRng;
+// RUST_BACKTRACE=1 SKIP_WASM_BUILD=1 RUST_LOG=runtime=debug cargo test epoch -- test_nill_epoch_paratensor test_1_graph test_10_graph test_512_graph test_4096_graph test_4096_graph_random_weights test_active_stake test_outdated_weights test_zero_weights --exact --nocapture
+
+use crate::mock::*;
+use rand::{Rng, thread_rng, SeedableRng, rngs::StdRng, seq::SliceRandom, distributions::Uniform};
 use substrate_fixed::types::I32F32;
 use frame_system::Config;
-use frame_support::{assert_ok};
+use frame_support::assert_ok;
 use std::time::Instant;
 mod mock;
 
@@ -22,13 +21,13 @@ fn test_nill_epoch_paratensor() {
 // Test an epoch on a graph with a single item.
 fn test_1_graph() {
 	new_test_ext().execute_with(|| {
-       println!( "test_1_graph:" );
+    	println!( "test_1_graph:" );
 		let netuid: u16 = 0;
 		let coldkey: u64 = 0;
 		let hotkey: u64 = 0;
 		let uid: u16 = 0;
 		let stake_amount: u64 = 1;
-		add_network(netuid, 0, 0);
+		add_network(netuid, u16::MAX - 1, 0); // set higher tempo to avoid built-in epoch, then manual epoch instead
 		ParatensorModule::set_max_allowed_uids( netuid, 1 ); 
 		ParatensorModule::add_balance_to_coldkey_account( &coldkey, stake_amount as u128 );
  		ParatensorModule::set_stake_for_testing( &hotkey, stake_amount );
@@ -53,7 +52,7 @@ fn test_1_graph() {
 // Test an epoch on a graph with two items.
 fn test_10_graph() {
 	new_test_ext().execute_with(|| {
-       println!( "test_10_graph" );
+    	println!( "test_10_graph" );
 		// Function for adding a nodes to the graph.
 		pub fn add_node( 
 				netuid: u16,
@@ -80,7 +79,7 @@ fn test_10_graph() {
 		// each with 1 stake and self weights.
 		let n: usize = 10;
 		let netuid: u16 = 0;
-		add_network(netuid, 0, 0);
+		add_network(netuid, u16::MAX - 1, 0); // set higher tempo to avoid built-in epoch, then manual epoch instead
 		ParatensorModule::set_max_allowed_uids( netuid, n as u16 ); 
 		for i in 0..10 {
 			add_node(
@@ -99,7 +98,7 @@ fn test_10_graph() {
 			// ParatensorModule::set_bonds_for_testing( netuid, uid, vec![ ( i as u16, u16::MAX )]); // rather, bonds are calculated in epoch
 		}
 		// Run the epoch.
-		ParatensorModule::epoch( 0, 1_000_000_000, true );
+		ParatensorModule::epoch( 0, 1_000_000_000, false );
 		// Check return values.
 		for i in 0..n {
 			assert_eq!( ParatensorModule::get_stake_for_hotkey( &(i as u64) ), 1 );
@@ -113,6 +112,7 @@ fn test_10_graph() {
 	});
 }
 
+#[allow(dead_code)]
 fn uid_stats(netuid: u16, uid: u16) {
 	println!( "stake: {:?}", ParatensorModule::get_stake_for_hotkey( &(uid as u64) ));
 	println!( "rank: {:?}", ParatensorModule::get_rank( netuid, uid ));
@@ -227,7 +227,7 @@ fn test_4096_graph_random_weights() {
 	let mut validators: Vec<u16> = vec![];
 	let mut servers: Vec<u16> = vec![];
 	let epochs: u16 = 1;
-	println!( "test_{n:?}_graph ({validators_n:?} validators)" );
+	println!( "test_{n:?}_graph_random_weights ({validators_n:?} validators)" );
 	for k in 0..3 {
 		if k == 0 { // blockwise [validator_block, server_block]
 			validators = (0..validators_n).collect();
@@ -276,7 +276,8 @@ fn test_4096_graph_random_weights() {
 	}
 }
 
-#[test]
+#[allow(dead_code)]
+// #[test]
 /// Test an epoch_sparse on a graph with 16384 nodes, of which the first 512 are validators setting non-self weights, and the rest servers setting only self-weights.
 fn test_16384_graph_sparse() {
 	new_test_ext().execute_with(|| {
@@ -317,7 +318,7 @@ fn test_16384_graph_sparse() {
 
 fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16>, epochs: u16, random_weights: bool, random_seed: u64, sparse: bool, debug: bool) {
 	// Create the network
-	add_network(netuid, 0, 0);
+	add_network(netuid, u16::MAX - 1, 0);  // set higher tempo to avoid built-in epoch, then manual epoch instead
 	// Register uids
 	ParatensorModule::set_max_allowed_uids( netuid, n );
 	for key in 0..n {
@@ -356,13 +357,13 @@ fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16
 		}
 	}
 	let duration = start.elapsed();
-	println!("Time elapsed in epoch() is: {:?}", duration);
-	let bonds = ParatensorModule::get_bonds( netuid );
-	for (uid, node) in vec![ (validators[0], "validator"), (servers[0], "server") ] {
-		println!( "\n{node}" );
-		uid_stats(netuid, uid);
-		println!( "bonds: {:?} (on validator), {:?} (on server)", bonds[uid as usize][0], bonds[uid as usize][servers[0] as usize]);
-	}
+	println!("Time elapsed in (sparse={sparse}) epoch() is: {:?}", duration);
+	// let bonds = ParatensorModule::get_bonds( netuid );
+	// for (uid, node) in vec![ (validators[0], "validator"), (servers[0], "server") ] {
+	// 	println!( "\n{node}" );
+	// 	uid_stats(netuid, uid);
+	// 	println!( "bonds: {:?} (on validator), {:?} (on server)", bonds[uid as usize][0], bonds[uid as usize][servers[0] as usize]);
+	// }
 }
 
 /// Implace normalizes the passed positive integer weights so that they sum to u16 max value.
