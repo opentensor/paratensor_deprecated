@@ -73,30 +73,30 @@ fn test_weights_err_max_weight_limit() { //TO DO SAM: uncomment when we implemen
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 0, 0 );
 		register_ok_neuron( netuid, 0, 0, 55555 );
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 1 );
-		assert!( ParatensorModule::is_hotkey_registered( netuid, &0 ) );
+		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &0 ) );
 		step_block(1);
 
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 1, 1 );
 		register_ok_neuron( netuid, 1, 1, 65555 );
-		assert!( ParatensorModule::is_hotkey_registered( netuid, &1 ) );
+		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &1 ) );
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 2);
 		step_block(1);
 
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 2, 2 );
 		register_ok_neuron( netuid, 2, 2, 75555 );
-		assert!( ParatensorModule::is_hotkey_registered( netuid, &2 ) );
+		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &2 ) );
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 3 );
 		step_block(1);
 
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 3, 3 );
 		register_ok_neuron( netuid, 3, 3, 95555 );
-		assert!( ParatensorModule::is_hotkey_registered( netuid, &3 ) );
+		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &3 ) );
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 4);
 		step_block(1);
 
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 4, 4 );
 		register_ok_neuron( netuid, 4, 4, 35555 );
-		assert!( ParatensorModule::is_hotkey_registered( netuid, &4 ) );
+		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &4 ) );
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 5);
 		step_block(1);
 

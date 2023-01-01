@@ -73,7 +73,7 @@ impl<T: Config> Pallet<T> {
             Self::create_account_if_non_existent( &h, &c );         
 
             // --- 6.2 Ensure that the pairing is correct.
-            ensure!( Self::account_belongs_to_coldkey( &h, &c ), Error::<T>::NonAssociatedColdKey );
+            ensure!( Self::coldkey_owns_hotkey( &c, &h ), Error::<T>::NonAssociatedColdKey );
         }
 
         // --- 7. Fill all the slots and erase the previous owners.
@@ -101,6 +101,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // --- 8. Increase subnetwork n to amount of hotkeys.
+        // TODO this is wrong.
         SubnetworkN::<T>::insert( netuid, hotkeys.len() as u16 );
 
         // --- 9. Deposit successful event.
@@ -221,7 +222,7 @@ impl<T: Config> Pallet<T> {
         Self::create_account_if_non_existent( &hotkey, &coldkey );         
 
         // --- 11. Ensure that the pairing is correct.
-        ensure!( Self::account_belongs_to_coldkey( &hotkey, &coldkey ), Error::<T>::NonAssociatedColdKey );
+        ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
 
         // --- 12. Append neuron or prune it.
         let subnetwork_uid: u16;
@@ -269,10 +270,10 @@ impl<T: Config> Pallet<T> {
                 // --- 3. We cant be in the top percentile of an empty network.
                 if Self::get_subnetwork_n( netuid_b ) == 0 { return false; }
 
-                // --- 4. First checkt to see if this hotkey is already registered on this network.
+                // --- 4. First check to see if this hotkey is already registered on this network.
                 // If we are not registered we trivially fail the requirement.
-                if !Self::is_hotkey_registered( netuid_b, hotkey ) { return false; }
-                let uid_b: u16 = Self::get_neuron_for_net_and_hotkey( netuid_b, hotkey ).unwrap();
+                if !Self::is_hotkey_registered_on_network( netuid_b, hotkey ) { return false; }
+                let uid_b: u16 = Self::get_uid_for_net_and_hotkey( netuid_b, hotkey ).unwrap();
 
                 // --- 5. Next, count how many keys on the connected network have a better prunning score than
                 // our target network.

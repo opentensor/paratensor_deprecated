@@ -150,6 +150,30 @@ pub mod pallet {
 	#[pallet::storage] /// --- SingleMap hotkey --> Owning Coldkey
     pub type GlobalAccounts<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
 
+	/// =========================
+	/// ==== New Accounts ====
+	/// =========================
+	#[pallet::type_value] 
+	pub fn DefaultTake<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultHCStake<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
+
+	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
+    pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
+	#[pallet::storage] /// --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
+    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
+	#[pallet::storage] /// --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
+    pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T>>;
+	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
+    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultTake<T>>;
+	#[pallet::storage] /// --- DMAP: ( cold, hot ) --> stake | Returns the stake under a hotkey prefixed by coldkey.
+    pub type ColdStake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
+	#[pallet::storage] /// --- DMAP: ( cold, hot ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
+    pub type HotStake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
+
+
 	/// =====================================
 	/// ==== Difficulty / Registrations =====
 	/// =====================================
@@ -438,7 +462,9 @@ pub mod pallet {
 		/// --- Event created when a network connection requirement is added.
 		NetworkConnectionAdded( u16, u16, u16 ),
 		/// --- Event created when a network connection requirement is removed.
-		NetworkConnectionRemoved( u16, u16 )
+		NetworkConnectionRemoved( u16, u16 ),
+		/// --- Event created to signal a hotkey has become a delegate.
+		DelegateAdded( T::AccountId, T::AccountId, u64 )
 	}
 	
 	/// ================

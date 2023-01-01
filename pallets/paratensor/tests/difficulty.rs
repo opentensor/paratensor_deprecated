@@ -38,9 +38,9 @@ fn test_registration_difficulty_adjustment() {
     	register_ok_neuron( netuid, hotkey0, coldkey0, 39420842 );
     	register_ok_neuron( netuid, hotkey1, coldkey1, 12412392 );
 		register_ok_neuron( netuid, hotkey2, coldkey2, 21813123 );
-        assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0 ).unwrap(), hotkey0 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1 ).unwrap(), hotkey1 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 2 ).unwrap(), hotkey2 );
+        assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0 ).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1 ).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 2 ).unwrap(), hotkey2 );
 
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 3); // All 3 are registered.
         assert_eq!( ParatensorModule::get_registrations_this_block( netuid ), 3 ); // 3 Registrations.
@@ -62,9 +62,9 @@ fn test_registration_difficulty_adjustment() {
         register_ok_neuron( netuid, hotkey0 + 1, coldkey0 + 1, 3942084 );
     	register_ok_neuron( netuid, hotkey1 + 1, coldkey1 + 1, 1241239 );
 		register_ok_neuron( netuid, hotkey2 + 1, coldkey2 + 1, 2181312 );
-        assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0 ).unwrap(), hotkey0 + 1); // replace 0
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1 ).unwrap(), hotkey1 + 1); // replace 1
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 2 ).unwrap(), hotkey2 + 1); // replace 2
+        assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0 ).unwrap(), hotkey0 + 1); // replace 0
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1 ).unwrap(), hotkey1 + 1); // replace 1
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 2 ).unwrap(), hotkey2 + 1); // replace 2
         assert_eq!( ParatensorModule::get_registrations_this_block( netuid ), 3 ); // Registrations have been erased.
         assert_eq!( ParatensorModule::get_registrations_this_interval( netuid ), 3 ); // Registrations this interval = 3
 
@@ -77,9 +77,9 @@ fn test_registration_difficulty_adjustment() {
     	register_ok_neuron( netuid, hotkey0 + 2, coldkey0 + 2, 394208420 );
     	register_ok_neuron( netuid, hotkey1 + 2, coldkey1 + 2, 124123920 );
 		register_ok_neuron( netuid, hotkey2 + 2, coldkey2 + 2, 218131230 );
-        assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0 ).unwrap(), hotkey0 + 2); // replace 0
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1 ).unwrap(), hotkey1 + 2); // replace 1
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 2 ).unwrap(), hotkey2 + 2); // replace 2
+        assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0 ).unwrap(), hotkey0 + 2); // replace 0
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1 ).unwrap(), hotkey1 + 2); // replace 1
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 2 ).unwrap(), hotkey2 + 2); // replace 2
         assert_eq!( ParatensorModule::get_registrations_this_block( netuid ), 3 ); // Registrations have been erased.
 
         // We have 6 registrations this adjustment interval.

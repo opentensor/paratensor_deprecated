@@ -55,11 +55,11 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
 
         // --- 3. Check to see if the hotkey is registered to the passed network.
-        ensure!( Self::is_hotkey_registered( netuid, &hotkey ), Error::<T>::NotRegistered );
+        ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
 
         // --- 4. Get the neuron uid of associated hotkey on network netuid.
         let neuron_uid;
-        match Self::get_neuron_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
+        match Self::get_uid_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
         // --- 5. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
@@ -104,7 +104,7 @@ impl<T: Config> Pallet<T> {
     /// Checks for any invalid uids on this network.
     pub fn contains_invalid_uids( netuid: u16, uids: &Vec<u16> ) -> bool {
         for uid in uids {
-            if !Self::is_uid_exist( netuid, *uid ) {
+            if !Self::is_uid_exist_on_network( netuid, *uid ) {
                 return true;
             }
         }

@@ -131,7 +131,7 @@ fn test_serving_set_metadata() {
         assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
         //
         let neuron_uid ;
-        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id) {
+        match ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id) {
             Ok(k) => neuron_uid = k,
             Err(e) => panic!("Error: {:?}", e),
         } 

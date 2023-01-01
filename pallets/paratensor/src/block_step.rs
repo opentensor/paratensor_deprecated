@@ -103,7 +103,7 @@ impl<T: Config> Pallet<T> {
         for (uid_i, hotkey_i) in <Keys<T> as IterableStorageDoubleMap<u16, u16, T::AccountId>>::iter_prefix(netuid) { 
             // Check uids.
             let stake_to_add: u64 = tao_emission[ uid_i as usize ];
-            Self::add_stake_to_neuron_hotkey_account( &hotkey_i, stake_to_add );
+            Self::emit_inflation_through_hotkey_account( &hotkey_i, stake_to_add );
         }
 
         remainder
