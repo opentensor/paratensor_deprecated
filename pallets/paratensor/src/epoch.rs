@@ -3,7 +3,7 @@ use sp_runtime::sp_std::if_std;
 use frame_support::sp_std::vec;
 use frame_support::inherent::Vec;
 use substrate_fixed::transcendental::exp;
-use substrate_fixed::types::I32F32;
+use substrate_fixed::types::{I32F32, I64F64};
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
@@ -31,7 +31,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let orig_stake: Vec<I32F32> = Self::get_stake( netuid );
+        let orig_stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
         let mut stake: Vec<I32F32> = orig_stake.clone();
         inplace_mask_vector( &inactive, &mut stake );
         inplace_normalize( &mut stake );
@@ -112,9 +112,7 @@ impl<T: Config> Pallet<T> {
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &stake ) { // no active stake
-                let mut unmasked_stake: Vec<I32F32> = orig_stake.clone(); // do not mask inactive
-                inplace_normalize( &mut unmasked_stake );
-                normalized_emission = unmasked_stake;
+                normalized_emission = orig_stake.clone(); // do not mask inactive, assumes orig_stake is normalized
             }
             else {
                 normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
@@ -167,7 +165,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive: {:?}", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let orig_stake: Vec<I32F32> = Self::get_stake( netuid );
+        let orig_stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
         let mut stake: Vec<I32F32> = orig_stake.clone();
         if debug { if_std! { println!( "S: {:?}", stake.clone() );}}
         inplace_mask_vector( &inactive, &mut stake ); // mask inactive stake
@@ -249,9 +247,7 @@ impl<T: Config> Pallet<T> {
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &stake ) { // no active stake
-                let mut unmasked_stake: Vec<I32F32> = orig_stake.clone(); // do not mask inactive
-                inplace_normalize( &mut unmasked_stake );
-                normalized_emission = unmasked_stake;
+                normalized_emission = orig_stake.clone(); // do not mask inactive, assumes orig_stake is normalized
             }
             else {
                 normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
@@ -304,17 +300,19 @@ impl<T: Config> Pallet<T> {
     pub fn get_dividend( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
     pub fn get_emission( netuid:u16, neuron_uid: u16 ) -> u64 { Emission::<T>::get( netuid, neuron_uid )  }
 
-    pub fn get_stake( netuid:u16 ) -> Vec<I32F32> {
+    pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
-        let mut stake: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ]; 
+        let mut stake_64: Vec<I64F64> = vec![ I64F64::from_num(0.0); n ]; 
         for neuron_uid in 0..n {
             if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
                 let hotkey: T::AccountId = Keys::<T>::get( netuid, neuron_uid as u16 );
                 if Stake::<T>::contains_key( hotkey.clone() ) {
-                    stake[neuron_uid as usize] = I32F32::from_num( Stake::<T>::get( hotkey ) ); 
+                    stake_64[neuron_uid as usize] = I64F64::from_num( Stake::<T>::get( hotkey ) ); 
                 }
             }
         }
+        inplace_normalize_64( &mut stake_64 );
+        let stake: Vec<I32F32> = vec_fixed64_to_fixed32( stake_64 );
         stake
     }
 
@@ -392,6 +390,9 @@ pub fn fixed_to_u16( x: I32F32 ) -> u16 { x.to_num::<u16>() }
 pub fn fixed_to_u64( x: I32F32 ) -> u64 { x.to_num::<u64>() }
 
 #[allow(dead_code)]
+pub fn fixed64_to_fixed32( x: I64F64 ) -> I32F32 { I32F32::from_num( x ) }
+
+#[allow(dead_code)]
 pub fn u16_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) }
 
 #[allow(dead_code)]
@@ -399,6 +400,9 @@ pub fn u16_proportion_to_fixed( x: u16 ) -> I32F32 { I32F32::from_num( x ) / I32
 
 #[allow(dead_code)]
 pub fn fixed_proportion_to_u16( x: I32F32 ) -> u16 { fixed_to_u16( x * I32F32::from_num( u16::MAX )) }
+
+#[allow(dead_code)]
+pub fn vec_fixed64_to_fixed32( vec: Vec<I64F64> ) -> Vec<I32F32> { vec.into_iter().map(|e| fixed64_to_fixed32(e) ).collect() }
 
 #[allow(dead_code)]
 pub fn vec_u16_proportions_to_fixed( vec: Vec<u16> ) -> Vec<I32F32> { vec.into_iter().map(|e| u16_proportion_to_fixed(e) ).collect() }
@@ -430,6 +434,15 @@ pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
 pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
     let x_sum: I32F32 = x.iter().sum();
     if x_sum == I32F32::from_num( 0.0 as f32 ){ return }
+    for i in 0..x.len() {
+        x[i] = x[i]/x_sum;
+    }
+}
+
+#[allow(dead_code)]
+pub fn inplace_normalize_64( x: &mut Vec<I64F64> ) {
+    let x_sum: I64F64 = x.iter().sum();
+    if x_sum == I64F64::from_num( 0 ){ return }
     for i in 0..x.len() {
         x[i] = x[i]/x_sum;
     }
@@ -765,17 +778,28 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use substrate_fixed::types::I32F32;
+    use substrate_fixed::types::{I32F32, I64F64};
     use crate::epoch;
 
     fn assert_float_compare(a: I32F32, b: I32F32, epsilon: I32F32 ) {
         assert!( I32F32::abs( a - b ) <= epsilon, "a({:?}) != b({:?})", a, b);
+    }
+
+    fn assert_float_compare_64(a: I64F64, b: I64F64, epsilon: I64F64 ) {
+        assert!( I64F64::abs( a - b ) <= epsilon, "a({:?}) != b({:?})", a, b);
     }
     
     fn assert_vec_compare(va: &Vec<I32F32>, vb: &Vec<I32F32>, epsilon: I32F32) {
         assert!(va.len() == vb.len());
         for i in 0..va.len(){
             assert_float_compare(va[i], vb[i], epsilon);
+        }  
+    }
+    
+    fn assert_vec_compare_64(va: &Vec<I64F64>, vb: &Vec<I64F64>, epsilon: I64F64) {
+        assert!(va.len() == vb.len());
+        for i in 0..va.len(){
+            assert_float_compare_64(va[i], vb[i], epsilon);
         }  
     }
     
@@ -802,6 +826,35 @@ mod tests {
 
     fn vec_to_fixed(vector: &Vec<f32>) -> Vec<I32F32> {
         vector.iter().map( | x | I32F32::from_num( *x ) ).collect()
+    }
+
+    #[test]
+    fn test_u64_normalization() {
+        let min: u64 = 1;
+        let min32: u64 = 4_889_444; // 21_000_000_000_000_000 / 4_294_967_296
+        let mid: u64 = 10_500_000_000_000_000;
+        let max: u64 = 21_000_000_000_000_000;
+        let min_64: I64F64 = I64F64::from_num(min);
+        let min32_64: I64F64 = I64F64::from_num(min32);
+        let mid_64: I64F64 = I64F64::from_num(mid);
+        let max_64: I64F64 = I64F64::from_num(max);
+        let max_sum: I64F64 = I64F64::from_num(max);
+        let min_frac: I64F64 = min_64 / max_sum;
+        assert_eq!(min_frac, I64F64::from_num(0.0000000000000000476));
+        let min_frac_32: I32F32 = I32F32::from_num(min_frac);
+        assert_eq!(min_frac_32, I32F32::from_num(0));
+        let min32_frac: I64F64 = min32_64 / max_sum;
+        assert_eq!(min32_frac,    I64F64::from_num(0.00000000023283066664));
+        let min32_frac_32: I32F32 = I32F32::from_num(min32_frac);
+        assert_eq!(min32_frac_32, I32F32::from_num(0.0000000002));
+        let half: I64F64 = mid_64 / max_sum;
+        assert_eq!(half, I64F64::from_num(0.5));
+        let half_32: I32F32 = I32F32::from_num(half);
+        assert_eq!(half_32, I32F32::from_num(0.5));
+        let one: I64F64 = max_64 / max_sum;
+        assert_eq!(one, I64F64::from_num(1));
+        let one_32: I32F32 = I32F32::from_num(one);
+        assert_eq!(one_32, I32F32::from_num(1));
     }
 
     #[test]
@@ -934,6 +987,17 @@ mod tests {
         let mut x2: Vec<I32F32> = vec![ I32F32::from_num(-1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]; 
         epoch::inplace_normalize(&mut x2);
         assert_vec_compare( &x2, &vec![ I32F32::from_num(-0.0256410255),  I32F32::from_num(0.2564102563),  I32F32::from_num(0.769230769)], epsilon );
+    }
+
+    #[test]
+    fn test_math_inplace_normalize_64() {
+        let epsilon: I64F64 = I64F64::from_num(0.0001);
+        let mut x1: Vec<I64F64> = vec![ I64F64::from_num(1.0),  I64F64::from_num(10.0),  I64F64::from_num(30.0)]; 
+        epoch::inplace_normalize_64(&mut x1);
+        assert_vec_compare_64( &x1, &vec![ I64F64::from_num(0.0243902437),  I64F64::from_num(0.243902439),  I64F64::from_num(0.7317073171)], epsilon );
+        let mut x2: Vec<I64F64> = vec![ I64F64::from_num(-1.0),  I64F64::from_num(10.0),  I64F64::from_num(30.0)]; 
+        epoch::inplace_normalize_64(&mut x2);
+        assert_vec_compare_64( &x2, &vec![ I64F64::from_num(-0.0256410255),  I64F64::from_num(0.2564102563),  I64F64::from_num(0.769230769)], epsilon );
     }
 
     #[test]
