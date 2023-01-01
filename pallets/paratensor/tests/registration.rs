@@ -79,14 +79,14 @@ fn test_registration_ok() {
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 1);
 
 		//check if hotkey is added to the Hotkeys
-		assert_eq!(ParatensorModule::get_coldkey_for_hotkey(&hotkey_account_id), coldkey_account_id);
+		assert_eq!(ParatensorModule::get_owning_coldkey_for_hotkey(&hotkey_account_id), coldkey_account_id);
 
 		// Check if the neuron has added to the Keys
-		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
 		
-		assert!(ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
+		assert!(ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).is_ok());
 		// Check if neuron has added to Uids
-		let neuro_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+		let neuro_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
 		assert_eq!(neuro_uid, neuron_uid);
 
 		// Check if the balance of this hotkey account for this subnetwork == 0
@@ -273,7 +273,7 @@ fn test_registration_pruning() {
 		
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		//
-		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
 		ParatensorModule::set_pruning_score(netuid, neuron_uid, 2);
 		//
 		let (nonce1, work1): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 11231312312);
@@ -281,7 +281,7 @@ fn test_registration_pruning() {
 		let coldkey_account_id1 = 668;
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id1), netuid, block_number, nonce1, work1, hotkey_account_id1, coldkey_account_id1));
 		//
-		let neuron_uid1 = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id1).unwrap();
+		let neuron_uid1 = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id1).unwrap();
 		ParatensorModule::set_pruning_score(netuid, neuron_uid1, 3);
 		//
 		let (nonce2, work2): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 212312414);
@@ -305,8 +305,8 @@ fn test_registration_get_neuron_metadata() {
 
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, block_number, nonce0, work0, hotkey_account_id, coldkey_account_id));
 		//
-		//let neuron_id = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_account_id);
-		let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
+		//let neuron_id = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
+		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
 		let neuron: AxonMetadataOf = ParatensorModule::get_neuron_metadata(netuid, neuron_uid);
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
@@ -426,24 +426,24 @@ fn test_full_pass_through() {
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
 
 		// Check the uids exist.
-		assert!( ParatensorModule::is_uid_exist( netuid0, 0) );
-		assert!( ParatensorModule::is_uid_exist( netuid1, 0) );
-		assert!( ParatensorModule::is_uid_exist( netuid2, 0) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid0, 0) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid1, 0) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid2, 0) );
 
 		// Check the other exists.
-		assert!( ParatensorModule::is_uid_exist( netuid0, 1) );
-		assert!( ParatensorModule::is_uid_exist( netuid1, 1) );
-		assert!( ParatensorModule::is_uid_exist( netuid2, 1) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid0, 1) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid1, 1) );
+		assert!( ParatensorModule::is_uid_exist_on_network( netuid2, 1) );
 
 		// Get the hotkey under each uid.
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 0).unwrap(), hotkey0 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 0).unwrap(), hotkey0 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 0).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 0).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 0).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 0).unwrap(), hotkey0 );
 
 		// Get the hotkey under the other uid.
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 1).unwrap(), hotkey1 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 1).unwrap(), hotkey1 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 1).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 1).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 1).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 1).unwrap(), hotkey1 );
 
 		// Check for replacement.
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 2);
@@ -466,9 +466,9 @@ fn test_full_pass_through() {
 		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid2), 3);
 
 		// Check the hotkeys are expected.
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid0, 0 ).unwrap(), hotkey2 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid1, 0 ).unwrap(), hotkey2 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid2, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 0 ).unwrap(), hotkey2 );
 	});
 }
 
@@ -490,8 +490,8 @@ fn test_bulk_register() {
 		ParatensorModule::set_max_allowed_uids( netuid, 2 );
 		register_ok_neuron( netuid, 11, 11, 39420842 );
     	register_ok_neuron( netuid, 12, 12, 12412392 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 11 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 12 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0).unwrap(), 11 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1).unwrap(), 12 );
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 2);
 
 		// Lets try to bulk register on a non existent network.
@@ -510,17 +510,17 @@ fn test_bulk_register() {
 		assert_eq!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 11,12 ], vec![ 0,1 ]), Err(Error::<Test>::NonAssociatedColdKey.into()) );
 
 		// Lets register bulk successfully (0,1) --> (11, 12)
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 11 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 12 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0).unwrap(), 11 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1).unwrap(), 12 );
 		assert_ok!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, vec![ 0,1 ], vec![ 0,1 ]) );
 
 		// Check uids are correct.
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 0).unwrap(), 0 );
-		assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, 1).unwrap(), 1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 0).unwrap(), 0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, 1).unwrap(), 1 );
 		
 		// Check coldkey -- hotkey pairing.
-		assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &0 ), 0 );
-		assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &1 ), 1 );
+		assert_eq!( ParatensorModule::get_owning_coldkey_for_hotkey( &0 ), 0 );
+		assert_eq!( ParatensorModule::get_owning_coldkey_for_hotkey( &1 ), 1 );
 
 		// Lets register bulk a huge set.
 		let hotkeys: Vec<u64> = (0..4096).collect();
@@ -530,8 +530,8 @@ fn test_bulk_register() {
 		assert_ok!( ParatensorModule::sudo_bulk_register(<<Test as Config>::Origin>::root(), 0, hotkeys.clone(), coldkeys.clone() ) );
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 4096 );
 		for i in 0..4096 {
-			assert_eq!( ParatensorModule::get_hotkey_for_net_and_neuron( netuid, i as u16 ).unwrap(), i as u64 );
-			assert_eq!( ParatensorModule::get_coldkey_for_hotkey( &(i as u64) ), i as u64  );
+			assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, i as u16 ).unwrap(), i as u64 );
+			assert_eq!( ParatensorModule::get_owning_coldkey_for_hotkey( &(i as u64) ), i as u64  );
 		}
 
 	});
@@ -587,14 +587,14 @@ fn test_network_connection_requirement() {
 		// Lets register key 3 with lower prunning score.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 9942084);
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[2] ), netuid_b, 0, nonce, work, hotkeys[2], coldkeys[2]) );
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 0); // Set prunning score to 0.
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[1] ).unwrap(), 0); // Set prunning score to 0.
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[0] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[1] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[0] ).unwrap(), 0); // Set prunning score to 0.
 
 		// Lets register key 4 with higher prunining score.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 10142084);
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[3] ), netuid_b, 0, nonce, work, hotkeys[3], coldkeys[3]) );
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_neuron_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 1); // Set prunning score to 1.
+		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 1); // Set prunning score to 1.
 
 		// Attempted register of key 3 fails because of bad prunning score on B.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 11142084);

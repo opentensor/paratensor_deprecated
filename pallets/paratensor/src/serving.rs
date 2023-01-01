@@ -41,13 +41,13 @@ impl<T: Config> Pallet<T> {
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 
         // --- 3. We make validy checks on the passed data.
-        ensure!( Self::is_hotkey_registered(netuid, &hotkey_id), Error::<T>::NotRegistered );        
+        ensure!( Self::is_hotkey_registered_on_network(netuid, &hotkey_id), Error::<T>::NotRegistered );        
         ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
         // --- 4. We get the uid associated with this hotkey account.
         let neuron_uid ;
-        match Self::get_neuron_for_net_and_hotkey(netuid, &hotkey_id) {
+        match Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id) {
             Ok(k) => neuron_uid = k,
             Err(e) => panic!("Error: {:?}", e),
         } 

@@ -394,15 +394,15 @@ fn test_remove_stake_from_hotkey_account_registered_in_various_networks() {
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		register_ok_neuron( netuid_ex, hotkey_id, coldkey_id, 48141209);
 		
-		//let neuron_uid = ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_id);
+		//let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_id);
 		let neuron_uid ;
-        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid, &hotkey_id) {
+        match ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_id) {
             Ok(k) => neuron_uid = k,
             Err(e) => panic!("Error: {:?}", e),
         } 
-		//let neuron_uid_ex = ParatensorModule::get_neuron_for_net_and_hotkey(netuid_ex, &hotkey_id);
+		//let neuron_uid_ex = ParatensorModule::get_uid_for_net_and_hotkey(netuid_ex, &hotkey_id);
 		let neuron_uid_ex ;
-        match ParatensorModule::get_neuron_for_net_and_hotkey(netuid_ex, &hotkey_id) {
+        match ParatensorModule::get_uid_for_net_and_hotkey(netuid_ex, &hotkey_id) {
             Ok(k) => neuron_uid_ex = k,
             Err(e) => panic!("Error: {:?}", e),
         } 
@@ -539,7 +539,7 @@ fn test_hotkey_belongs_to_coldkey_ok() {
 		add_network(netuid, tempo, 0);
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
-		assert_eq!(ParatensorModule::get_coldkey_for_hotkey(&hotkey_id), coldkey_id);
+		assert_eq!(ParatensorModule::get_owning_coldkey_for_hotkey(&hotkey_id), coldkey_id);
 	});
 }
 // /************************************************************

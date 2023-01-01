@@ -566,7 +566,7 @@ fn test_outdated_weights() {
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
 		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(new_key), netuid, block_number, nonce, work, new_key, new_key));
 		let deregistered_uid: u16 = n-1; // since uid=n-1 only recieved 1/3 of weight, it will get pruned first
-		assert_eq!(new_key, ParatensorModule::get_hotkey_for_net_and_neuron(netuid, deregistered_uid).expect("Not registered"));
+		assert_eq!(new_key, ParatensorModule::get_hotkey_for_net_and_uid(netuid, deregistered_uid).expect("Not registered"));
 		run_to_block( 2 ); // run to next block to outdate weights and bonds set on deregistered uid
 		// === Update weights from only uid=0
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ 2 * (u16::MAX / 3), u16::MAX / 3 ]));
