@@ -42,7 +42,7 @@ fn test_add_stake_ok_no_emission() {
 		ParatensorModule::add_balance_to_coldkey_account( &coldkey_account_id, 10000 );
 
 		// Check we have zero staked before transfer
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_account_id ), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_account_id ), 0);
 
 		// Also total stake should be zero
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
@@ -51,7 +51,7 @@ fn test_add_stake_ok_no_emission() {
 		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, 10000));
 
 		// Check if stake has increased
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_account_id), 10000);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_account_id), 10000);
 
 		// Check if balance has  decreased
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_account_id), 0);
@@ -84,10 +84,10 @@ fn test_dividends_with_run_to_block() {
 		register_ok_neuron(netuid, neuron_dest_hotkey_id, coldkey_account_id, 12323);
 
 		// Add some stake to the hotkey account, so we can test for emission before the transfer takes place
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&neuron_src_hotkey_id, initial_stake);
+		ParatensorModule::increase_stake_on_hotkey_account(&neuron_src_hotkey_id, initial_stake);
 
 		// Check if the initial stake has arrived
-		assert_eq!( ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_src_hotkey_id), initial_stake );
+		assert_eq!( ParatensorModule::get_total_stake_for_hotkey(&neuron_src_hotkey_id), initial_stake );
 
 		// Check if all three neurons are registered
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 3 );
@@ -96,10 +96,10 @@ fn test_dividends_with_run_to_block() {
 		run_to_block( 2 );
 
 		// Check if the stake is equal to the inital stake + transfer
-		assert_eq!(ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_src_hotkey_id), initial_stake);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&neuron_src_hotkey_id), initial_stake);
 
 		// Check if the stake is equal to the inital stake + transfer
-		assert_eq!(ParatensorModule::get_stake_of_neuron_hotkey_account(&neuron_dest_hotkey_id), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&neuron_dest_hotkey_id), 0);
     });
 }
 
@@ -115,16 +115,13 @@ fn test_add_stake_err_signature() {
 }
 
 #[test]
-fn test_add_stake_not_registered_key_pair() { //it must pass since we are not checking if the hotkey is registered for DAO purposes
+fn test_add_stake_not_registered_key_pair() {
 	new_test_ext().execute_with(|| {
-		let coldkey_account_id = 435445; // Not active id
+		let coldkey_account_id = 435445;
 		let hotkey_account_id = 54544;
 		let amount = 1337;
-
-		// Put the balance on the account
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey_account_id, 1800);
-		
-		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount));
+		assert_eq!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount), Err(Error::<Test>::NotRegistered.into()));
 	});
 }
 
@@ -209,17 +206,17 @@ fn test_remove_stake_ok_no_emission() {
 
 		// Some basic assertions
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_account_id), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_account_id), 0);
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_account_id), 0);
 
 		// Give the neuron some stake to remove
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_account_id, amount);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_account_id, amount);
 
 		// Do the magic
 		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey_account_id), hotkey_account_id, amount));
 
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_account_id), amount as u128);
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_account_id), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_account_id), 0);
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
 	});
 }
@@ -271,7 +268,7 @@ fn test_remove_stake_no_enough_stake() {
 		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_id), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), 0);
 
 		let result = ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey_id), hotkey_id, amount);
 		assert_eq!(result, Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
@@ -331,10 +328,10 @@ fn test_add_stake_to_hotkey_account_ok() {
 		// There is not stake in the system at first, so result should be 0;
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
 
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, amount);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, amount);
 
 		// The stake that is now in the account, should equal the amount
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_id), amount);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), amount);
 
 		// The total stake should have been increased by the amount -> 0 + amount = amount
 		assert_eq!(ParatensorModule::get_total_stake(), amount);
@@ -360,17 +357,17 @@ fn test_remove_stake_from_hotkey_account() {
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 
 		// Add some stake that can be removed
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, amount);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, amount);
 
 		// Prelimiary checks
 		assert_eq!(ParatensorModule::get_total_stake(), amount);
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_id), amount);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), amount);
 
 		// Remove stake
-		ParatensorModule::remove_stake_from_hotkey_account(&hotkey_id, amount);
+		ParatensorModule::decrease_stake_on_hotkey_account(&hotkey_id, amount);
 
 		// The stake on the hotkey account should be 0
-		assert_eq!(ParatensorModule::get_stake_for_hotkey(&hotkey_id), 0);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), 0);
 
 		// The total amount of stake should be 0
 		assert_eq!(ParatensorModule::get_total_stake(), 0);
@@ -407,16 +404,16 @@ fn test_remove_stake_from_hotkey_account_registered_in_various_networks() {
             Err(e) => panic!("Error: {:?}", e),
         } 
 		//Add some stake that can be removed
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, amount);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, amount);
 
-		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid, neuron_uid), amount);
-		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid_ex, neuron_uid_ex), amount);
+		assert_eq!(ParatensorModule::get_stake_for_uid_and_subnetwork(netuid, neuron_uid), amount);
+		assert_eq!(ParatensorModule::get_stake_for_uid_and_subnetwork(netuid_ex, neuron_uid_ex), amount);
 
 		// Remove stake
-		ParatensorModule::remove_stake_from_hotkey_account(&hotkey_id, amount);
+		ParatensorModule::decrease_stake_on_hotkey_account(&hotkey_id, amount);
 		//
-		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid, neuron_uid), 0);
-		assert_eq!(ParatensorModule::get_neuron_stake_for_subnetwork(netuid_ex, neuron_uid_ex), 0);
+		assert_eq!(ParatensorModule::get_stake_for_uid_and_subnetwork(netuid, neuron_uid), 0);
+		assert_eq!(ParatensorModule::get_stake_for_uid_and_subnetwork(netuid_ex, neuron_uid_ex), 0);
 	});
 }
 
@@ -428,23 +425,9 @@ fn test_remove_stake_from_hotkey_account_registered_in_various_networks() {
 fn test_increase_total_stake_ok() {
 	new_test_ext().execute_with(|| {
         let increment = 10000;
-
         assert_eq!(ParatensorModule::get_total_stake(), 0);
 	    ParatensorModule::increase_total_stake(increment);
 		assert_eq!(ParatensorModule::get_total_stake(), increment);
-	});
-}
-
-#[test]
-#[should_panic]
-fn test_increase_total_stake_panic_overflow() {
-	new_test_ext().execute_with(|| {
-        let initial_total_stake = u64::MAX;
-		let increment : u64 = 1;
-
-		// Setup initial total stake
-		ParatensorModule::increase_total_stake(initial_total_stake);
-		ParatensorModule::increase_total_stake(increment); // Should trigger panic
 	});
 }
 
@@ -465,18 +448,6 @@ fn test_decrease_total_stake_ok() {
 	});
 }
 
-#[test]
-#[should_panic]
-fn test_decrease_total_stake_panic_underflow() {
-	new_test_ext().execute_with(|| {
-        let initial_total_stake = 10000;
-		let decrement = 20000;
-
-		ParatensorModule::increase_total_stake(initial_total_stake);
-		ParatensorModule::decrease_total_stake(decrement); // Should trigger panic
-	});
-}
-
 // /************************************************************
 // 	staking::add_balance_to_coldkey_account() tests
 // ************************************************************/
@@ -485,7 +456,6 @@ fn test_add_balance_to_coldkey_account_ok() {
 	new_test_ext().execute_with(|| {
         let coldkey_id = 4444322;
 		let amount = 50000;
-
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey_id, amount);
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_id), amount);
 	});
@@ -499,11 +469,9 @@ fn test_remove_balance_from_coldkey_account_ok() {
 	new_test_ext().execute_with(|| {
 		let coldkey_account_id = 434324; // Random
 		let ammount = 10000; // Arbitrary
-
 		// Put some $$ on the bank
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey_account_id, ammount);
 		assert_eq!(ParatensorModule::get_coldkey_balance(&coldkey_account_id), ammount);
-
 		// Should be able to withdraw without hassle
 		let result = ParatensorModule::remove_balance_from_coldkey_account(&coldkey_account_id, ammount);
 		assert_eq!(result, true);
@@ -534,10 +502,7 @@ fn test_hotkey_belongs_to_coldkey_ok() {
         let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
-
-		//add network
-		add_network(netuid, tempo, 0);
-		
+		add_network(netuid, tempo, 0);		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
 		assert_eq!(ParatensorModule::get_owning_coldkey_for_hotkey(&hotkey_id), coldkey_id);
 	});
@@ -551,7 +516,6 @@ fn test_can_remove_balane_from_coldkey_account_ok() {
         let coldkey_id = 87987984;
 		let initial_amount = 10000;
 		let remove_amount = 5000;
-
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey_id, initial_amount);
 		assert_eq!(ParatensorModule::can_remove_balance_from_coldkey_account(&coldkey_id, remove_amount), true);
 	});
@@ -563,7 +527,6 @@ fn test_can_remove_balance_from_coldkey_account_err_insufficient_balance() {
 		let coldkey_id = 87987984;
 		let initial_amount = 10000;
 		let remove_amount = 20000;
-
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey_id, initial_amount);
 		assert_eq!(ParatensorModule::can_remove_balance_from_coldkey_account(&coldkey_id, remove_amount), false);
 	});
@@ -580,16 +543,12 @@ fn test_has_enough_stake_yes() {
         let netuid = 1;
 		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
-
-		//add network
 		add_network(netuid, tempo, 0);
-		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
-
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, intial_amount);
-        ParatensorModule::get_stake_for_hotkey(&hotkey_id);
-        //
-		assert_eq!(ParatensorModule::has_enough_stake(&hotkey_id, 5000), true);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, intial_amount);
+		assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), 10000);
+		assert_eq!(ParatensorModule::get_stake_for_coldkey_and_hotkey(&coldkey_id, &hotkey_id), 10000);
+		assert_eq!(ParatensorModule::has_enough_stake(&coldkey_id, &hotkey_id, 5000), true);
 	});
 }
 
@@ -602,13 +561,10 @@ fn test_has_enough_stake_no() {
         let netuid = 1;
 		let tempo: u16 = 13;
 		let start_nonce: u64 = 0;
-
-		//add network
 		add_network(netuid, tempo, 0);
-		
 		register_ok_neuron( netuid, hotkey_id, coldkey_id, start_nonce);
-		ParatensorModule::add_stake_to_neuron_hotkey_account(&hotkey_id, intial_amount);
-		assert_eq!(ParatensorModule::has_enough_stake(&hotkey_id, 5000), false);
+		ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, intial_amount);
+		assert_eq!(ParatensorModule::has_enough_stake(&coldkey_id, &hotkey_id, 5000), false);
 
 	});
 }

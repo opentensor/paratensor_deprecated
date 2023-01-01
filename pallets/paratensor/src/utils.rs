@@ -60,7 +60,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_validator_exclude_quantile( netuid: u16 ) -> u16 { ValidatorExcludeQuantile::<T>::get( netuid ) }
     pub fn get_registrations_this_interval( netuid: u16 ) -> u16 { RegistrationsThisInterval::<T>::get( netuid ) } 
     pub fn get_max_registratations_per_block( netuid: u16 ) -> u16 { MaxRegistrationsPerBlock::<T>::get( netuid ) } 
-    pub fn get_neuron_stake_for_subnetwork( netuid: u16, neuron_uid: u16) -> u64 { S::<T>::get( netuid, neuron_uid) }
+    pub fn get_uid_stake_for_subnetwork( netuid: u16, neuron_uid: u16) -> u64 { Self::get_total_stake_for_hotkey( &Self::get_hotkey_for_net_and_uid( netuid, neuron_uid ).unwrap() ) }
     pub fn get_target_registrations_per_interval( netuid: u16 ) -> u16 { TargetRegistrationsPerInterval::<T>::get( netuid ) }
     pub fn get_neuron_block_at_registration( netuid: u16, neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get( netuid, neuron_uid )}
 }

@@ -286,11 +286,6 @@ impl<T: Config> Pallet<T> {
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
 
-    // Testing function.
-    pub fn set_stake_for_testing( hotkey: &T::AccountId, stake:u64 ) { 
-        Stake::<T>::insert( hotkey, stake );
-    }
-
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
@@ -313,12 +308,7 @@ impl<T: Config> Pallet<T> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 
         let mut stake: Vec<I32F32> = vec![  I32F32::from_num(0.0); n ]; 
         for neuron_uid in 0..n {
-            if Keys::<T>::contains_key( netuid, neuron_uid as u16 ){
-                let hotkey: T::AccountId = Keys::<T>::get( netuid, neuron_uid as u16 );
-                if Stake::<T>::contains_key( hotkey.clone() ) {
-                    stake[neuron_uid as usize] = I32F32::from_num( Stake::<T>::get( hotkey ) ); 
-                }
-            }
+            stake[neuron_uid as usize] = I32F32::from_num( Self::get_stake_for_uid_and_subnetwork( netuid, neuron_uid as u16 ) );
         }
         stake
     }

@@ -257,6 +257,22 @@ impl<T: Config> Pallet<T> {
         return Uids::<T>::contains_key( netuid, hotkey ) 
     }
 
+    pub fn get_hotkey_for_net_and_uid( netuid: u16, neuron_uid: u16) ->  Result<T::AccountId, DispatchError> {
+        Keys::<T>::try_get(netuid, neuron_uid).map_err(|_err| Error::<T>::NotRegistered.into()) 
+    }
+
+    pub fn get_uid_for_net_and_hotkey( netuid: u16, hotkey: &T::AccountId) -> Result<u16, DispatchError> { 
+        return Uids::<T>::try_get(netuid, &hotkey).map_err(|_err| Error::<T>::NotRegistered.into()) 
+    }
+
+    pub fn get_stake_for_uid_and_subnetwork( netuid: u16, neuron_uid: u16) -> u64 { 
+        if Self::is_uid_exist_on_network( netuid, neuron_uid) {
+            return Self::get_total_stake_for_hotkey( &Self::get_hotkey_for_net_and_uid( netuid, neuron_uid ).unwrap() ) 
+        } else {
+            return 0;
+        }
+    }
+
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
@@ -277,15 +293,6 @@ impl<T: Config> Pallet<T> {
         }
         return number_of_subnets;
     }
-
-    pub fn get_hotkey_for_net_and_uid( netuid: u16, neuron_uid: u16) ->  Result<T::AccountId, DispatchError> {
-        Keys::<T>::try_get(netuid, neuron_uid).map_err(|_err| Error::<T>::NotRegistered.into()) 
-    }
-
-    pub fn get_uid_for_net_and_hotkey( netuid: u16, hotkey: &T::AccountId) -> Result<u16, DispatchError> { 
-        return Uids::<T>::try_get(netuid, &hotkey).map_err(|_err| Error::<T>::NotRegistered.into()) 
-    }
-
 
 
     /// --- Returns true if a network connection exists.

@@ -137,41 +137,29 @@ pub mod pallet {
 	#[pallet::storage] /// ---- StorageItem Total issuance on chain.
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 
-	/// =========================
-	/// ==== Global Accounts ====
-	/// =========================
-	#[pallet::type_value] 
-	pub fn DefaultColdkeyAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
-
-	#[pallet::storage] /// --- Total number of Existing Global Accounts
-	pub type TotalGlobalAccounts<T> = StorageValue<_, u64, ValueQuery>;
-	#[pallet::storage] /// --- SingleMap hotkey --> Stake
-    pub type Stake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery>;
-	#[pallet::storage] /// --- SingleMap hotkey --> Owning Coldkey
-    pub type GlobalAccounts<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T> >;
-
-	/// =========================
-	/// ==== New Accounts ====
-	/// =========================
+	/// ==================
+	/// ==== Accounts ====
+	/// ==================
 	#[pallet::type_value] 
 	pub fn DefaultTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value] 
-	pub fn DefaultHCStake<T: Config>() -> u64 { 0 }
+	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
+	#[pallet::type_value] 
+	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
-	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
-    pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
-	#[pallet::storage] /// --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
-    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
-	#[pallet::storage] /// --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
-    pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultColdkeyAccount<T>>;
+
 	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
     pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultTake<T>>;
-	#[pallet::storage] /// --- DMAP: ( cold, hot ) --> stake | Returns the stake under a hotkey prefixed by coldkey.
-    pub type ColdStake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
-	#[pallet::storage] /// --- DMAP: ( cold, hot ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
-    pub type HotStake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultHCStake<T>>;
+	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
+    pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
+	#[pallet::storage] /// --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
+    pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
+	#[pallet::storage] /// --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
+    pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
+	#[pallet::storage] /// --- DMAP: ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
+    pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
 
 	/// =====================================
