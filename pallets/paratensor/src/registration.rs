@@ -70,7 +70,7 @@ impl<T: Config> Pallet<T> {
         // --- 6. Create all accounts for the passed hot - cold pair.
         for (h, c) in hotkeys.iter().zip( coldkeys.clone() ) {
             // --- 6.1 If the network account does not exist we will create it here.
-            Self::create_account_if_non_existent( &h, &c );         
+            Self::create_account_if_non_existent( &c, &h );         
 
             // --- 6.2 Ensure that the pairing is correct.
             ensure!( Self::coldkey_owns_hotkey( &c, &h ), Error::<T>::NonAssociatedColdKey );
@@ -219,7 +219,7 @@ impl<T: Config> Pallet<T> {
         UsedWork::<T>::insert( &work.clone(), current_block_number );
 
         // --- 10. If the network account does not exist we will create it here.
-        Self::create_account_if_non_existent( &hotkey, &coldkey );         
+        Self::create_account_if_non_existent( &coldkey, &hotkey);         
 
         // --- 11. Ensure that the pairing is correct.
         ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
