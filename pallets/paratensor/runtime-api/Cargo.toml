@@ -1,0 +1,20 @@
+[package]
+name = "paratensor-runtime-api"
+version = "0.0.1"
+edition = "2021"
+authors = ['Cameron Fairchild <https://github.com/camfairchild>']
+repository = 'https://github.com/opentensor/paratensor'
+description = "A pallet that adds a custom runtime API to paratensor"
+license = "MIT"
+
+[dependencies]
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[features]
+default = ["std"]
+std = [
+	"sp-api/std",
+]

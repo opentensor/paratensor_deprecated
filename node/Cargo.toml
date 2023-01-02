@@ -25,6 +25,9 @@ jsonrpc-core = "18.0.0"
 # Local
 bittensor-parachain = { path = "../runtime" }
 
+paratensor-custom-rpc = { path = "../../pallets/paratensor/rpc" }
+paratensor-runtime-api = { path = "../../pallets/paratensor/runtime-api" }
+
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
