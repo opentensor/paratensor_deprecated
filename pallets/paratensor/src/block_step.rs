@@ -109,6 +109,36 @@ impl<T: Config> Pallet<T> {
         remainder
     }
 
+     /// Distributes token inflation through the hotkey based on emission. The call ensures that the inflation
+    /// is distributed onto the accounts in proportion of the stake delegated minus the take. This function
+    /// is called after an epoch to distribute the newly minted stake according to delegation.
+    ///
+    pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64 ) {
+        
+        // --- 1. Check if the hotkey is a delegate. If not we simply pass the stake through to the 
+        // coldkye - hotkey account as normal.
+        if !Self::hotkey_is_delegate( hotkey ) { 
+            Self::increase_stake_on_hotkey_account( &hotkey, emission ); 
+            return; 
+        }
+
+        // --- 2. The hotkey is a delegate. We first distribute a proportion of the emission to the hotkey
+        // directly as a function of its 'take'
+        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
+        let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
+        let remaining_emission: u64 = emission - delegate_take;
+
+        // 3. -- The remaining emission does to the owners in proportion to the stake delegated.
+        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
+            
+            // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
+            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_hotkey_stake, remaining_emission );
+            Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, stake_proportion );
+        }
+        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
+
+    }
+
 
     /// Adjusts the network difficulty of every active network. Reseting state parameters.
     ///
