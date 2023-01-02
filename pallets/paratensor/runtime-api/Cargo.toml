@@ -1,5 +1,5 @@
 [package]
-name = "paratensor-runtime-api"
+name = "paratensor-custom-rpc-runtime-api"
 version = "0.0.1"
 edition = "2021"
 authors = ['Cameron Fairchild <https://github.com/camfairchild>']

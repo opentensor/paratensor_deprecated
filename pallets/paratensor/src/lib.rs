@@ -28,6 +28,7 @@ mod weights;
 mod networks;
 mod serving; 
 mod block_step;
+mod neuron_metadata;
 
 #[frame_support::pallet]
 pub mod pallet {
