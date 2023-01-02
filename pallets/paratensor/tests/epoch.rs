@@ -150,8 +150,8 @@ fn test_512_graph() {
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ), 0 );
 			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 146 ); // Note R = floor(1 / (512 - 64) * 65_535) = 146
-			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
-			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 65535 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 1/(1+exp(-10*(1-0.5))) = 0.9932 => (0.9932*65_535) = floor( 65089.362 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 146 ); // Note I = floor(1 / (512 - 64) * 65_535) = 146
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1116073 ); // Note E = floor(0.5 / (512 - 64) * 1_000_000_000) = 1_116_071 (discrepancy)
@@ -207,8 +207,8 @@ fn test_4096_graph() {
 			for uid in &servers {
 				assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &(*uid as u64) ), 0 );
 				assert_eq!( ParatensorModule::get_rank( netuid, *uid ), 17 ); // Note R = floor(1 / (4096 - 256) * 65_535) = 16
-				assert_eq!( ParatensorModule::get_trust( netuid, *uid ), 0 );
-				assert_eq!( ParatensorModule::get_consensus( netuid, *uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+				assert_eq!( ParatensorModule::get_trust( netuid, *uid ), 65535 );
+				assert_eq!( ParatensorModule::get_consensus( netuid, *uid ), 65096 ); // Note C = 1/(1+exp(-10*(1-0.5))) = 0.9932 => (0.9932*65_535) = floor( 65089.362 )
 				assert_eq!( ParatensorModule::get_incentive( netuid, *uid ), 17 ); // Note I = floor(1 / (4096 - 256) * 65_535) = 16
 				assert_eq!( ParatensorModule::get_dividend( netuid, *uid ), 0 );
 				assert_eq!( ParatensorModule::get_emission( netuid, *uid ), 130209 ); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208 (discrepancy)
@@ -248,7 +248,7 @@ fn test_4096_graph_random_weights() {
 		let (mut rank, mut incentive, mut dividend, mut emission, mut bondv, mut bonds): (Vec<u16>, Vec<u16>, Vec<u16>, Vec<u64>, Vec<I32F32>, Vec<I32F32>) = (vec![], vec![], vec![], vec![], vec![], vec![]);
 		// Dense epoch
 		new_test_ext().execute_with(|| {
-			init_run_epochs(netuid, n, &validators, &servers, epochs, 1, true, 0, false, false);
+			init_run_epochs(netuid, n, &validators, &servers, epochs, 1, true, k, false, false);
 
 			let bond = ParatensorModule::get_bonds( netuid );
 			for uid in 0..n {
@@ -262,7 +262,7 @@ fn test_4096_graph_random_weights() {
 		});
 		// Sparse epoch (same random seed as dense)
 		new_test_ext().execute_with(|| {
-			init_run_epochs(netuid, n, &validators, &servers, epochs, 1, true, 0, true, false);
+			init_run_epochs(netuid, n, &validators, &servers, epochs, 1, true, k, true, false);
 			// Assert that dense and sparse epoch results are equal
 			let bond = ParatensorModule::get_bonds( netuid );
 			for uid in 0..n {
@@ -306,8 +306,8 @@ fn test_16384_graph_sparse() {
 		for uid in servers {
 			assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ), 0 );
 			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 4 ); // Note R = floor(1 / (16384 - 512) * 65_535) = 4
-			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
-			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
+			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 65535 );
+			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 1/(1+exp(-10*(1-0.5))) = 0.9932 => (0.9932*65_535) = floor( 65089.362 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 4 ); // Note I = floor(1 / (16384 - 512) * 65_535) = 4
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 31517 ); // Note E = floor(0.5 / (16384 - 512) * 1_000_000_000) = 31502 (discrepancy)

@@ -66,7 +66,7 @@ impl<T: Config> Pallet<T> {
         // Compute thresholded weights.
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
-        let threshold: I32F32 = I32F32::from_num( 0.01 );
+        let threshold: I32F32 = I32F32::from_num(0.1) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
         if debug { if_std! { println!( "tW:\n{:?}\n", clipped_weights.clone() );}}
 
@@ -211,7 +211,7 @@ impl<T: Config> Pallet<T> {
         // Compute thresholded weights.
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
-        let threshold: I32F32 = I32F32::from_num( 0.01 );
+        let threshold: I32F32 = I32F32::from_num(0.1) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<(u16, I32F32)>> = sparse_clip( &weights, threshold, upper, lower );
         if debug { if_std! { println!( "W (threshold): {:?}", clipped_weights.clone() );}}
 
