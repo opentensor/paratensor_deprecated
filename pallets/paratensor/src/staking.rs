@@ -37,7 +37,7 @@ impl<T: Config> Pallet<T> {
         let coldkey = ensure_signed( origin )?;
  
         // --- 2. Ensure we are delegating an known key.
-        ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NonAssociatedColdKey );    
+        ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    
   
         // --- 3. Ensure that the coldkey is the owner.
         ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );

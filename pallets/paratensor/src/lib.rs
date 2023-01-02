@@ -122,13 +122,21 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
-	/// ===============================
-	/// ==== Global Params Storage ====
-	/// ===============================
+	/// ============================
+	/// ==== Staking + Accounts ====
+	/// ============================
+	#[pallet::type_value] 
+	pub fn DefaultTake<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultBlockEmission<T: Config>() -> u64 {1000000000}
 	#[pallet::type_value] 
+	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
+	#[pallet::type_value] 
 	pub fn DefaultTotalIssuance<T: Config>() -> u64 { T::InitialIssuance::get() }
+	#[pallet::type_value] 
+	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
 	#[pallet::storage] /// ---- StorageItem Global Total Stake.
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
@@ -136,20 +144,6 @@ pub mod pallet {
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] /// ---- StorageItem Total issuance on chain.
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-
-	/// ==================
-	/// ==== Accounts ====
-	/// ==================
-	#[pallet::type_value] 
-	pub fn DefaultTake<T: Config>() -> u64 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
-	#[pallet::type_value] 
-	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
-	#[pallet::type_value] 
-	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
-
-
 	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
     pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultTake<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
@@ -160,7 +154,6 @@ pub mod pallet {
     pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
 	#[pallet::storage] /// --- DMAP: ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
     pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
-
 
 	/// =====================================
 	/// ==== Difficulty / Registrations =====
@@ -215,7 +208,6 @@ pub mod pallet {
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] /// --- DoubleMap: netuid -> netuid -> prunning score.
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
-
 
 	/// ==============================
 	/// ==== Subnetwork Features =====
@@ -379,13 +371,6 @@ pub mod pallet {
 	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Pruning Score
 	pub(super) type PruningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPruningScore<T> >;
 	
-	
-	/// ************************************************************
-	///	-Genesis-Configuration  
-	/// ************************************************************
-	/// ---- Genesis Configuration (Mostly used for testing.)
-	/// TO DO (If we need it) 
-
 	/// ===============
 	/// ==== Events ===
 	/// ===============
@@ -627,6 +612,39 @@ pub mod pallet {
 			weights: Vec<u16>
 		) -> DispatchResult {
 			Self::do_set_weights( origin, netuid, dests, weights )
+		}
+
+		/// --- Sets the key as a delegate.
+		///
+		/// # Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The signature of the caller's coldkey.
+		///
+		/// 	* 'hotkey' (T::AccountId):
+		/// 		- The hotkey we are delegating (must be owned by the coldkey.)
+		///
+		/// 	* 'take' (u64):
+		/// 		- The stake proportion that this hotkey takes from delegations.
+		///
+		/// # Event:
+		/// 	* DelegateAdded;
+		/// 		- On successfully setting a hotkey as a delegate.
+		///
+		/// # Raises:
+		/// 	* 'NotRegistered':
+		/// 		- The hotkey we are delegating is not registered on the network.
+		///
+		/// 	* 'NonAssociatedColdKey':
+		/// 		- The hotkey we are delegating is not owned by the calling coldket.
+		///
+		///
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn become_delegate(
+			origin: OriginFor<T>, 
+			hotkey: T::AccountId, 
+			take: u64	
+		) -> DispatchResult {
+			Self::do_become_delegate(origin, hotkey, take)
 		}
 
 		/// --- Adds stake to a hotkey. The call is made from the
