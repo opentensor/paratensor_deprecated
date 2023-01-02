@@ -172,7 +172,6 @@ impl<T: Config> Pallet<T> {
     pub fn erase_all_network_data(netuid: u16){
 
         // --- 1. Remove incentive mechanism memory.
-        S::<T>::remove_prefix( netuid, None );
         Uids::<T>::remove_prefix( netuid, None );
         Keys::<T>::remove_prefix( netuid, None );
         Rank::<T>::remove_prefix( netuid, None );

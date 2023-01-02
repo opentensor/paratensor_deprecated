@@ -266,6 +266,7 @@ impl<T: Config> Pallet<T> {
 
         // Sync parameter updates.
         for i in 0..n {
+            // TODO(taco): set is active.
             Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
@@ -287,8 +288,10 @@ impl<T: Config> Pallet<T> {
     pub fn set_incentive( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
     pub fn set_dividend( netuid:u16, neuron_uid:u16, dividend:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividend ) }
     pub fn set_pruning( netuid:u16, neuron_uid:u16, pruning:u16) { PruningScores::<T>::insert( netuid, neuron_uid, pruning ) }
+    pub fn set_pruning_score( netuid:u16, neuron_uid: u16, pruning_score: u16 ) { PruningScores::<T>::insert(netuid, neuron_uid, pruning_score); }
     pub fn set_emission( netuid:u16, neuron_uid:u16, emission:u64) { Emission::<T>::insert( netuid, neuron_uid, emission ) }
     pub fn set_bonds( netuid:u16, neuron_uid:u16, bonds:Vec<(u16,u16)>) { Bonds::<T>::insert( netuid, neuron_uid, bonds ) }
+    pub fn set_is_validator( netuid:u16, neuron_uid:u16, is_validator:bool) { IsValidator::<T>::insert( netuid, neuron_uid, is_validator ) }
 
     pub fn get_float_rho( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_rho( netuid ) )  }
     pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
@@ -298,6 +301,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_incentive( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
     pub fn get_dividend( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
     pub fn get_emission( netuid:u16, neuron_uid: u16 ) -> u64 { Emission::<T>::get( netuid, neuron_uid )  }
+    pub fn get_is_validator( netuid: u16, neuron_uid: u16 ) -> bool { IsValidator::<T>::get( netuid, neuron_uid ) }
 
     pub fn get_stake( netuid:u16 ) -> Vec<I32F32> {
         let n: usize = Self::get_subnetwork_n( netuid ) as usize; 

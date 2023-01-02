@@ -117,6 +117,7 @@ parameter_types! {
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
 	pub const InitialValidatorExcludeQuantile: u16 = 10;
+	pub const InitialNAllowedValidators: u16 = 100;
 
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
@@ -155,6 +156,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialPruningScore = InitialPruningScore;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialNAllowedValidators = InitialNAllowedValidators;
 }
 
 // Build genesis storage according to the mock runtime.

@@ -97,6 +97,8 @@ pub mod pallet {
 		type InitialPruningScore: Get<u16>;	
 		#[pallet::constant] /// Initial validator exclude quantile.
 		type InitialValidatorExcludeQuantile: Get<u16>;
+		#[pallet::constant] /// Initial allowed validators per network.
+		type InitialNAllowedValidators: Get<u16>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -259,6 +261,8 @@ pub mod pallet {
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
+	#[pallet::type_value] 
+	pub fn DefaultNAllowedValidators<T: Config>() -> u16 { T::InitialNAllowedValidators::get() }
 	#[pallet::type_value]
 	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
 	#[pallet::type_value]
@@ -295,6 +299,8 @@ pub mod pallet {
 	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MinAllowedWeights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
+	#[pallet::storage] /// --- SingleMap netuid --> n_allowed_validators
+	pub type NAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultNAllowedValidators<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Adjustment Interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Bonds Moving Average
@@ -307,7 +313,7 @@ pub mod pallet {
 	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
 	#[pallet::storage] /// ---- SingleMap netuid -->  Target Registration Per Interval
 	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
-	#[pallet::storage] /// ---- DoubleMap netuid --> uid --> Block Registration
+	#[pallet::storage] /// ---- DMAP( netuid, uid ) --> Block Registration
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	/// =======================================
@@ -332,6 +338,8 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultActive<T:Config>() -> bool { false }
 	#[pallet::type_value] 
+	pub fn DefaultIsValidator<T:Config>() -> bool { false }
+	#[pallet::type_value] 
 	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
 	#[pallet::type_value] 
 	pub fn DefaultWeights<T:Config>() -> Vec<(u16, u16)> { vec![] }
@@ -340,35 +348,35 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Stake
-    pub(super) type S<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultStake<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Rank
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> rank
 	pub(super) type Rank<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultRank<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> hotkey --> uid
+	#[pallet::storage] /// --- DMAP( netuid, hotkey ) --> uid
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Trust
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Axon Metadata (version, ip address, port, ip type)
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> (version, ip address, port, ip type)
 	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Activity
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> active
 	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> hotkey
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> hotkey
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Emission 
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> emission 
 	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Incentive
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> incentive
 	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Consensus
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> consensus
 	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Dividends
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> dividends
 	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> LastUpdate
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> last_update
 	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Bonds
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> bonds
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Weights
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> is_validator
+    pub(super) type IsValidator<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, bool, ValueQuery, DefaultIsValidator<T> >;
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
-	#[pallet::storage] /// --- DoubleMap netuid --> uid --> Pruning Score
+	#[pallet::storage] /// --- DMAP( netuid, uid ) --> pruning_score.
 	pub(super) type PruningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPruningScore<T> >;
 	
 	/// ===============
@@ -426,6 +434,8 @@ pub mod pallet {
 		ImmunityPeriodSet(u16, u16),
 		/// --- Event created when bonds moving average is set for a subnet
 		BondsMovingAverageSet(u16, u64),
+		/// --- Event created when setting the max n allowed validators on a subnet.
+		NAllowedValidatorsSet(u16, u16),
 		/// --- Event created when the validator exclude quantile has been set for a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ),
 		/// --- Event created when the axon server information is added to the network.
@@ -1022,6 +1032,30 @@ pub mod pallet {
 			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
 			BondsMovingAverage::<T>::insert( netuid, bonds_moving_average );
 			Self::deposit_event( Event::BondsMovingAverageSet( netuid, bonds_moving_average ) );
+			Ok(())
+		}
+
+		/// ---- Sudo set this networks n_allowed_validators
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` (u16):
+		/// 		- The network we are setting the moving average on.
+		///
+		/// 	* `n_allowed_validators` (u16):
+		/// 		- The bonds moving average.
+		///
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_n_allowed_validators( 
+			origin:OriginFor<T>, 
+			netuid: u16,
+			n_allowed_validators: u16
+		) -> DispatchResult {  
+			ensure_root( origin )?;
+			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+			NAllowedValidators::<T>::insert( netuid, n_allowed_validators );
+			Self::deposit_event( Event::NAllowedValidatorsSet( netuid, n_allowed_validators ) );
 			Ok(())
 		}
 

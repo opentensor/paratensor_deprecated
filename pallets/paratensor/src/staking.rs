@@ -1,4 +1,5 @@
 use super::*;
+use sp_runtime::sp_std::if_std;
 use substrate_fixed::types::I64F64;
 use frame_support::storage::IterableStorageDoubleMap;
 
@@ -199,18 +200,20 @@ impl<T: Config> Pallet<T> {
 
         // --- 2. The hotkey is a delegate. We first distribute a proportion of the emission to the hotkey
         // directly as a function of its 'take'
+        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
         let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
         let remaining_emission: u64 = emission - delegate_take;
-        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
+        if_std! { println!( "emission: {:?} delegate_take: {:?} remaining_emission: {:?}\n", emission, delegate_take, remaining_emission);}
 
         // 3. -- The remaining emission does to the owners in proportion to the stake delegated.
-        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
         for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
             
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
             let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_hotkey_stake, remaining_emission );
+            if_std! { println!( "emission: {:?} stake_i: {:?}  total_hotkey_stake: {:?} stake_proportion: {:?}\n", emission, stake_i, total_hotkey_stake, stake_proportion);}
             Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, stake_proportion );
         }
+        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
 
     }
 
