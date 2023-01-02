@@ -31,11 +31,11 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive:\n{:?}\n", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let orig_stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
-        let mut stake: Vec<I32F32> = orig_stake.clone();
-        inplace_mask_vector( &inactive, &mut stake );
-        inplace_normalize( &mut stake );
-        if debug { if_std! { println!( "S:\n{:?}\n", stake.clone() );}}
+        let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
+        let mut active_stake: Vec<I32F32> = stake.clone();
+        inplace_mask_vector( &inactive, &mut active_stake );
+        inplace_normalize( &mut active_stake );
+        if debug { if_std! { println!( "S:\n{:?}\n", active_stake.clone() );}}
 
         // Block at registration vector (block when each neuron was most recently registered).
         let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
@@ -56,7 +56,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W:\n{:?}\n", weights.clone() );}}
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
-        let mut ranks: Vec<I32F32> = matmul( &weights, &stake );
+        let mut ranks: Vec<I32F32> = matmul( &weights, &active_stake );
         inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R:\n{:?}\n", ranks.clone() );}}
 
@@ -68,7 +68,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "tW:\n{:?}\n", clipped_weights.clone() );}}
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
-        let trust: Vec<I32F32> = matmul( &clipped_weights, &stake );
+        let trust: Vec<I32F32> = matmul( &clipped_weights, &active_stake );
         if debug { if_std! { println!( "T:\n{:?}\n", trust.clone() );}}
 
         // Compute consensus.
@@ -91,7 +91,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "B:\n{:?}\n", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &stake ); // ΔB = W◦S
+        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &active_stake ); // ΔB = W◦S
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB:\n{:?}\n", bonds_delta.clone() );}}
     
@@ -111,11 +111,11 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut normalized_emission );
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
-            if is_zero( &stake ) { // no active stake
-                normalized_emission = orig_stake.clone(); // do not mask inactive, assumes orig_stake is normalized
+            if is_zero( &active_stake ) { // no active stake
+                normalized_emission = stake.clone(); // do not mask inactive, assumes ostake is normalized
             }
             else {
-                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+                normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
             }
         }
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
@@ -165,13 +165,13 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "Inactive: {:?}", inactive.clone() );}}
 
         // Access network stake as normalized vector.
-        let orig_stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
-        let mut stake: Vec<I32F32> = orig_stake.clone();
+        let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
         if debug { if_std! { println!( "S: {:?}", stake.clone() );}}
-        inplace_mask_vector( &inactive, &mut stake ); // mask inactive stake
-        if debug { if_std! { println!( "S (mask): {:?}", stake.clone() );}}
-        inplace_normalize( &mut stake );
-        if debug { if_std! { println!( "S (mask+norm): {:?}", stake.clone() );}}
+        let mut active_stake: Vec<I32F32> = stake.clone();
+        inplace_mask_vector( &inactive, &mut active_stake ); // mask inactive stake
+        if debug { if_std! { println!( "S (mask): {:?}", active_stake.clone() );}}
+        inplace_normalize( &mut active_stake );
+        if debug { if_std! { println!( "S (mask+norm): {:?}", active_stake.clone() );}}
 
         // Block at registration vector (block when each neuron was most recently registered).
         let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
@@ -188,7 +188,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W (mask+norm): {:?}", weights.clone() );}}
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
-        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &stake, n );
+        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &active_stake, n );
         inplace_normalize( &mut ranks );
         if debug { if_std! { println!( "R: {:?}", ranks.clone() );}}
 
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "W (threshold): {:?}", clipped_weights.clone() );}}
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
-        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &stake, n );
+        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &active_stake, n );
         if debug { if_std! { println!( "T: {:?}", trust.clone() );}}
 
         // Compute consensus.
@@ -225,7 +225,7 @@ impl<T: Config> Pallet<T> {
         if debug { if_std! { println!( "B (mask+norm): {:?}", bonds.clone() );}}        
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &stake ); // ΔB = W◦S (outdated W masked)
+        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
         if debug { if_std! { println!( "ΔB: {:?}", bonds_delta.clone() );}}
         inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
         if debug { if_std! { println!( "ΔB (norm): {:?}", bonds_delta.clone() );}}
@@ -246,11 +246,11 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut normalized_emission );
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
-            if is_zero( &stake ) { // no active stake
-                normalized_emission = orig_stake.clone(); // do not mask inactive, assumes orig_stake is normalized
+            if is_zero( &active_stake ) { // no active stake
+                normalized_emission = stake.clone(); // do not mask inactive, assumes stake is normalized
             }
             else {
-                normalized_emission = stake.clone(); // emission proportional to inactive-masked normalized stake
+                normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
             }
         }
         let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
