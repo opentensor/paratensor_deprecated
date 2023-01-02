@@ -26,7 +26,6 @@ paratensor-custom-rpc-runtime-api = { version = "0.0.1", path = "../runtime-api"
 [features]
 default = ["std"]
 std = [
-  "serde",
   "sp-api/std",
   "sp-runtime/std",
   "paratensor-custom-rpc-runtime-api/std"
