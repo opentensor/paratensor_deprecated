@@ -7,6 +7,9 @@ use substrate_fixed::types::{I32F32, I64F64};
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
+
+    /// Calculates reward consensus and returns the emissions for uids/hotkeys in a given `netuid`.
+    /// (Dense version used only for testing purposes.)
     pub fn epoch_dense( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
   
         // Get subnetwork size.
@@ -112,7 +115,7 @@ impl<T: Config> Pallet<T> {
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &active_stake ) { // no active stake
-                normalized_emission = stake.clone(); // do not mask inactive, assumes ostake is normalized
+                normalized_emission = stake.clone(); // do not mask inactive, assumes stake is normalized
             }
             else {
                 normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
@@ -142,6 +145,19 @@ impl<T: Config> Pallet<T> {
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
 
+    /// Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning, emission and bonds, and 
+    /// returns the emissions for uids/hotkeys in a given `netuid`.
+    ///
+    /// # Args:
+    /// 	* 'netuid': ( u16 ):
+    ///         - The network to distribute the emission onto.
+    /// 		
+    /// 	* 'rao_emission': ( u64 ):
+    ///         - The total emission for the epoch.
+    ///
+    /// 	* 'debug' ( bool ):
+    /// 		- Print debugging outputs.
+    ///    
     pub fn epoch( netuid: u16, rao_emission: u64, debug: bool ) -> Vec<u64> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
@@ -410,6 +426,7 @@ pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
     vector_sum == I32F32::from_num( 0 )
 }
 
+/// Returns a normalized (sum to 1 except 0) copy of the input vector.
 #[allow(dead_code)]
 pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
     let x_sum: I32F32 = sum( x );
@@ -420,6 +437,7 @@ pub fn normalize( x: &Vec<I32F32> ) -> Vec<I32F32> {
     }
 }
 
+/// Normalizes (sum to 1 except 0) the input vector directly in-place.
 #[allow(dead_code)]
 pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
     let x_sum: I32F32 = x.iter().sum();
@@ -429,6 +447,7 @@ pub fn inplace_normalize( x: &mut Vec<I32F32> ) {
     }
 }
 
+/// Normalizes (sum to 1 except 0) the I64F64 input vector directly in-place.
 #[allow(dead_code)]
 pub fn inplace_normalize_64( x: &mut Vec<I64F64> ) {
     let x_sum: I64F64 = x.iter().sum();
@@ -438,6 +457,7 @@ pub fn inplace_normalize_64( x: &mut Vec<I64F64> ) {
     }
 }
 
+/// Normalizes (sum to 1 except 0) each row (dim=0) of a matrix in-place.
 #[allow(dead_code)]
 pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
     for i in 0..x.len() {
@@ -448,6 +468,7 @@ pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
     }
 }
 
+/// Normalizes (sum to 1 except 0) each row (dim=0) of a sparse matrix in-place.
 #[allow(dead_code)]
 pub fn inplace_row_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>> ) {
     for sparse_row in sparse_matrix.iter_mut() {
@@ -458,6 +479,7 @@ pub fn inplace_row_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>>
     }
 }
 
+/// Normalizes (sum to 1 except 0) each column (dim=1) of a sparse matrix in-place.
 #[allow(dead_code)]
 pub fn inplace_col_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>> ) {
     let n = sparse_matrix.len();
@@ -475,6 +497,7 @@ pub fn inplace_col_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>>
     }
 }
 
+/// Normalizes (sum to 1 except 0) each column (dim=1) of a matrix in-place.
 #[allow(dead_code)]
 pub fn inplace_col_normalize( x: &mut Vec<Vec<I32F32>> ) {
     if x.len() == 0 { return }
@@ -524,6 +547,7 @@ pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>>
     }
 }
 
+/// Mask out the diagonal of the input matrix in-place.
 #[allow(dead_code)]
 pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
     if matrix.len() == 0 { return }
@@ -535,6 +559,7 @@ pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
     }
 }
 
+/// Return a new sparse matrix with a masked out diagonal of input sparse matrix.
 #[allow(dead_code)]
 pub fn diag_mask_sparse( sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u16, I32F32)>> {
     let n: usize = sparse_matrix.len();
@@ -706,14 +731,10 @@ pub fn inplace_clip( x: &mut Vec<Vec<I32F32>>, threshold: I32F32, upper: I32F32,
     }
 }
 
+/// Return matrix exponential moving average: `alpha * a_ij + one_minus_alpha * b_ij`.
+/// `alpha` is the EMA coefficient, how much to add of the new observation, typically small, 
+/// higher alpha discounts older observations faster.
 #[allow(dead_code)]
-/// Matrix exponential moving average: alpha * a_ij + one_minus_alpha * b_ij
-///
-/// # Arguments
-///
-/// * `new` - new observation
-/// * `old` - old observation
-/// * `alpha` - EMA coefficient, typically small, higher alpha discounts older observations faster
 pub fn mat_ema( new: &Vec<Vec<I32F32>>, old: &Vec<Vec<I32F32>>, alpha: I32F32 ) -> Vec<Vec<I32F32>> {
     if new.len() == 0 { return vec![vec![];1] }
     if new[0].len() == 0 { return vec![vec![];1] }
@@ -729,6 +750,9 @@ pub fn mat_ema( new: &Vec<Vec<I32F32>>, old: &Vec<Vec<I32F32>>, alpha: I32F32 ) 
     result
 }
 
+/// Return sparse matrix exponential moving average: `alpha * a_ij + one_minus_alpha * b_ij`.
+/// `alpha` is the EMA coefficient, how much to add of the new observation, typically small, 
+/// higher alpha discounts older observations faster.
 #[allow(dead_code)]
 pub fn sparse_mat_ema( new: &Vec<Vec<(u16, I32F32)>>, old: &Vec<Vec<(u16, I32F32)>>, alpha: I32F32 ) -> Vec<Vec<(u16, I32F32)>> {
     assert!(new.len() == old.len());
@@ -753,6 +777,7 @@ pub fn sparse_mat_ema( new: &Vec<Vec<(u16, I32F32)>>, old: &Vec<Vec<(u16, I32F32
     result
 }
 
+/// Return sparse matrix only with elements >= threshold of an input sparse matrix.
 #[allow(dead_code)]
 pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec<Vec<(u16, I32F32)>> {
     let mut sparse_threshold_result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; w.len() ]; 
