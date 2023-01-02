@@ -595,6 +595,12 @@ fn test_full_with_delegating() {
 		assert_eq!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
 		assert_eq!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
 
+		// Cant remove either.
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 10), Err(Error::<Test>::NotRegistered.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 10), Err(Error::<Test>::NotRegistered.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 10), Err(Error::<Test>::NotRegistered.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 10), Err(Error::<Test>::NotRegistered.into()));
+
 		// Neither key can become a delegate either because we are not registered.
 		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
 		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
@@ -631,6 +637,11 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_total_stake_for_coldkey( &coldkey0 ), 100 );
 		assert_eq!( ParatensorModule::get_total_stake_for_coldkey( &coldkey1 ), 100 );
 		assert_eq!( ParatensorModule::get_total_stake(), 200 );
+
+
+		// Cant remove these funds because we are not delegating.
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
 		// Emit inflation through non delegates.
 		ParatensorModule::emit_inflation_through_hotkey_account( &hotkey0, 100 );
@@ -676,23 +687,36 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 700 ); // 200 + 1000 x ( 200 / 400 ) = 300 + 600 = 700
 		assert_eq!( ParatensorModule::get_total_stake(), 2898 ); // 600 + 700 + 900 + 700 = 2900 ~= 2898 
 
+		// Try unstaking too much.
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
 
-		// ParatensorModule::delegate_hotkey( hotkey0, )
+		// unstaking is ok.
+		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100) );
+		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100) );
+		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100) );
+		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100) );
 
-		// We cant stake either because they are not registered.
-		// assert_eq!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
-		// assert_eq!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
+		// All the amounts have been decreased.
+		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 499 ); 
+		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey1 ), 600 ); 
+		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey0 ), 799 ); 
+		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 600 ); 
 
-		// // Create a network.Error::<T>::NotRegistered
-        // let netuid = 1;
-		// add_network(netuid, 0, 0);
 
-		// register_ok_neuron( netuid, hotkey0, coldkey0, 10);
+		// Lets register and stake a new key.
+		let hotkey2 = 5;
+		let coldkey2 = 6; 
+		register_ok_neuron( netuid, hotkey2, coldkey2, 248123 );
+		ParatensorModule::add_balance_to_coldkey_account(&coldkey2, 60000);
+		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 1000) );
+		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 100) );
+		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey2, &hotkey2 ), 900 ); 
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
-		// ParatensorModule::increase_stake_on_hotkey_account(&hotkey_id, intial_amount);
-		// assert_eq!(ParatensorModule::get_total_stake_for_hotkey(&hotkey_id), 10000);
-		// assert_eq!(ParatensorModule::get_stake_for_coldkey_and_hotkey(&coldkey_id, &hotkey_id), 10000);
-		// assert_eq!(ParatensorModule::has_enough_stake(&coldkey_id, &hotkey_id, 5000), true);
 	});
 }
 

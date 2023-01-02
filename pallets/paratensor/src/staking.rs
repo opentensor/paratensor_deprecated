@@ -156,7 +156,7 @@ impl<T: Config> Pallet<T> {
         let coldkey = ensure_signed( origin )?;
 
         // --- 2. Ensure that the hotkey account exists this is only possible through registration.
-        ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NonAssociatedColdKey );    
+        ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    
 
         // --- 3. Ensure that the hotkey allows delegation or that the hotkey is owned by the calling coldkey.
         ensure!( Self::hotkey_is_delegate( &hotkey ) || Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
