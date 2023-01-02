@@ -31,7 +31,7 @@ impl<T: Config> Pallet<T> {
 	pub fn do_become_delegate(
         origin: T::Origin, 
         hotkey: T::AccountId, 
-        take: u64
+        take: u16
     ) -> dispatch::DispatchResult {
         // --- 1. We check the coldkey signuture.
         let coldkey = ensure_signed( origin )?;
@@ -41,6 +41,9 @@ impl<T: Config> Pallet<T> {
   
         // --- 3. Ensure that the coldkey is the owner.
         ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
+
+        // --- 4. Ensure we are not already a delegate (dont allow changing delegate take.)
+        ensure!( !Self::hotkey_is_delegate( &hotkey ), Error::<T>::AlreadyDelegate );
 
         // --- 4. Delegate the key.
         Self::delegate_hotkey( &hotkey, take );
@@ -181,42 +184,106 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Distributes token inflation through the hotkey based on emission. The call ensures that the inflation
+    /// is distributed onto the accounts in proportion of the stake delegated minus the take. This function
+    /// is called after an epoch to distribute the newly minted stake according to delegation.
+    ///
+    pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64 ) {
+        
+        // --- 1. Check if the hotkey is a delegate. If not we simply pass the stake through to the 
+        // coldkye - hotkey account as normal.
+        if !Self::hotkey_is_delegate( hotkey ) { 
+            Self::increase_stake_on_hotkey_account( &hotkey, emission ); 
+            return; 
+        }
+
+        // --- 2. The hotkey is a delegate. We first distribute a proportion of the emission to the hotkey
+        // directly as a function of its 'take'
+        let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
+        let remaining_emission: u64 = emission - delegate_take;
+        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
+
+        // 3. -- The remaining emission does to the owners in proportion to the stake delegated.
+        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
+        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
+            
+            // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
+            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_hotkey_stake, remaining_emission );
+            Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, stake_proportion );
+        }
+
+    }
+
+    /// Returns emission awarded to a hotkey as a function of its proportion of the total stake.
+    ///
+    pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
+        let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
+        let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
+        return proportional_emission.to_num::<u64>();
+    }
+
+    /// Returns the delegated stake 'take' assigend to this key. (If exists, otherwise 0)
+    ///
+    pub fn calculate_delegate_proportional_take( hotkey: &T::AccountId, emission: u64 ) -> u64 {
+        if Self::hotkey_is_delegate( hotkey ) {
+            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( hotkey ) ) / I64F64::from_num( u16::MAX );
+            let take_emission: I64F64 = take_proportion * I64F64::from_num( emission );
+            return take_emission.to_num::<u64>();
+        } else {
+            return 0;
+        }
+    }
+
+    /// Returns true if the passed hotkey allow delegative staking. 
+    ///
     pub fn hotkey_is_delegate( hotkey: &T::AccountId ) -> bool {
 		return Delegates::<T>::contains_key( hotkey );
     }
 
-    pub fn delegate_hotkey( hotkey: &T::AccountId, take: u64 ) {
+    /// Sets the hotkey as a delegate with take.
+    ///
+    pub fn delegate_hotkey( hotkey: &T::AccountId, take: u16 ) {
         Delegates::<T>::insert( hotkey, take );
     }
 
+    /// Returns the total amount of stake in the staking table.
+    ///
     pub fn get_total_stake() -> u64 { 
         return TotalStake::<T>::get();
     }
 
+    /// Increases the total amount of stake by the passed amount.
+    ///
     pub fn increase_total_stake( increment: u64 ) { 
         TotalStake::<T>::put( Self::get_total_stake().saturating_add( increment ) );
     }
 
+    /// Decreases the total amount of stake by the passed amount.
+    ///
     pub fn decrease_total_stake( decrement: u64 ) { 
         TotalStake::<T>::put( Self::get_total_stake().saturating_sub( decrement ) );
     }
 
+    /// Returns the total amount of stake under a hotkey (delegative or otherwise)
+    ///
     pub fn get_total_stake_for_hotkey( hotkey: &T::AccountId ) -> u64 { 
         return TotalHotkeyStake::<T>::get( hotkey ); 
     }
 
+    /// Returns the total amount of stake held by the coldkey (delegative or otherwise)
+    ///
     pub fn get_total_stake_for_coldkey( coldkey: &T::AccountId ) -> u64 { 
         return TotalColdkeyStake::<T>::get( coldkey ); 
     }
 
+    /// Returns the stake under the cold - hot pairing in the staking table.
+    ///
     pub fn get_stake_for_coldkey_and_hotkey( coldkey: &T::AccountId, hotkey: &T::AccountId ) -> u64 { 
         return Stake::<T>::get( hotkey, coldkey );
     }
 
-    pub fn set_stake_under_coldkey_hotkey( coldkey: &T::AccountId, hotkey: &T::AccountId, stake:u64 ) { 
-        Stake::<T>::insert( hotkey, coldkey, stake );
-    }
-
+    /// Creates a cold - hot pairing account if the hotkey is not already an active account.
+    ///
     pub fn create_account_if_non_existent( coldkey: &T::AccountId, hotkey: &T::AccountId ) {
         if !Self::hotkey_account_exists( hotkey ) {
             Stake::<T>::insert( hotkey, coldkey, 0 ); 
@@ -224,14 +291,20 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    /// Returns the coldkey owning this hotkey. This function should only be called for active accounts.
+    ///
     pub fn get_owning_coldkey_for_hotkey( hotkey: &T::AccountId ) ->  T::AccountId { 
         return Owner::<T>::get( hotkey );
     }
 
+    /// Returns true if the hotkey account has been created.
+    ///
     pub fn hotkey_account_exists( hotkey: &T::AccountId ) -> bool {
 		return Owner::<T>::contains_key( hotkey );
     }
 
+    /// Return true if the passed coldkey owns the hotkey. 
+    ///
     pub fn coldkey_owns_hotkey( coldkey: &T::AccountId, hotkey: &T::AccountId ) -> bool {
         if Self::hotkey_account_exists( hotkey ){
 		    return Owner::<T>::get( hotkey ) == *coldkey;
@@ -240,56 +313,53 @@ impl<T: Config> Pallet<T> {
         }
     }
 
-    pub fn get_hotkey_delegate_take( hotkey: &T::AccountId ) -> u64 {
-        if Self::hotkey_is_delegate( hotkey ) {
-            return Delegates::<T>::get( hotkey );
-        } else {
-            return 0;
-        }
-    }
-
-
+    /// Returns true if the cold-hot staking account has enough balance to fufil the decrement.
+    ///
     pub fn has_enough_stake( coldkey: &T::AccountId, hotkey: &T::AccountId, decrement: u64 ) -> bool {
         return Self::get_stake_for_coldkey_and_hotkey( coldkey, hotkey ) >= decrement;
     }
 
+    /// Increases the stake on the hotkey account under its owning coldkey.
+    ///
     pub fn increase_stake_on_hotkey_account( hotkey: &T::AccountId, increment: u64 ){
         Self::increase_stake_on_coldkey_hotkey_account( &Self::get_owning_coldkey_for_hotkey( hotkey ), hotkey, increment );
     }
 
+    /// Decreases the stake on the hotkey account under its owning coldkey.
+    ///
     pub fn decrease_stake_on_hotkey_account( hotkey: &T::AccountId, decrement: u64 ){
         Self::decrease_stake_on_coldkey_hotkey_account( &Self::get_owning_coldkey_for_hotkey( hotkey ), hotkey, decrement );
     }
 
+    /// Increases the stake on the cold - hot pairing by increment while also incrementing other counters.
+    /// This function should be called rather than set_stake under account.
+    /// 
     pub fn increase_stake_on_coldkey_hotkey_account( coldkey: &T::AccountId, hotkey: &T::AccountId, increment: u64 ){
         TotalColdkeyStake::<T>::insert( coldkey, Self::get_total_stake_for_coldkey( coldkey ).saturating_add( increment ) );
         TotalHotkeyStake::<T>::insert( hotkey,  Self::get_total_stake_for_hotkey( hotkey ).saturating_add( increment ) );
         let previous_stake: u64 = Self::get_stake_for_coldkey_and_hotkey( coldkey, hotkey );
-        Self::set_stake_under_coldkey_hotkey( coldkey, hotkey, previous_stake.saturating_add( increment ) ); 
+        Self::__set_stake_under_coldkey_hotkey( coldkey, hotkey, previous_stake.saturating_add( increment ) ); 
         TotalStake::<T>::put( Self::get_total_stake().saturating_add( increment ) );
     }
 
+    /// Decreases the stake on the cold - hot pairing by the decrement while decreasing other counters.
+    ///
     pub fn decrease_stake_on_coldkey_hotkey_account( coldkey: &T::AccountId, hotkey: &T::AccountId, decrement: u64 ){
         TotalColdkeyStake::<T>::insert( coldkey, Self::get_total_stake_for_coldkey( coldkey ).saturating_sub( decrement ) );
         TotalHotkeyStake::<T>::insert( hotkey, Self::get_total_stake_for_hotkey( hotkey ).saturating_sub( decrement ) );
         let previous_stake: u64 = Self::get_stake_for_coldkey_and_hotkey( coldkey, hotkey );
-        Self::set_stake_under_coldkey_hotkey( coldkey, hotkey, previous_stake.saturating_sub( decrement ) ); 
+        Self::__set_stake_under_coldkey_hotkey( coldkey, hotkey, previous_stake.saturating_sub( decrement ) ); 
         TotalStake::<T>::put( Self::get_total_stake().saturating_sub( decrement ) );
     }
 
-    pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64 ) {
-        if Self::hotkey_is_delegate( hotkey ) {
-            let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
-            for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
-                let stake_proportion: I64F64 = I64F64::from_num( stake_i ) / I64F64::from_num( total_hotkey_stake );
-                let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
-                Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, proportional_emission.to_num::<u64>() );
-            }
-        } else {
-            let owning_coldkey: T::AccountId = Self::get_owning_coldkey_for_hotkey( hotkey );
-            Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey, &hotkey, emission );
-        }
+    /// Private: Sets the amount of stake under the cold and hot pairinig in the staking table.
+    ///
+    pub fn __set_stake_under_coldkey_hotkey( coldkey: &T::AccountId, hotkey: &T::AccountId, stake:u64 ) { 
+        Stake::<T>::insert( hotkey, coldkey, stake );
     }
+
+
+
 
 	pub fn u64_to_balance( input: u64 ) -> Option<<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance> { input.try_into().ok() }
 

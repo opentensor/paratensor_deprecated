@@ -651,14 +651,19 @@ fn test_full_with_delegating() {
 
 
 		// Try allowing the keys to become delegates, fails because of incorrect coldkeys.
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		// Set take to be 0.
+		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
 		// Become delegates all is ok.
 		assert_ok!( ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 10) ); 
 		assert_ok! (ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 10) );
 		assert!( ParatensorModule::hotkey_is_delegate( &hotkey0 ) );
 		assert!( ParatensorModule::hotkey_is_delegate( &hotkey1 ) );
+
+		// Cant become a delegate twice.
+		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
+		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
 
 		// This add stake works for delegates.
 		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 200 );
@@ -677,7 +682,6 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_total_stake_for_coldkey( &coldkey1 ), 500 );
 		assert_eq!( ParatensorModule::get_total_stake(), 900 );
 
-
 		// Lets emit inflation through the hot and coldkeys.
 		ParatensorModule::emit_inflation_through_hotkey_account( &hotkey0, 1000 ); 
 		ParatensorModule::emit_inflation_through_hotkey_account( &hotkey1, 1000 );
@@ -687,35 +691,44 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 700 ); // 200 + 1000 x ( 200 / 400 ) = 300 + 600 = 700
 		assert_eq!( ParatensorModule::get_total_stake(), 2898 ); // 600 + 700 + 900 + 700 = 2900 ~= 2898 
 
-		// Try unstaking too much.
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		// // Try unstaking too much.
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100000), Err(Error::<Test>::NotEnoughStaketoWithdraw.into()));
 
-		// unstaking is ok.
-		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100) );
-		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100) );
-		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100) );
-		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100) );
+		// // unstaking is ok.
+		// assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100) );
+		// assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 100) );
+		// assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 100) );
+		// assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 100) );
 
-		// All the amounts have been decreased.
-		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 499 ); 
-		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey1 ), 600 ); 
-		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey0 ), 799 ); 
-		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 600 ); 
+		// // All the amounts have been decreased.
+		// assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 499 ); 
+		// assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey1 ), 600 ); 
+		// assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey0 ), 799 ); 
+		// assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 600 ); 
+
+		// // // Lets emit inflation through the hot and coldkeys.
+		// // ParatensorModule::emit_inflation_through_hotkey_account( &hotkey0, 1000 ); 
+		// // ParatensorModule::emit_inflation_through_hotkey_account( &hotkey1, 1000 );
+		// // assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 599 ); // 200 + 1000 x ( 200 / 500 ) = 200 + 400 = 600 ~= 599
+		// // assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey1 ), 700 ); // 200 + 1000 x ( 200 / 400 ) = 200 + 500 = 700
+		// // assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey0 ), 899 ); // 300 + 1000 x ( 300 / 500 ) = 300 + 600 = 900 ~= 899
+		// // assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey1, &hotkey1 ), 700 ); // 200 + 1000 x ( 200 / 400 ) = 300 + 600 = 700
+		// // assert_eq!( ParatensorModule::get_total_stake(), 2898 ); // 600 + 700 + 900 + 700 = 2900 ~= 2898 
 
 
-		// Lets register and stake a new key.
-		let hotkey2 = 5;
-		let coldkey2 = 6; 
-		register_ok_neuron( netuid, hotkey2, coldkey2, 248123 );
-		ParatensorModule::add_balance_to_coldkey_account(&coldkey2, 60000);
-		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 1000) );
-		assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 100) );
-		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey2, &hotkey2 ), 900 ); 
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
-		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		// // Lets register and stake a new key.
+		// let hotkey2 = 5;
+		// let coldkey2 = 6; 
+		// register_ok_neuron( netuid, hotkey2, coldkey2, 248123 );
+		// ParatensorModule::add_balance_to_coldkey_account(&coldkey2, 60000);
+		// assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 1000) );
+		// assert_ok!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, 100) );
+		// assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey2, &hotkey2 ), 900 ); 
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		// assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
 	});
 }

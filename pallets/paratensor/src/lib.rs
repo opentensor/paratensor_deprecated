@@ -126,7 +126,7 @@ pub mod pallet {
 	/// ==== Staking + Accounts ====
 	/// ============================
 	#[pallet::type_value] 
-	pub fn DefaultTake<T: Config>() -> u64 { 0 }
+	pub fn DefaultTake<T: Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
@@ -145,7 +145,7 @@ pub mod pallet {
 	#[pallet::storage] /// ---- StorageItem Total issuance on chain.
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
-    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery, DefaultTake<T>>;
+    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultTake<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
     pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] /// --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
@@ -437,7 +437,7 @@ pub mod pallet {
 		/// --- Event created when a network connection requirement is removed.
 		NetworkConnectionRemoved( u16, u16 ),
 		/// --- Event created to signal a hotkey has become a delegate.
-		DelegateAdded( T::AccountId, T::AccountId, u64 )
+		DelegateAdded( T::AccountId, T::AccountId, u16 )
 	}
 	
 	/// ================
@@ -527,6 +527,8 @@ pub mod pallet {
 		// --- Thrown when a hotkey attempts to register into a network without passing the 
 		// registration requirment from another network.
 		DidNotPassConnectedNetworkRequirement,
+		// --- Thrown if the hotkey attempt to become delegate when they are already.
+		AlreadyDelegate,
 	}
 
 	/// ================
@@ -642,7 +644,7 @@ pub mod pallet {
 		pub fn become_delegate(
 			origin: OriginFor<T>, 
 			hotkey: T::AccountId, 
-			take: u64	
+			take: u16	
 		) -> DispatchResult {
 			Self::do_become_delegate(origin, hotkey, take)
 		}
