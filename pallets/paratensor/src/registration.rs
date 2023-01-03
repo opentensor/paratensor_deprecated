@@ -323,7 +323,7 @@ impl<T: Config> Pallet<T> {
         Dividends::<T>::remove( netuid, uid_to_prune );
         Consensus::<T>::remove( netuid, uid_to_prune );
         Incentive::<T>::remove( netuid, uid_to_prune );
-        IsValidator::<T>::remove( netuid, uid_to_prune );
+        ValidatorPermit::<T>::remove( netuid, uid_to_prune );
         PruningScores::<T>::remove( netuid, uid_to_prune );
         AxonsMetaData::<T>::remove( netuid, uid_to_prune );
     }

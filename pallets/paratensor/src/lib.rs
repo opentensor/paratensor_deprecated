@@ -355,7 +355,7 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultActive<T:Config>() -> bool { false }
 	#[pallet::type_value] 
-	pub fn DefaultIsValidator<T:Config>() -> bool { false }
+	pub fn DefaultValidatorPermit<T:Config>() -> bool { false }
 	#[pallet::type_value] 
 	pub fn DefaultBonds<T:Config>() -> Vec<(u16, u16)> { vec![] }
 	#[pallet::type_value] 
@@ -389,8 +389,8 @@ pub mod pallet {
 	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> bonds
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
-	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> is_validator
-    pub(super) type IsValidator<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, bool, ValueQuery, DefaultIsValidator<T> >;
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> validator_permit
+    pub(super) type ValidatorPermit<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, bool, ValueQuery, DefaultValidatorPermit<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> pruning_score.
