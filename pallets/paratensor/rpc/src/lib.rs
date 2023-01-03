@@ -4,22 +4,22 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
-use paratensor_custom_rpc_runtime_api::NeuronMetadataApi as NeuronMetadataRuntimeApi;
-use pallet_paratensor::NeuronMetadata as NeuronMetadataStruct;
+use paratensor_custom_rpc_runtime_api::NeuronInfoApi as NeuronInfoRuntimeApi;
+use pallet_paratensor::NeuronInfo as NeuronInfoStruct;
 
 #[rpc]
-pub trait NeuronMetadataApi<BlockHash> {
+pub trait NeuronInfoApi<BlockHash> {
     // TODO (Cameron): fix return type
-	#[rpc(name = "neuronMetadata_getNeurons")]
-	fn get_neurons(&self, at: Option<BlockHash>, netuid: u16) -> Result<NeuronMetadataStruct>;
+	#[rpc(name = "NeuronInfo_getNeurons")]
+	fn get_neurons(&self, at: Option<BlockHash>, netuid: u16) -> Result<NeuronInfoStruct>;
 }
 
-pub struct NeuronMetadata<C, M> {
+pub struct NeuronInfo<C, M> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<M>,
 }
 
-impl<C, M> NeuronMetadata<C, M> {
+impl<C, M> NeuronInfo<C, M> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -45,15 +45,15 @@ impl<C, M> NeuronMetadata<C, M> {
 // 	}
 // }
 
-impl<C, Block> NeuronMetadataApi<<Block as BlockT>::Hash> for NeuronMetadata<C, Block>
+impl<C, Block> NeuronInfoApi<<Block as BlockT>::Hash> for NeuronInfo<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
-	C::Api: NeuronMetadataRuntimeApi<Block>,
+	C::Api: NeuronInfoRuntimeApi<Block>,
 	{   // TODO (Cameron): fix return type
-	fn get_neurons(&self, at: Option<<Block as BlockT>::Hash>, netuid: u16) -> Result<NeuronMetadataStruct> {
+	fn get_neurons(&self, at: Option<<Block as BlockT>::Hash>, netuid: u16) -> Result<NeuronInfoStruct> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.

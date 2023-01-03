@@ -738,8 +738,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl paratensor_custom_rpc_runtime_api::NeuronMetadataApi<Block> for Runtime {
-		fn get_neurons(netuid: u16) -> Vec<pallet_paratensor::NeuronMetadata> {
+	impl paratensor_custom_rpc_runtime_api::NeuronInfoApi<Block> for Runtime {
+		fn get_neurons(netuid: u16) -> Vec<pallet_paratensor::NeuronInfo> {
 			Paratensor::get_neurons(netuid)
 		}
 	}

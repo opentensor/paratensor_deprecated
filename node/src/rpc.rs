@@ -41,8 +41,8 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: paratensor_custom_rpc_runtime_api::NeuronMetadataApi<Block>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: paratensor_custom_rpc_runtime_api::NeuronInfoApi<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -52,8 +52,8 @@ where
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	// Custom RPC for getting neuron metadata
-	io.extend_with(paratensor_custom_rpc::NeuronMetadataApi::to_delegate(
-		paratensor_custom_rpc::NeuronMetadata::new(client),
+	io.extend_with(paratensor_custom_rpc::NeuronInfoApi::to_delegate(
+		paratensor_custom_rpc::NeuronInfo::new(client),
 	));
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
