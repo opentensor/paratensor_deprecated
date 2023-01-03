@@ -134,7 +134,7 @@ impl<T: Config> Pallet<T> {
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
+            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
             Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
         }  
@@ -283,7 +283,7 @@ impl<T: Config> Pallet<T> {
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_pruning( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
+            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
             Self::set_bonds( netuid, i, ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect())
         }  
@@ -298,7 +298,6 @@ impl<T: Config> Pallet<T> {
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
     pub fn set_incentive( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
     pub fn set_dividend( netuid:u16, neuron_uid:u16, dividend:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividend ) }
-    pub fn set_pruning( netuid:u16, neuron_uid:u16, pruning:u16) { PruningScores::<T>::insert( netuid, neuron_uid, pruning ) }
     pub fn set_pruning_score( netuid:u16, neuron_uid: u16, pruning_score: u16 ) { PruningScores::<T>::insert(netuid, neuron_uid, pruning_score); }
     pub fn set_emission( netuid:u16, neuron_uid:u16, emission:u64) { Emission::<T>::insert( netuid, neuron_uid, emission ) }
     pub fn set_bonds( netuid:u16, neuron_uid:u16, bonds:Vec<(u16,u16)>) { Bonds::<T>::insert( netuid, neuron_uid, bonds ) }
