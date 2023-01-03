@@ -369,7 +369,7 @@ pub fn polkadot_config() -> ChainSpec {
 				],
 				vec![
 					// Collator 1
-					Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+					Ss58Codec::from_ss58check("5CyEApos33zYijdejJLKmtDe5G9ZHu8j5U5gAFLVtMbSH397").unwrap(),
 										
 				],
 				2097.into(),
