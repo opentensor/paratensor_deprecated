@@ -10,8 +10,8 @@ license = "MIT"
 [dependencies]
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
 
-[dev-dependencies]
-serde_json = "1.0"
+# local 
+pallet-paratensor = { version = "0.0.1-dev", path = "../../paratensor", default-features = false }
 
 [features]
 default = ["std"]
