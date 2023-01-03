@@ -1,7 +1,11 @@
 use super::*;
+use serde::{Serialize, Deserialize};
 use frame_support::storage::IterableStorageDoubleMap;
+use frame_support::pallet_prelude::{Decode, Encode};
 use sp_std::vec::Vec;
 
+#[derive(Decode, Encode)]
+#[derive(Serialize, Deserialize)]
 pub struct NeuronInfo {//<T:Config> {
     //hotkey: T::AccountId,
     //coldkey: T::AccountId,
