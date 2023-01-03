@@ -101,6 +101,114 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// ---- The implementation for the extrinsic sudo_add_network_connect_requirement.
+    /// Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The caller, must be sudo.
+    ///
+    /// 	* `netuid_a` (u16):
+    /// 		- The network we are adding the requirment to (parent network)
+    ///
+    /// 	* `netuid_b` (u16):
+    /// 		- The network we the requirement refers to (child network)
+    ///
+    /// 	* `prunning_score_requirement` (u16):
+    /// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
+    ///
+    pub fn do_sudo_add_network_connection_requirement(
+        origin: T::Origin, 
+        netuid_a: u16,
+        netuid_b: u16,
+        requirement: u16
+    ) -> dispatch::DispatchResult {
+        ensure_root( origin )?;
+        ensure!( netuid_a != netuid_b, Error::<T>::InvalidConnectionRequirement );
+        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
+        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
+        Self::add_connection_requirement( netuid_a, netuid_b, requirement );
+        Self::deposit_event( Event::NetworkConnectionAdded( netuid_a, netuid_b, requirement ) );
+        Ok(())
+    }
+
+    /// ---- The implementation for the extrinsic sudo_remove_network_connect_requirement.
+    /// Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The caller, must be sudo.
+    ///
+    /// 	* `netuid_a` (u16):
+    /// 		- The network we are removing the requirment from.
+    ///
+    /// 	* `netuid_b` (u16):
+    /// 		- The required network connection to remove.
+    ///   
+    pub fn do_sudo_remove_network_connection_requirement(
+        origin: T::Origin, 
+        netuid_a: u16,
+        netuid_b: u16,
+    ) -> dispatch::DispatchResult {
+        ensure_root( origin )?;
+        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
+        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
+        Self::remove_connection_requirment( netuid_a, netuid_b );
+        Self::deposit_event( Event::NetworkConnectionRemoved( netuid_a, netuid_b ) );
+        Ok(())
+    }
+
+
+    /// ---- The implementation for the extrinsic set_emission_values.
+    ///
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- Must be sudo.
+    ///
+   	/// 	* `netuids` (Vec<u16>):
+	/// 		- A vector of network uids values. This must include all netuids.
+	///
+	/// 	* `emission` (Vec<u64>):
+	/// 		- The emission values associated with passed netuids in order.
+    ///
+    /// # Event:
+    /// 	* NetworkRemoved;
+    /// 		- On the successfull removing of this network.
+    ///
+    /// # Raises:
+    /// 	* 'EmissionValuesDoesNotMatchNetworks':
+    /// 		- Attempting to remove a non existent network.
+    ///
+    pub fn do_set_emission_values( 
+        origin: T::Origin, 
+        netuids: Vec<u16>,
+        emission: Vec<u64>
+    ) -> dispatch::DispatchResult {
+
+        // --- 1. Ensure caller is sudo.
+        ensure_root( origin )?;
+
+        // --- 2. Ensure emission values match up to network uids.
+        ensure!( netuids.len() == emission.len(), Error::<T>::WeightVecNotEqualSize );
+
+        // --- 3. Ensure we are setting emission for all networks. 
+        ensure!( netuids.len() as u16 == TotalNetworks::<T>::get(), Error::<T>::NotSettingEnoughWeights );
+
+        // --- 4. Ensure the passed uids contain no duplicates.
+        ensure!( !Self::has_duplicate_netuids( &netuids ), Error::<T>::DuplicateUids );
+
+        // --- 5. Ensure that the passed uids are valid for the network.
+        ensure!( !Self::contains_invalid_netuids( &netuids ), Error::<T>::InvalidUid );
+
+        // --- 6. check if sum of emission rates is equal to 1.
+        ensure!( emission.iter().sum::<u64>() as u64 == Self::get_block_emission(), Error::<T>::InvalidEmissionValues);
+
+        // --- 7. Add emission values for each network
+        Self::set_emission_values( &netuids, &emission );
+
+        // --- 8. Add emission values for each network
+        Self::deposit_event( Event::EmissionValuesSet() );
+
+        // --- 9. Ok and return.
+        Ok(())
+    }
+
     /// Initializes a new subnetwork under netuid with parameters.
     ///
     pub fn init_new_network( netuid:u16, tempo:u16, modality:u16 ){
@@ -124,9 +232,9 @@ impl<T: Config> Pallet<T> {
         Self::set_default_values_for_all_parameters( netuid );
     }
 
-      /// Removes the network (netuid) and all of its parameters.
-      ///
-      pub fn remove_network( netuid:u16 ) {
+    /// Removes the network (netuid) and all of its parameters.
+    ///
+    pub fn remove_network( netuid:u16 ) {
 
         // --- 1. Remove network count.
         SubnetworkN::<T>::remove( netuid );
@@ -204,43 +312,20 @@ impl<T: Config> Pallet<T> {
     }
 
 
-    /// ---- The implementation for the extrinsic sudo_add_network_connect_requirement.
-    /// Args:
-    /// 	* 'origin': (<T as frame_system::Config>Origin):
-    /// 		- The caller, must be sudo.
-    ///
-    /// 	* `netuid_a` (u16):
-    /// 		- The network we are adding the requirment to (parent network)
-    ///
-    /// 	* `netuid_b` (u16):
-    /// 		- The network we the requirement refers to (child network)
-    ///
-    /// 	* `prunning_score_requirement` (u16):
-    /// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
-    ///
-    pub fn do_sudo_add_network_connection_requirement(
-        origin: T::Origin, 
-        netuid_a: u16,
-        netuid_b: u16,
-        requirement: u16
-    ) -> dispatch::DispatchResult {
-        ensure_root( origin )?;
-        ensure!( netuid_a != netuid_b, Error::<T>::InvalidConnectionRequirement );
-        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
-        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
-        Self::add_connection_requirement( netuid_a, netuid_b, requirement );
-        Self::deposit_event( Event::NetworkConnectionAdded( netuid_a, netuid_b, requirement ) );
-        Ok(())
-    }
-
+    /// Returns the number of filled slots on a network.
+    ////
     pub fn get_subnetwork_n( netuid:u16 ) -> u16 { 
         return SubnetworkN::<T>::get( netuid ) 
     }
 
+    /// Increments the number of slots used on a network.
+    ///
     pub fn increment_subnetwork_n( netuid:u16 ) {
         SubnetworkN::<T>::insert( netuid, SubnetworkN::<T>::take( netuid ) + 1 );
     }
 
+    /// Decrements the number of used slots on a network.
+    ///
     pub fn decrement_subnetwork_n( netuid:u16 ) { 
         let n = SubnetworkN::<T>::get( netuid ); 
         if n > 0 {
@@ -248,22 +333,32 @@ impl<T: Config> Pallet<T> {
         } 
     }
 
+    /// Returns true if the uid is set on the network.
+    ///
     pub fn is_uid_exist_on_network(netuid: u16, uid: u16) -> bool {
         return  Keys::<T>::contains_key(netuid, uid);
     }
 
+    /// Returns true if the hotkey holds a slot on the network.
+    ///
     pub fn is_hotkey_registered_on_network( netuid:u16, hotkey: &T::AccountId ) -> bool { 
         return Uids::<T>::contains_key( netuid, hotkey ) 
     }
 
+    /// Returs the hotkey under the network uid as a Result. Ok if the uid is taken.
+    ///
     pub fn get_hotkey_for_net_and_uid( netuid: u16, neuron_uid: u16) ->  Result<T::AccountId, DispatchError> {
         Keys::<T>::try_get(netuid, neuron_uid).map_err(|_err| Error::<T>::NotRegistered.into()) 
     }
 
+    /// Returns the uid of the hotkey in the network as a Result. Ok if the hotkey has a slot.
+    ///
     pub fn get_uid_for_net_and_hotkey( netuid: u16, hotkey: &T::AccountId) -> Result<u16, DispatchError> { 
         return Uids::<T>::try_get(netuid, &hotkey).map_err(|_err| Error::<T>::NotRegistered.into()) 
     }
 
+    /// Returns the stake of the uid on network or 0 if it doesnt exist.
+    ///
     pub fn get_stake_for_uid_and_subnetwork( netuid: u16, neuron_uid: u16) -> u64 { 
         if Self::is_uid_exist_on_network( netuid, neuron_uid) {
             return Self::get_total_stake_for_hotkey( &Self::get_hotkey_for_net_and_uid( netuid, neuron_uid ).unwrap() ) 
@@ -272,12 +367,16 @@ impl<T: Config> Pallet<T> {
         }
     }
 
+    /// Fills a uid on the network.
+    ///
     pub fn add_subnetwork_account( netuid:u16, uid: u16, hotkey: &T::AccountId ) { 
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); 
         Uids::<T>::insert( netuid, hotkey.clone(), uid );
         Self::increment_subnetwork_n( netuid );
     }
 
+    /// Removes a uid from the subnetwork.
+    ///
     pub fn remove_subnetwork_account( netuid:u16, uid: u16 ) { 
         let hotkey = Keys::<T>::get( netuid, uid );
         Uids::<T>::remove( netuid, hotkey.clone() );
@@ -285,6 +384,8 @@ impl<T: Config> Pallet<T> {
         Self::decrement_subnetwork_n( netuid );
     }
 
+    /// Return the total number of subnetworks available on the chain.
+    ///
     pub fn get_number_of_subnets()-> u16 {
         let mut number_of_subnets : u16 = 0;
         for (_, _)  in <SubnetworkN<T> as IterableStorageMap<u16, u16>>::iter(){
@@ -292,7 +393,6 @@ impl<T: Config> Pallet<T> {
         }
         return number_of_subnets;
     }
-
 
     /// --- Returns true if a network connection exists.
     ///
@@ -321,84 +421,6 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn remove_connection_requirment( netuid_a: u16, netuid_b: u16) {
         if Self::network_connection_requirement_exists(netuid_a, netuid_b) { NetworkConnect::<T>::remove( netuid_a, netuid_b ); }
-    }
-
-    /// ---- The implementation for the extrinsic sudo_remove_network_connect_requirement.
-    /// Args:
-    /// 	* 'origin': (<T as frame_system::Config>Origin):
-    /// 		- The caller, must be sudo.
-    ///
-    /// 	* `netuid_a` (u16):
-    /// 		- The network we are removing the requirment from.
-    ///
-    /// 	* `netuid_b` (u16):
-    /// 		- The required network connection to remove.
-    ///   
-    pub fn do_sudo_remove_network_connection_requirement(
-        origin: T::Origin, 
-        netuid_a: u16,
-        netuid_b: u16,
-    ) -> dispatch::DispatchResult {
-        ensure_root( origin )?;
-        ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
-        ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
-        Self::remove_connection_requirment( netuid_a, netuid_b );
-        Self::deposit_event( Event::NetworkConnectionRemoved( netuid_a, netuid_b ) );
-        Ok(())
-    }
-
-    /// ---- The implementation for the extrinsic set_emission_values.
-    ///
-    /// # Args:
-    /// 	* 'origin': (<T as frame_system::Config>Origin):
-    /// 		- Must be sudo.
-    ///
-   	/// 	* `netuids` (Vec<u16>):
-	/// 		- A vector of network uids values. This must include all netuids.
-	///
-	/// 	* `emission` (Vec<u64>):
-	/// 		- The emission values associated with passed netuids in order.
-    ///
-    /// # Event:
-    /// 	* NetworkRemoved;
-    /// 		- On the successfull removing of this network.
-    ///
-    /// # Raises:
-    /// 	* 'EmissionValuesDoesNotMatchNetworks':
-    /// 		- Attempting to remove a non existent network.
-    ///
-    pub fn do_set_emission_values( 
-        origin: T::Origin, 
-        netuids: Vec<u16>,
-        emission: Vec<u64>
-    ) -> dispatch::DispatchResult {
-
-        // --- 1. Ensure caller is sudo.
-        ensure_root( origin )?;
-
-        // --- 2. Ensure emission values match up to network uids.
-        ensure!( netuids.len() == emission.len(), Error::<T>::WeightVecNotEqualSize );
-
-        // --- 3. Ensure we are setting emission for all networks. 
-        ensure!( netuids.len() as u16 == TotalNetworks::<T>::get(), Error::<T>::NotSettingEnoughWeights );
-
-        // --- 4. Ensure the passed uids contain no duplicates.
-        ensure!( !Self::has_duplicate_netuids( &netuids ), Error::<T>::DuplicateUids );
-
-        // --- 5. Ensure that the passed uids are valid for the network.
-        ensure!( !Self::contains_invalid_netuids( &netuids ), Error::<T>::InvalidUid );
-
-        // --- 6. check if sum of emission rates is equal to 1.
-        ensure!( emission.iter().sum::<u64>() as u64 == Self::get_block_emission(), Error::<T>::InvalidEmissionValues);
-
-        // --- 7. Add emission values for each network
-        Self::set_emission_values( &netuids, &emission );
-
-        // --- 8. Add emission values for each network
-        Self::deposit_event( Event::EmissionValuesSet() );
-
-        // --- 9. Ok and return.
-        Ok(())
     }
 
     /// Returns true if the items contain duplicates.

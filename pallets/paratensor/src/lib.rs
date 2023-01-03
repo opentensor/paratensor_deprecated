@@ -53,6 +53,9 @@ pub mod pallet {
 		/// --- Currency type that will be used to place deposits on neurons
 		type Currency: Currency<Self::AccountId> + Send + Sync;
 
+		/// =================================
+		/// ==== Initial Value Constants ====
+		/// =================================
 		#[pallet::constant] /// Initial currency issuance.
 		type InitialIssuance: Get<u64>;
 		#[pallet::constant] /// Initial min allowed weights setting.
@@ -103,9 +106,9 @@ pub mod pallet {
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-	/// =========================
-	/// ==== Endpoint Struct ====
-	/// =========================
+	/// =====================
+	/// ==== Axon Struct ====
+	/// =====================
 	pub type AxonMetadataOf = AxonMetadata;
 	#[derive(Encode, Decode, Default, TypeInfo)]
     pub struct AxonMetadata {
@@ -140,11 +143,11 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultAccount<T: Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap()}
 
-	#[pallet::storage] /// ---- StorageItem Global Total Stake.
+	#[pallet::storage] /// --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
-	#[pallet::storage] /// --- StorageItem Global Block Emission.
+	#[pallet::storage] /// --- ITEM ( global_block_emission )
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
-	#[pallet::storage] /// ---- StorageItem Total issuance on chain.
+	#[pallet::storage] /// --- ITEM ( total_issuance )
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
     pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultTake<T>>;
@@ -154,7 +157,7 @@ pub mod pallet {
     pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
     pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
-	#[pallet::storage] /// --- DMAP: ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
+	#[pallet::storage] /// --- DMAP ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
     pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
 	/// =====================================
@@ -175,17 +178,17 @@ pub mod pallet {
 
 	#[pallet::storage] /// ---- StorageItem Global Used Work.
     pub type UsedWork<T:Config> = StorageMap<_, Identity, Vec<u8>, u64, ValueQuery>;
-	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	#[pallet::storage] /// --- MAP ( netuid ) --> Difficulty
 	pub type Difficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultDifficulty<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	#[pallet::storage] /// --- MAP ( netuid ) --> Difficulty
 	pub type MinDifficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMinDifficulty<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Difficulty
+	#[pallet::storage] /// --- MAP ( netuid ) --> Difficulty
 	pub type MaxDifficulty<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultMaxDifficulty<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid -->  Block at last adjustment.
+	#[pallet::storage] /// --- MAP ( netuid ) -->  Block at last adjustment.
 	pub type LastAdjustmentBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastAdjustmentBlock<T> >;
-	#[pallet::storage] /// --- SingleMap netuid --> Registration this Block.
+	#[pallet::storage] /// --- MAP ( netuid ) --> Registration this Block.
 	pub type RegistrationsThisBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRegistrationsThisBlock<T>>;
-	#[pallet::storage] /// --- StorageItem Global Max Registration Per Block.
+	#[pallet::storage] /// --- ITEM( global_max_registrations_per_block ) 
 	pub type MaxRegistrationsPerBlock<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxRegistrationsPerBlock<T> >;
 
 	/// ==============================
@@ -200,15 +203,15 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
 
-	#[pallet::storage] /// --- StorageValue: Total number of Existing Networks.
+	#[pallet::storage] /// --- ITEM( tota_number_of_existing_networks )
 	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
-	#[pallet::storage] /// --- SingleMap: netuid --> SubNetwork Size (Number of UIDs in the network).
+	#[pallet::storage] /// --- MAP ( netuid ) --> subnetwork_n (Number of UIDs in the network).
 	pub type SubnetworkN<T:Config> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultN<T> >;
-	#[pallet::storage] /// --- SingleMap: netuid --> Modality   TEXT: 0, IMAGE: 1, TENSOR: 2
+	#[pallet::storage] /// --- MAP ( netuid ) --> modality   TEXT: 0, IMAGE: 1, TENSOR: 2
 	pub type NetworkModality<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultModality<T>> ;
-	#[pallet::storage] /// --- SingleMap: Network UID -> If network is added.
+	#[pallet::storage] /// --- MAP ( netuid ) --> network_is_added
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
-	#[pallet::storage] /// --- DoubleMap: netuid -> netuid -> prunning score.
+	#[pallet::storage] /// --- DMAP ( netuid, netuid ) -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
 
 	/// ==============================
@@ -220,23 +223,21 @@ pub mod pallet {
 	pub fn DefaultPendingEmission<T: Config>() ->  u64 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultBlocksSinceLastStep<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultLastMechansimStepBlock<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultTempo<T: Config>() -> u16 { T::InitialTempo::get() }
-	#[pallet::type_value]
-	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
 
-	#[pallet::storage] /// --- SingleMap netuid --> Block of last mechanism step. TODO(const)
-	pub type LastMechansimStepBlock<T> = StorageValue<_, u64, ValueQuery>;
-	#[pallet::storage] /// ---- SingleMap netuid --> Tempo
+	#[pallet::storage] /// --- MAP ( netuid ) --> tempo
 	pub type Tempo<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTempo<T> >;
-	#[pallet::storage] /// --- SingleMap netuid --> EmissionValues
+	#[pallet::storage] /// --- MAP ( netuid ) --> emission_values
 	pub type EmissionValues<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultEmissionValues<T>>;
-	#[pallet::storage] /// --- SingleMap netuid --> Pending Emission
+	#[pallet::storage] /// --- MAP ( netuid ) --> pending_emission
 	pub type PendingEmission<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultPendingEmission<T>>;
-	#[pallet::storage] /// --- SingleMap netuid --> Blocks since last step.
+	#[pallet::storage] /// --- MAP ( netuid ) --> blocks_since_last_step.
 	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
-	#[pallet::storage] /// --- SingleMap netuid --> validator Exclude Quantile
-	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> last_mechanism_step_block
+	pub type LastMechansimStepBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam storage ====
@@ -273,47 +274,51 @@ pub mod pallet {
 	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
+	#[pallet::type_value]
+	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 
-	#[pallet::storage] /// ---- SingleMap netuid --> Rho
+	#[pallet::storage] /// --- MAP ( netuid ) --> Rho
 	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Kappa
+	#[pallet::storage] /// --- MAP ( netuid ) --> Kappa
 	pub type Kappa<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultKappa<T> >;
-	#[pallet::storage] 	/// ---- SingleMap netuid --> uid, we use to record uids to prune at next epoch.
+	#[pallet::storage] /// --- MAP ( netuid ) --> uid, we use to record uids to prune at next epoch.
     pub type NeuronsToPruneAtNextEpoch<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] /// ---- SingleMap netuid --> Registration This Interval
+	#[pallet::storage] /// --- MAP ( netuid ) --> registrations_this_interval
 	pub type RegistrationsThisInterval<T:Config> = StorageMap<_, Identity, u16, u16, ValueQuery>;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Max Allowed Uids
+	#[pallet::storage] /// --- MAP ( netuid ) --> max_allowed_uids
 	pub type MaxAllowedUids<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedUids<T> >;
-	#[pallet::storage] 	/// --- SingleMap Network UID ---> Immunity Period
+	#[pallet::storage] /// --- MAP ( netuid ) --> immunity_period
 	pub type ImmunityPeriod<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultImmunityPeriod<T> >;
-	#[pallet::storage] /// --- SingleMap netuid --> Activity Cutoff
+	#[pallet::storage] /// --- MAP ( netuid ) --> activity_cutoff
 	pub type ActivityCutoff<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultActivityCutoff<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Stake Pruning Min
+	#[pallet::storage] /// --- MAP ( netuid ) --> stake_pruning_min
 	pub type StakePruningMin<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningMin<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MaxWeightsLimit
+	#[pallet::storage] /// --- MAP ( netuid ) --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Validator Epoch Length
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_epoch_len
 	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
-	#[pallet::storage] /// ---- SingleMap netuid --> Hyper-parameter MinAllowedWeights
+	#[pallet::storage] /// --- MAP ( netuid ) --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] /// --- SingleMap netuid --> n_allowed_validators
+	#[pallet::storage] /// --- MAP ( netuid ) --> n_allowed_validators
 	pub type NAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultNAllowedValidators<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid -->  Adjustment Interval
+	#[pallet::storage] /// --- MAP ( netuid ) --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid -->  Bonds Moving Average
+	#[pallet::storage] /// --- MAP ( netuid ) --> bonds_moving_average
 	pub type BondsMovingAverage<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBondsMovingAverage<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Validator Batch Size
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_batch_size
 	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
-	#[pallet::storage] /// --- SingleMap Network UID ---> Validaotr Sequence Length
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_sequence_length
 	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
-	#[pallet::storage] 	/// ---- SingleMap Network UID ---> Valdiator Epochs Per Reset
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_epochs_per_reset
 	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
-	#[pallet::storage] /// ---- SingleMap netuid -->  Target Registration Per Interval
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_exclude_quantile
+	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> target_registrations_this_interval
 	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
-	#[pallet::storage] /// ---- DMAP( netuid, uid ) --> Block Registration
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> block_at_registration
 	pub type BlockAtRegistration<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64, ValueQuery, DefaultBlockAtRegistration<T> >;
 
 	/// =======================================
@@ -348,35 +353,35 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultKey<T:Config>() -> T::AccountId { T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).unwrap() }
 
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> rank
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> rank
 	pub(super) type Rank<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultRank<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, hotkey ) --> uid
+	#[pallet::storage] /// --- DMAP ( netuid, hotkey ) --> uid
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> trust
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> (version, ip address, port, ip type)
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> (version, ip address, port, ip type)
 	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> active
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> active
 	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> hotkey
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> hotkey
 	pub(super) type Keys<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, T::AccountId, ValueQuery, DefaultKey<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> emission 
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> emission 
 	pub(super) type Emission<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u64, ValueQuery, DefaultEmission<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> incentive
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> incentive
 	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> consensus
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> consensus
 	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> dividends
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> dividends
 	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> last_update
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> last_update
 	pub(super) type LastUpdate<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u64 , ValueQuery, DefaultLastUpdate<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> bonds
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> bonds
     pub(super) type Bonds<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultBonds<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> is_validator
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> is_validator
     pub(super) type IsValidator<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, bool, ValueQuery, DefaultIsValidator<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> weights
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> weights
     pub(super) type Weights<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, Vec<(u16, u16)>, ValueQuery, DefaultWeights<T> >;
-	#[pallet::storage] /// --- DMAP( netuid, uid ) --> pruning_score.
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> pruning_score.
 	pub(super) type PruningScores<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultPruningScore<T> >;
 	
 	/// ===============
@@ -551,7 +556,6 @@ pub mod pallet {
 		/// # Args:
 		/// 	* 'n': (T::BlockNumber):
 		/// 		- The number of the block we are initializing.
-		// TODO( Saeideh ): We need tests on this pending emission / tempo process.
 		fn on_initialize( _block_number: BlockNumberFor<T> ) -> Weight {
 			Self::block_step();
 			return 0; 
@@ -931,7 +935,6 @@ pub mod pallet {
 			)
 		}
 
-
 		/// ---- Sudo create and load network.
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
@@ -982,12 +985,7 @@ pub mod pallet {
 		/// 		- The topk percentile prunning score requirement (u16:MAX normalized.)
 		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_add_network_connection_requirement( 
-			origin:OriginFor<T>, 
-			netuid_a: u16,
-			netuid_b: u16,
-			requirement: u16,
-		) -> DispatchResult { 
+		pub fn sudo_add_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16, requirement: u16 ) -> DispatchResult { 
 			Self::do_sudo_add_network_connection_requirement( origin, netuid_a, netuid_b, requirement )
 		}
 
@@ -1003,400 +1001,87 @@ pub mod pallet {
 		/// 		- The required network connection to remove.
 		///   
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_remove_network_connection_requirement( 
-			origin:OriginFor<T>, 
-			netuid_a: u16,
-			netuid_b: u16,
-		) -> DispatchResult { 
+		pub fn sudo_remove_network_connection_requirement( origin:OriginFor<T>, netuid_a: u16, netuid_b: u16 ) -> DispatchResult { 
 			Self::do_sudo_remove_network_connection_requirement( origin, netuid_a, netuid_b )
 		}
 
-		/// ---- Sudo set this network's bonds moving average.
+		/// ==================================
+		/// ==== Parameter Sudo calls ========
+		/// ==================================
+		/// Each function sets the corresponding hyper paramter on the specified network
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
 		/// 	* `netuid` (u16):
-		/// 		- The network we are setting the moving average on.
+		/// 		- The network identifier.
 		///
-		/// 	* `bonds_moving_average` (u16):
-		/// 		- The bonds moving average.
-		///
+		/// 	* `hyperparameter value` (u16):
+		/// 		- The value of the hyper parameter.
+		///   
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_bonds_moving_average( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			bonds_moving_average: u64 
-		) -> DispatchResult {  
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			BondsMovingAverage::<T>::insert( netuid, bonds_moving_average );
-			Self::deposit_event( Event::BondsMovingAverageSet( netuid, bonds_moving_average ) );
-			Ok(())
+		pub fn sudo_set_bonds_moving_average( origin:OriginFor<T>, netuid: u16, bonds_moving_average: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_bonds_moving_average( origin, netuid, bonds_moving_average )
 		}
-
-		/// ---- Sudo set this networks n_allowed_validators
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network we are setting the moving average on.
-		///
-		/// 	* `n_allowed_validators` (u16):
-		/// 		- The bonds moving average.
-		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_n_allowed_validators( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			n_allowed_validators: u16
-		) -> DispatchResult {  
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			NAllowedValidators::<T>::insert( netuid, n_allowed_validators );
-			Self::deposit_event( Event::NAllowedValidatorsSet( netuid, n_allowed_validators ) );
-			Ok(())
+		pub fn sudo_set_n_allowed_validators( origin:OriginFor<T>, netuid: u16, n_allowed_validators: u16 ) -> DispatchResult {  
+			Self::do_sudo_set_n_allowed_validators( origin, netuid, n_allowed_validators )
 		}
-
-		/// ---- Sudo set networks difficulty hyper parameters.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network we are setting the hyper parameter on.
-		///
-		/// 	* `difficulty` (u16):
-		/// 		- The network POW difficulty.
-		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_difficulty( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			difficulty: u64 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			Difficulty::<T>::insert( netuid, difficulty );
-			Self::deposit_event( Event::DifficultySet( netuid, difficulty ) );
-			Ok(())
+		pub fn sudo_set_difficulty( origin:OriginFor<T>, netuid: u16, difficulty: u64 ) -> DispatchResult {
+			Self::do_sudo_set_difficulty( origin, netuid, difficulty )
 		}
-
-		/// ---- Sudo set the POW adjustment interval for this network.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set the adjustment interval.
-		///
-		/// 	* `adjustment_interval` (u16):
-		/// 		- The network POW adjustment interval.
-		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_adjustment_interval( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			adjustment_interval: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			AdjustmentInterval::<T>::insert(netuid, adjustment_interval);
-			Self::deposit_event( Event::AdjustmentIntervalSet( netuid, adjustment_interval) );
-			Ok(()) 
+		pub fn sudo_set_adjustment_interval( origin:OriginFor<T>, netuid: u16, adjustment_interval: u16 ) -> DispatchResult { 
+			Self::do_sudo_set_adjustment_interval( origin, netuid, adjustment_interval )
 		}
-
-		/// ---- Sudo set the target registrations per interval for this network.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set the adjustment interval.
-		///
-		/// 	* `target_registrations_per_interval` (u16):
-		/// 		- The network POW target registrations per interval
-		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_target_registrations_per_interval( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			target_registrations_per_interval: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			TargetRegistrationsPerInterval::<T>::insert(netuid, target_registrations_per_interval);
-			Self::deposit_event( Event::RegistrationPerIntervalSet( netuid, target_registrations_per_interval) );
-			Ok(())
+		pub fn sudo_set_target_registrations_per_interval( origin:OriginFor<T>, netuid: u16, target_registrations_per_interval: u16 ) -> DispatchResult {
+			Self::do_sudo_set_target_registrations_per_interval( origin, netuid, target_registrations_per_interval )
 		}
-		
-		/// ---- Sudo set the activity for this network.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set the adjustment interval.
-		///
-		/// 	* `target_registrations_per_interval` (u16):
-		/// 		- The network POW target registrations per interval
-		///
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_activity_cutoff( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			activity_cutoff: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ActivityCutoff::<T>::insert(netuid, activity_cutoff);
-			Self::deposit_event( Event::ActivityCutoffSet( netuid, activity_cutoff) );
-			Ok(())
+		pub fn sudo_set_activity_cutoff( origin:OriginFor<T>, netuid: u16, activity_cutoff: u16 ) -> DispatchResult {
+			Self::do_sudo_set_activity_cutoff( origin, netuid, activity_cutoff )
 		}
-
-		/// ---- Sudo set rho.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set rho.
-		///
-		/// 	* `rho` (u16):
-		/// 		- The network rho value.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_rho( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			rho: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			Rho::<T>::insert(netuid, rho);
-			Self::deposit_event( Event::RhoSet( rho ) );
-			Ok(())
+		pub fn sudo_set_rho( origin:OriginFor<T>, netuid: u16, rho: u16 ) -> DispatchResult {
+			Self::do_sudo_set_rho( origin, netuid, rho )
 		}
-
-		/// ---- Sudo set kappa.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set kappa on.
-		///
-		/// 	* `kappa` (u16):
-		/// 		- The network kappa value.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_kappa( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			kappa: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			Kappa::<T>::insert(netuid, kappa);
-			Self::deposit_event( Event::KappaSet( netuid, kappa) );
-			Ok(())
+		pub fn sudo_set_kappa( origin:OriginFor<T>, netuid: u16, kappa: u16 ) -> DispatchResult {
+			Self::do_sudo_set_kappa( origin, netuid, kappa )
 		}
-
-		/// ---- Sudo set max allowed uids.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set max_allowed_uids on.
-		///
-		/// 	* `max_allowed_uids` (u16):
-		/// 		- The network max_allowed_uids hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_allowed_uids( 
-			origin:OriginFor<T>,
-			netuid: u16, 
-			max_allowed_uids: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ensure!( max_allowed_uids < u16::MAX, Error::<T>::MaxAllowedUIdsNotAllowed );
-			MaxAllowedUids::<T>::insert(netuid, max_allowed_uids);
-			Self::deposit_event( Event::MaxAllowedUidsSet( netuid, max_allowed_uids) );
-			Ok(())
+		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>, netuid: u16, max_allowed_uids: u16 ) -> DispatchResult {
+			Self::do_sudo_set_max_allowed_uids(origin, netuid, max_allowed_uids )
 		}
-
-		/// ---- Sudo set min_allowed_weights.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set min_allowed_weights  on.
-		///
-		/// 	* `min_allowed_weights` (u16):
-		/// 		- The network min_allowed_weights  hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_min_allowed_weights( 
-			origin:OriginFor<T>,
-			netuid: u16, 
-			min_allowed_weights: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			MinAllowedWeights::<T>::insert(netuid, min_allowed_weights);
-			Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
-			Ok(())
+		pub fn sudo_set_min_allowed_weights( origin:OriginFor<T>, netuid: u16, min_allowed_weights: u16 ) -> DispatchResult {
+			Self::do_sudo_set_min_allowed_weights( origin, netuid, min_allowed_weights )
 		}
-
-		/// ---- Sudo set validator_batch_size.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set validator_batch_size on.
-		///
-		/// 	* `validator_batch_size` (u16):
-		/// 		- The network validator_batch_size hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_batch_size( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			validator_batch_size: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ValidatorBatchSize::<T>::insert(netuid, validator_batch_size);
-			Self::deposit_event(Event::ValidatorBatchSizeSet(netuid, validator_batch_size));
-			Ok(())
+		pub fn sudo_set_validator_batch_size( origin:OriginFor<T>, netuid: u16, validator_batch_size: u16 ) -> DispatchResult {
+			Self::do_sudo_set_validator_batch_size( origin, netuid, validator_batch_size )
 		}
-
-		/// ---- Sudo set validator_sequence_length.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set validator_sequence_length on.
-		///
-		/// 	* `validator_sequence_length` (u16):
-		/// 		- The network validator_sequence_length hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_sequence_length( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			validator_sequence_length: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?; 
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ValidatorSequenceLength::<T>::insert(netuid, validator_sequence_length);
-			Self::deposit_event(Event::ValidatorSequenceLengthSet(netuid, validator_sequence_length));
-			Ok(())
+		pub fn sudo_set_validator_sequence_length( origin:OriginFor<T>, netuid: u16, validator_sequence_length: u16 ) -> DispatchResult {
+			Self::do_sudo_set_validator_sequence_length(origin, netuid, validator_sequence_length )
 		}
-
-		/// ---- Sudo set validator_epochs_per_reset.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set validator_epochs_per_reset on.
-		///
-		/// 	* `validator_epochs_per_reset` (u16):
-		/// 		- The network validator_epochs_per_reset hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_epochs_per_reset( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			validator_epochs_per_reset : u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ValidatorEpochsPerReset::<T>::insert(netuid, validator_epochs_per_reset);
-			Self::deposit_event(Event::ValidatorEpochPerResetSet(netuid, validator_epochs_per_reset));
-			Ok(())
+		pub fn sudo_set_validator_epochs_per_reset( origin:OriginFor<T>, netuid: u16, validator_epochs_per_reset: u16 ) -> DispatchResult {
+			Self::do_sudo_set_validator_epochs_per_reset( origin, netuid, validator_epochs_per_reset )
 		}
-
-		/// ---- Sudo set immunity_period.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set immunity_period on.
-		///
-		/// 	* `immunity_period ` (u16):
-		/// 		- The network immunity_period hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_immunity_period( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			immunity_period: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ImmunityPeriod::<T>::insert(netuid, immunity_period);
-			Self::deposit_event(Event::ImmunityPeriodSet(netuid, immunity_period));
-			Ok(())
+		pub fn sudo_set_immunity_period( origin:OriginFor<T>, netuid: u16, immunity_period: u16 ) -> DispatchResult {
+			Self::do_sudo_set_immunity_period( origin, netuid, immunity_period )
 		}
-
-		/// ---- Sudo set max_weight_limit.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set max_weight_limit on.
-		///
-		/// 	* `max_weight_limit ` (u16):
-		/// 		- The network max_weight_limit hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_max_weight_limit( 
-			origin:OriginFor<T>,
-			netuid: u16, 
-			max_weight_limit: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			MaxWeightsLimit::<T>::insert( netuid, max_weight_limit );
-			Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
-			Ok(())
+		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>, netuid: u16, max_weight_limit: u16 ) -> DispatchResult {
+			Self::do_sudo_set_max_weight_limit( origin, netuid, max_weight_limit )
 		}
-		
-		// --- SUDO functions to manage NETWORKS ---
-
-		/// ---- Sudo set validator_exclude_quantile.
-		/// Args:
-		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, must be sudo.
-		///
-		/// 	* `netuid` (u16):
-		/// 		- The network id to set validator_exclude_quantile on.
-		///
-		/// 	* `validator_exclude_quantile ` (u16):
-		/// 		- The network validator_exclude_quantile hyper-parameter.
-		///	
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_exclude_quantile( 
-			origin:OriginFor<T>, 
-			netuid: u16,
-			validator_exclude_quantile: u16 
-		) -> DispatchResult {
-			ensure_root( origin )?;
-			ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-			ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
-		    ValidatorExcludeQuantile::<T>::insert(netuid, validator_exclude_quantile );
-			Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
-			Ok(())
+		pub fn sudo_set_validator_exclude_quantile( origin:OriginFor<T>, netuid: u16, validator_exclude_quantile: u16 ) -> DispatchResult {
+			Self::do_sudo_set_validator_exclude_quantile( origin, netuid, validator_exclude_quantile )
 		}
 
 	}	

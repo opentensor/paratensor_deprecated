@@ -7,11 +7,11 @@ use frame_support::storage::IterableStorageDoubleMap;
 impl<T: Config> Pallet<T> { 
 
     pub fn block_step() {
-        // Adjust difficulties.
+        // --- 1. Adjust difficulties.
 		Self::adjust_registration_difficulties();
-		// Distribute emission.
+		// --- 2. Distribute emission.
 		Self::distribute_pending_emission_onto_networks();
-        // Run epochs.
+        // --- 3. Run epochs.
         Self::run_epochs_and_emit();
     }
 
@@ -63,7 +63,14 @@ impl<T: Config> Pallet<T> {
 
                 // --- 7. Add the remainder back to the pending.
                 PendingEmission::<T>::insert( netuid_i, tao_remainder );
+
+                // --- 8. Drain blocks and set epoch counters.
+                Self::set_blocks_since_last_step( netuid_i, 0 );
+                Self::set_last_mechanism_step_block( netuid_i, block_number );
             } 
+
+            // --- 9. Increase blocks since last step.
+            Self::set_blocks_since_last_step( netuid_i, Self::get_blocks_since_last_step( netuid_i ) + 1 );
         }
     }
 

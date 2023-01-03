@@ -3,236 +3,36 @@ use frame_system::Config;
 mod mock;
 use mock::*;
 use frame_support::sp_runtime::DispatchError;
-use substrate_fixed::types::I32F32;
 use pallet_paratensor::{Error};
-
-#[test]
-fn test_sudo_set_rho() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let rho: u16 = 11;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid, rho));
-        assert_eq!(ParatensorModule::get_rho(netuid), rho);
-    });
-}
-
-#[test]
-fn test_sudo_set_bonds_moving_average () {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let bonds_moving_average: u64 = 10;
-        add_network(netuid, 12, 0);
-		assert_ok!(ParatensorModule::sudo_set_bonds_moving_average(<<Test as Config>::Origin>::root(), netuid, bonds_moving_average));
-        assert_eq!(ParatensorModule::get_bonds_moving_average(netuid), bonds_moving_average);
-    });
-}
-
-#[test]
-fn test_sudo_set_bonds_moving_average_fail () {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let bonds_moving_average: u64 = 10;
-        assert_eq!(ParatensorModule::sudo_set_bonds_moving_average(<<Test as Config>::Origin>::root(), netuid, bonds_moving_average) , Err(Error::<Test>::NetworkDoesNotExist.into()) );
-    });
-}
-
-#[test]
-fn test_sudo_set_difficulty () {
-	new_test_ext().execute_with(|| {
-        let difficulty: u64 = 10;
-        let netuid: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid, difficulty));
-        assert_eq!(ParatensorModule::get_difficulty_as_u64(netuid), difficulty);
-    });
-}
 
 #[test]
 fn test_sudo_set_adjustment_interval() {
 	new_test_ext().execute_with(|| {
-        let adjustment_interval: u16 = 10;
-        let netuid: u16 = 10;
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_adjustment_interval( netuid );
         add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_adjustment_interval(<<Test as Config>::Origin>::root(), netuid, adjustment_interval));
-        assert_eq!(ParatensorModule::get_adjustment_interval(netuid), adjustment_interval);
+		assert_eq!( ParatensorModule::sudo_set_adjustment_interval(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_adjustment_interval(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_adjustment_interval(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_adjustment_interval(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_adjustment_interval(netuid), to_be_set);
     });
 }
 
-#[test]
-fn test_sudo_set_adjustment_interval_fail() {
-	new_test_ext().execute_with(|| {
-        let adjustment_interval: u16 = 10;
-        let netuid: u16 = 10;
-        assert_eq!(ParatensorModule::sudo_set_adjustment_interval(<<Test as Config>::Origin>::root(), netuid, adjustment_interval) , Err(Error::<Test>::NetworkDoesNotExist.into()) );
-    });
-}
 
 #[test]
-fn test_sudo_set_target_registrations_per_interval() {
-	new_test_ext().execute_with(|| {
-        let target_registrations_per_interval: u16 = 10;
-        let netuid: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_target_registrations_per_interval(<<Test as Config>::Origin>::root(), netuid, target_registrations_per_interval));
-        assert_eq!(ParatensorModule::get_target_registrations_per_interval(netuid), target_registrations_per_interval);
-    });
-}
-
-#[test]
-fn test_sudo_set_target_registrations_per_interval_fail() {
-	new_test_ext().execute_with(|| {
-        let target_registrations_per_interval: u16 = 10;
-        let netuid: u16 = 10;
-        assert_eq!(ParatensorModule::sudo_set_target_registrations_per_interval(<<Test as Config>::Origin>::root(), netuid, target_registrations_per_interval), Err(Error::<Test>::NetworkDoesNotExist.into()) );
-    });
-}
-
-#[test]
-fn test_sudo_set_activity_cutoff() {
-	new_test_ext().execute_with(|| {
-        let activity_cutoff: u16 = 10;
-        let netuid: u16 = 10;
-        add_network(netuid, 10, 0);
-        let init_activity_cutoff: u16 = ParatensorModule::get_activity_cutoff(netuid);
-		assert_eq!(ParatensorModule::sudo_set_activity_cutoff(<<Test as Config>::Origin>::signed(0), netuid, activity_cutoff),  Err(DispatchError::BadOrigin.into()));
-        assert_eq!(ParatensorModule::get_activity_cutoff(netuid), init_activity_cutoff);
-    });
-}
-
-#[test]
-fn test_sudo_set_activity_cutoff_fail() {
-	new_test_ext().execute_with(|| {
-        let activity_cutoff: u16 = 10;
-        let netuid: u16 = 10;
-        assert_eq!(ParatensorModule::sudo_set_activity_cutoff(<<Test as Config>::Origin>::root(), netuid, activity_cutoff), Err(Error::<Test>::NetworkDoesNotExist.into()) );
-    });
-}
-
-#[test]
-fn test_sudo_set_kappa() {
+fn test_sudo_set_validator_exclude_quantile() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
-        let kappa: u16 = 5;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_validator_exclude_quantile( netuid );
         add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::root(), netuid, kappa));
-
-        let value  =  ( ParatensorModule::get_float_kappa(netuid)  *  I32F32::from_num( u16::MAX )).to_num::<u16>() + 1;
-        assert_eq!(value , kappa); 
-    });
-}
-
-#[test]
-fn test_sudo_set_rho_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let rho: u16 = 5;
-        
-		assert_eq!(ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid, rho), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
-fn test_sudo_set_max_allowed_uid() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let new_max_allowed_uids: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, new_max_allowed_uids));
-        assert!( ParatensorModule::get_max_allowed_uids(netuid) == new_max_allowed_uids );
-    });
-}
-
-#[test]
-fn test_sudo_set_max_allowed_uid_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let max_allowed_uids: u16 = 10;
-        
-		assert_eq!(ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, max_allowed_uids), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
-fn test_sudo_set_min_allowed_weights() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let min_allowed_weights: u16 = 1;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_min_allowed_weights(<<Test as Config>::Origin>::root(), netuid, min_allowed_weights));
-        assert_eq!(ParatensorModule::get_min_allowed_weights(netuid), min_allowed_weights);
-    });
-}
-
-#[test]
-fn test_sudo_set_min_allowed_weights_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 10;
-        let min_allowed_weights: u16 = 1;
-		assert_eq!(ParatensorModule::sudo_set_min_allowed_weights(<<Test as Config>::Origin>::root(), netuid, min_allowed_weights), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
-fn test_sudo_set_validator_batch_size() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let validator_batch_size: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_validator_batch_size(<<Test as Config>::Origin>::root(), netuid, validator_batch_size));
-        assert_eq!(ParatensorModule::get_validator_batch_size(netuid), validator_batch_size);
-    });
-}
-
-#[test]
-fn test_sudo_set_validator_batch_size_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let validator_batch_size: u16 = 10;
-		assert_eq!(ParatensorModule::sudo_set_validator_batch_size(<<Test as Config>::Origin>::root(), netuid, validator_batch_size), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
-fn test_sudo_set_validator_sequence_length() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let validator_sequence_length: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_validator_sequence_length(<<Test as Config>::Origin>::root(), netuid, validator_sequence_length));
-        assert_eq!(ParatensorModule::get_validator_sequence_length(netuid), validator_sequence_length);
-    });
-}
-
-#[test]
-fn test_sudo_set_validator_sequence_length_fail() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let validator_sequence_length: u16 = 10;
-		assert_eq!(ParatensorModule::sudo_set_validator_sequence_length(<<Test as Config>::Origin>::root(), netuid, validator_sequence_length), Err(Error::<Test>::NetworkDoesNotExist.into()));
-    });
-}
-
-#[test]
-fn test_sudo_set_validator_epochs_per_reset() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let validator_epochs_per_reset: u16= 10;
-        add_network(netuid, 10, 0);
-        let init_validator_epochs_per_reset: u16 = ParatensorModule::get_validator_epochs_per_reset(netuid);
-		assert_eq!(ParatensorModule::sudo_set_validator_epochs_per_reset(<<Test as Config>::Origin>::signed(0), netuid, validator_epochs_per_reset),  Err(DispatchError::BadOrigin.into()));
-        assert_eq!(ParatensorModule::get_validator_epochs_per_reset(netuid), init_validator_epochs_per_reset);
-    });
-}
-
-#[test]
-fn test_sudo_set_immunity_period() {
-	new_test_ext().execute_with(|| {
-        let netuid: u16 = 1;
-        let immunity_period: u16 = 10;
-        add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_immunity_period(<<Test as Config>::Origin>::root(), netuid, immunity_period));
-        assert_eq!(ParatensorModule::get_immunity_period(netuid), immunity_period);
+		assert_eq!( ParatensorModule::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_validator_exclude_quantile(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_validator_exclude_quantile(netuid), to_be_set);
     });
 }
 
@@ -240,20 +40,194 @@ fn test_sudo_set_immunity_period() {
 fn test_sudo_set_max_weight_limit() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
-        let max_weight_limit: u16 = 10;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_max_weight_limit( netuid );
         add_network(netuid, 10, 0);
-        let init_max_weight_limit: u16 = ParatensorModule::get_max_weight_limit(netuid);
-		assert_eq!(ParatensorModule::sudo_set_max_weight_limit(<<Test as Config>::Origin>::signed(0), netuid, max_weight_limit),  Err(DispatchError::BadOrigin.into()));
-        assert_eq!(ParatensorModule::get_max_weight_limit(netuid), init_max_weight_limit);
+		assert_eq!( ParatensorModule::sudo_set_max_weight_limit(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_max_weight_limit(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_max_weight_limit(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_max_weight_limit(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_max_weight_limit(netuid), to_be_set);
     });
 }
+
+
+#[test]
+fn test_sudo_set_immunity_period() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_immunity_period( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_immunity_period(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_immunity_period(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_immunity_period(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_immunity_period(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_immunity_period(netuid), to_be_set);
+    });
+}
+
+
+#[test]
+fn test_sudo_set_validator_epochs_per_reset() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_validator_epochs_per_reset( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_validator_epochs_per_reset(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_validator_epochs_per_reset(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_validator_epochs_per_reset(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_validator_epochs_per_reset(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_validator_epochs_per_reset(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_validator_sequence_length() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_validator_sequence_length( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_validator_sequence_length(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_validator_sequence_length(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_validator_sequence_length(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_validator_sequence_length(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_validator_sequence_length(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_validator_batch_size() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_validator_batch_size( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_validator_batch_size(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_validator_batch_size(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_validator_batch_size(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_validator_batch_size(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_validator_batch_size(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_min_allowed_weights() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_min_allowed_weights( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_min_allowed_weights(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_min_allowed_weights(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_min_allowed_weights(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_min_allowed_weights(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_min_allowed_weights(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_max_allowed_uids() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_max_allowed_uids( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_max_allowed_uids(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_max_allowed_uids(netuid), to_be_set);
+    });
+}
+
+
+#[test]
+fn test_sudo_set_kappa() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_kappa( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_kappa(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_kappa(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_kappa(netuid), to_be_set);
+    });
+}
+        
+
+#[test]
+fn test_sudo_set_rho() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_rho( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_rho(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_rho(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_activity_cutoff() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_activity_cutoff( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_activity_cutoff(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_activity_cutoff(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_activity_cutoff(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_activity_cutoff(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_activity_cutoff(netuid), to_be_set);
+    });
+}
+        
+        
+#[test]
+fn test_sudo_set_target_registrations_per_interval() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_target_registrations_per_interval( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_target_registrations_per_interval(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_target_registrations_per_interval(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_target_registrations_per_interval(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_target_registrations_per_interval(netuid), to_be_set);
+    });
+}
+        
+#[test]
+fn test_sudo_set_difficulty() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u64 = 10;
+        let init_value: u64 = ParatensorModule::get_difficulty_as_u64( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_difficulty(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_difficulty_as_u64(netuid), to_be_set);
+    });
+}
+        
 
 #[test]
 fn test_sudo_set_n_allowed_validators() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
         let to_be_set: u16 = 10;
-        let init_value: u16 = ParatensorModule::get_n_allowed_validators(netuid);
+        let init_value: u16 = ParatensorModule::get_n_allowed_validators( netuid );
         add_network(netuid, 10, 0);
 		assert_eq!( ParatensorModule::sudo_set_n_allowed_validators(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
         assert_eq!( ParatensorModule::sudo_set_n_allowed_validators(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
@@ -263,14 +237,19 @@ fn test_sudo_set_n_allowed_validators() {
     });
 }
 
+
 #[test]
-fn test_sudo_validator_exclude_quantile() {
+fn test_sudo_set_bonds_moving_average() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
-        let validator_exclude_quantile: u16 = 10;
+        let to_be_set: u64 = 10;
+        let init_value: u64 = ParatensorModule::get_bonds_moving_average(netuid);
         add_network(netuid, 10, 0);
-		assert_ok!(ParatensorModule::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::root(), netuid, validator_exclude_quantile));
-        assert_eq!(ParatensorModule::get_validator_exclude_quantile(netuid), validator_exclude_quantile);
+		assert_eq!( ParatensorModule::sudo_set_bonds_moving_average(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_bonds_moving_average(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_bonds_moving_average(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_bonds_moving_average(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_bonds_moving_average(netuid), to_be_set);
     });
 }
 

@@ -21,7 +21,6 @@ fn test_block_step_multi(){
     assert_eq!( ParatensorModule::get_difficulty_as_u64( netuid ), 10000 );
     assert_eq!( ParatensorModule::get_immunity_period( netuid ), 2 );
     assert_eq!( ParatensorModule::get_emission_value( netuid ), 0 );
-    assert_eq!( ParatensorModule::get_last_mechanism_step_block(), 0 );
     assert_eq!( ParatensorModule::get_activity_cutoff( netuid ), 5000 );
     assert_eq!( ParatensorModule::get_pending_emission( netuid ), 0 );
     assert_eq!( ParatensorModule::get_max_weight_limit( netuid ), u16::MAX );
@@ -31,6 +30,7 @@ fn test_block_step_multi(){
     assert_eq!( ParatensorModule::get_bonds_moving_average( netuid ), 500_000 );
     assert_eq!( ParatensorModule::get_validator_batch_size( netuid ), 10 );
     assert_eq!( ParatensorModule::get_last_adjustment_block( netuid ), 0 );
+    assert_eq!( ParatensorModule::get_last_mechanism_step_block( netuid ), 0 );
     assert_eq!( ParatensorModule::get_blocks_since_last_step( netuid ), 0 );
     assert_eq!( ParatensorModule::get_registrations_this_block( netuid ), 0 );
     assert_eq!( ParatensorModule::get_validator_epochs_per_reset( netuid ), 10 );
