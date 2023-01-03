@@ -5,7 +5,7 @@ use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 use paratensor_custom_rpc_runtime_api::NeuronInfoApi as NeuronInfoRuntimeApi;
-use pallet_paratensor::NeuronInfo as NeuronInfoStruct;
+use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
 #[rpc]
 pub trait NeuronInfoApi<BlockHash> {
@@ -53,7 +53,7 @@ where
 	C: HeaderBackend<Block>,
 	C::Api: NeuronInfoRuntimeApi<Block>,
 	{   // TODO (Cameron): fix return type
-	fn get_neurons(&self, at: Option<<Block as BlockT>::Hash>, netuid: u16) -> Result<NeuronInfoStruct> {
+	fn get_neurons(&self, at: Option<<Block as BlockT>::Hash>, netuid: u16) -> Result<<Vec<NeuronInfoStruct>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.

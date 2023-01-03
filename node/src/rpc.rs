@@ -51,7 +51,7 @@ where
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
-	// Custom RPC for getting neuron metadata
+	// Custom RPC for getting neuron info
 	io.extend_with(paratensor_custom_rpc::NeuronInfoApi::to_delegate(
 		paratensor_custom_rpc::NeuronInfo::new(client),
 	));

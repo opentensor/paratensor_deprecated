@@ -28,7 +28,7 @@ mod weights;
 mod networks;
 mod serving; 
 mod block_step;
-pub mod neuron_metadata;
+pub mod neuron_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -42,6 +42,7 @@ pub mod pallet {
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
+	use serde::Serialize;
 
 	/// ================
 	/// ==== Config ====
@@ -106,7 +107,7 @@ pub mod pallet {
 	/// ==== Endpoint Struct ====
 	/// =========================
 	pub type AxonMetadataOf = AxonMetadata;
-	#[derive(Encode, Decode, Default, TypeInfo)]
+	#[derive(Encode, Decode, Default, TypeInfo, Serialize)]
     pub struct AxonMetadata {
 		/// ---- The endpoint's code version.
         pub version: u32,
