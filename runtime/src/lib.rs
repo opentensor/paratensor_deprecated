@@ -473,6 +473,7 @@ parameter_types! {
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
+	pub const ParatensorInitialNAllowedValidators: u16 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
 	pub const ParatensorInitialAdjustmentInterval: u16 = 100;
@@ -483,7 +484,7 @@ parameter_types! {
 	pub const ParatensorInitialStakePruningMin: u16 = 0;
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
-	pub const InitialValidatorExcludeQuantile: u8 = 10; // 0.1
+	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
 	
 }
 impl pallet_paratensor::Config for Runtime {
@@ -510,7 +511,8 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
 	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
 	type InitialPruningScore = ParatensorInitialPruningScore;
-	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
+	type InitialNAllowedValidators = ParatensorInitialNAllowedValidators;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

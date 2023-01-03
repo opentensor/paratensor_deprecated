@@ -63,7 +63,8 @@ impl<T: Config> Pallet<T> {
 
         // --- 7. We deposit the neuron updated event.
         Self::deposit_event(Event::AxonServed(neuron_uid));
-        
+        log::info!("AxonServed( neuron_uid:{:?} ) ", neuron_uid );
+
         // --- 8. Return is successful dispatch. 
         Ok(())
     }

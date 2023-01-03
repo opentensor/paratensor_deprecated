@@ -100,7 +100,6 @@ fn test_remove_difficulty_for_network() {
 fn test_remove_network_for_all_hotkeys() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
-        let test: Vec<u16>= vec![];
         let tempo: u16 = 13;
         add_network(netuid, tempo, 0);
         register_ok_neuron( 1, 55, 66, 0);
