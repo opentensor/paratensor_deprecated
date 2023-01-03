@@ -32,42 +32,61 @@ impl<T: Config> Pallet<T> {
         let mut neurons = Vec::new();
         let n = SubnetworkN::<T>::get( netuid ); 
         for uid_i in 0..n {
-            let mut neuron: NeuronMetadata<T> = NeuronMetadata::<T>::default();
-
-            neuron.uid = uid_i;
-            neuron.netuid = netuid;
+            let uid = uid_i;
+            let netuid = netuid;
 
             let axons_metadata = AxonsMetaData::<T>::get( netuid, uid_i as u16 );
+            let axon_metadata;
             if axons_metadata.is_some() {
-                neuron.axon_metadata = axons_metadata.unwrap();
+                axon_metadata = axons_metadata.unwrap();
             } else {
-                neuron.axon_metadata = AxonMetadata::default();
+                axon_metadata = AxonMetadata::default();
             }
 
-            neuron.hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
-            neuron.coldkey = Owner::<T>::get( neuron.hotkey ).clone();
+            let hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
+            let coldkey = Owner::<T>::get( hotkey ).clone();
 
-            neuron.last_update = LastUpdate::<T>::get( netuid, uid_i as u16 );
+            let last_update = LastUpdate::<T>::get( netuid, uid_i as u16 );
             
             // TODO: replace with last_update check if we remove Active storage
-            neuron.active = Active::<T>::get( netuid, uid_i as u16 );
+            let active = Active::<T>::get( netuid, uid_i as u16 );
 
-            neuron.rank = Rank::<T>::get( netuid, uid_i as u16 );
-            neuron.emission = Emission::<T>::get( netuid, uid_i as u16 );
-            neuron.incentive = Incentive::<T>::get( netuid, uid_i as u16 );
-            neuron.consensus = Consensus::<T>::get( netuid, uid_i as u16 );
-            neuron.trust = Trust::<T>::get( netuid, uid_i as u16 );
-            neuron.dividends = Dividends::<T>::get( netuid, uid_i as u16 );
-            neuron.pruning_score = PruningScores::<T>::get( netuid, uid_i as u16 );
+            let rank = Rank::<T>::get( netuid, uid_i as u16 );
+            let emission = Emission::<T>::get( netuid, uid_i as u16 );
+            let incentive = Incentive::<T>::get( netuid, uid_i as u16 );
+            let consensus = Consensus::<T>::get( netuid, uid_i as u16 );
+            let trust = Trust::<T>::get( netuid, uid_i as u16 );
+            let dividends = Dividends::<T>::get( netuid, uid_i as u16 );
+            let pruning_score = PruningScores::<T>::get( netuid, uid_i as u16 );
             
-            neuron.weights = Weights::<T>::get( netuid, uid_i as u16 );
-            neuron.bonds = Bonds::<T>::get( netuid, uid_i as u16 );
+            let weights = Weights::<T>::get( netuid, uid_i as u16 );
+            let bonds = Bonds::<T>::get( netuid, uid_i as u16 );
             
             let mut stakes = Vec::<(T::AccountId, u64)>::new();
-            for ( coldkey, stake ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64> >::iter_prefix( neuron.hotkey.clone() ) {
+            for ( coldkey, stake ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64> >::iter_prefix( hotkey.clone() ) {
                 stakes.push( (coldkey.clone(), stake) );
             }
-            neuron.stake = stakes;
+            let stake = stakes;
+
+            let neuron = NeuronMetadata {
+                hotkey,
+                coldkey,
+                uid,
+                netuid,
+                active,
+                axon_metadata,
+                stake,
+                rank,
+                emission,
+                incentive,
+                consensus,
+                trust,
+                dividends,
+                last_update,
+                weights,
+                bonds,
+                pruning_score
+            };
             
             neurons.push( neuron );
         }
