@@ -60,6 +60,7 @@ impl<T: Config> Pallet<T> {
         Self::init_new_network( netuid, tempo, modality );
         
         // --- 6. Emit the new network event.
+        log::info!("NetworkAdded( netuid:{:?}, modality:{:?} )", netuid, modality);
         Self::deposit_event( Event::NetworkAdded( netuid, modality ) );
 
         // --- 7. Ok and return.
@@ -95,8 +96,9 @@ impl<T: Config> Pallet<T> {
         Self::remove_network( netuid );
     
         // --- 4. Emit the event.
+        log::info!("NetworkRemoved( netuid:{:?} )", netuid);
         Self::deposit_event( Event::NetworkRemoved( netuid ) );
-        
+
         // --- 5. Ok and return.
         Ok(())
     }
@@ -126,6 +128,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
         ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
         Self::add_connection_requirement( netuid_a, netuid_b, requirement );
+        log::info!("NetworkConnectionAdded( netuid_a:{:?}, netuid_b:{:?} requirement: {:?} )", netuid_a, netuid_b, requirement);
         Self::deposit_event( Event::NetworkConnectionAdded( netuid_a, netuid_b, requirement ) );
         Ok(())
     }
@@ -150,6 +153,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid_a ), Error::<T>::NetworkDoesNotExist );
         ensure!( Self::if_subnet_exist( netuid_b ), Error::<T>::NetworkDoesNotExist );
         Self::remove_connection_requirment( netuid_a, netuid_b );
+        log::info!("NetworkConnectionRemoved( netuid_a:{:?}, netuid_b:{:?} )", netuid_a, netuid_b );
         Self::deposit_event( Event::NetworkConnectionRemoved( netuid_a, netuid_b ) );
         Ok(())
     }
@@ -203,6 +207,7 @@ impl<T: Config> Pallet<T> {
         Self::set_emission_values( &netuids, &emission );
 
         // --- 8. Add emission values for each network
+        log::info!("EmissionValuesSet()");
         Self::deposit_event( Event::EmissionValuesSet() );
 
         // --- 9. Ok and return.
@@ -254,7 +259,7 @@ impl<T: Config> Pallet<T> {
 
 
     /// Explicitly sets all network parameters to their default values.
-    /// Note: this is required because, although there are defaults, they do not come through on all calls.
+    /// Note: this is required because, although there are defaults, they are not explicitly set until this call.
     ///
     pub fn set_default_values_for_all_parameters(netuid: u16){
         // Make network parameters explicit.

@@ -1,5 +1,4 @@
 use super::*;
-use substrate_fixed::types::I64F64;
 
 impl<T: Config> Pallet<T> { 
 
@@ -48,8 +47,9 @@ impl<T: Config> Pallet<T> {
         Self::delegate_hotkey( &hotkey, take );
       
         // --- 5. Emit the staking event.
+        log::info!("DelegateAdded( coldkey:{:?}, hotkey:{:?}, take:{:?} )", coldkey, hotkey, take );
         Self::deposit_event( Event::DelegateAdded( coldkey, hotkey, take ) );
-   
+
         // --- 9. Ok and return.
         Ok(())
     }
@@ -112,8 +112,9 @@ impl<T: Config> Pallet<T> {
         Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &hotkey, stake_to_be_added );
  
         // --- 8. Emit the staking event.
+        log::info!("StakeAdded( hotkey:{:?}, stake_to_be_added:{:?} )", hotkey, stake_to_be_added );
         Self::deposit_event( Event::StakeAdded( hotkey, stake_to_be_added ) );
- 
+
         // --- 9. Ok and return.
         Ok(())
     }
@@ -177,30 +178,11 @@ impl<T: Config> Pallet<T> {
         Self::add_balance_to_coldkey_account( &coldkey, stake_to_be_added_as_currency.unwrap() );
 
         // --- 8. Emit the unstaking event.
+        log::info!("StakeRemoved( hotkey:{:?}, stake_to_be_removed:{:?} )", hotkey, stake_to_be_removed );
         Self::deposit_event( Event::StakeRemoved( hotkey, stake_to_be_removed ) );
 
         // --- 9. Done and ok.
         Ok(())
-    }
-
-    /// Returns emission awarded to a hotkey as a function of its proportion of the total stake.
-    ///
-    pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
-        let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
-        let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
-        return proportional_emission.to_num::<u64>();
-    }
-
-    /// Returns the delegated stake 'take' assigend to this key. (If exists, otherwise 0)
-    ///
-    pub fn calculate_delegate_proportional_take( hotkey: &T::AccountId, emission: u64 ) -> u64 {
-        if Self::hotkey_is_delegate( hotkey ) {
-            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( hotkey ) ) / I64F64::from_num( u16::MAX );
-            let take_emission: I64F64 = take_proportion * I64F64::from_num( emission );
-            return take_emission.to_num::<u64>();
-        } else {
-            return 0;
-        }
     }
 
     /// Returns true if the passed hotkey allow delegative staking. 

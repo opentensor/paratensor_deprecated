@@ -9,6 +9,7 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Global Getters ====
 	/// ========================
+    pub fn set_debug( debug: bool ) { Debug::<T>::put( debug ) }
     pub fn set_min_difficulty( netuid: u16, min_difficulty: u64 ) { MinDifficulty::<T>::insert( netuid, min_difficulty) }
     pub fn set_max_difficulty( netuid: u16, max_difficulty: u64 ) { MaxDifficulty::<T>::insert( netuid, max_difficulty) }
     pub fn set_last_update_for_neuron(netuid: u16, neuron_uid: u16, update: u64){ LastUpdate::<T>::insert(netuid, neuron_uid, update); }
@@ -22,6 +23,7 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Global Getters ====
 	/// ========================
+    pub fn debug() -> bool { Debug::<T>::get() }
     pub fn get_total_issuance() -> u64 { TotalIssuance::<T>::get() }
     pub fn get_block_emission() -> u64 { BlockEmission::<T>::get() }
     pub fn get_current_block_as_u64( ) -> u64 { TryInto::try_into( system::Pallet::<T>::block_number() ).ok().expect("blockchain will not exceed 2^64 blocks; QED.") }
@@ -52,6 +54,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_adjustment_interval( netuid, adjustment_interval );
+        log::info!("AdjustmentIntervalSet( netuid: {:?} adjustment_interval: {:?} ) ", netuid, adjustment_interval);
         Self::deposit_event( Event::AdjustmentIntervalSet( netuid, adjustment_interval) );
         Ok(()) 
     }
@@ -63,6 +66,7 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
         ensure!( validator_exclude_quantile <= 100, Error::<T>::StorageValueOutOfRange ); // The quantile must be between 0 and 100 => 0% and 100%
         Self::set_validator_exclude_quantile( netuid, validator_exclude_quantile );
+        log::info!("ValidatorExcludeQuantileSet( netuid: {:?} validator_exclude_quantile: {:?} ) ", netuid, validator_exclude_quantile);
         Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
         Ok(())
     }
@@ -73,6 +77,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
         Self::set_max_weight_limit( netuid, max_weight_limit );
+        log::info!("MaxWeightLimitSet( netuid: {:?} max_weight_limit: {:?} ) ", netuid, max_weight_limit);
         Self::deposit_event( Event::MaxWeightLimitSet( netuid, max_weight_limit ) );
         Ok(())
     }
@@ -83,6 +88,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_immunity_period( netuid, immunity_period );
+        log::info!("ImmunityPeriodSet( netuid: {:?} immunity_period: {:?} ) ", netuid, immunity_period);
         Self::deposit_event(Event::ImmunityPeriodSet(netuid, immunity_period));
         Ok(())
     }
@@ -93,6 +99,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_validator_epochs_per_reset( netuid, validator_epochs_per_reset );
+        log::info!("ValidatorEpochPerResetSet( netuid: {:?} validator_epochs_per_reset: {:?} ) ", netuid, validator_epochs_per_reset );
         Self::deposit_event(Event::ValidatorEpochPerResetSet(netuid, validator_epochs_per_reset));
         Ok(())
     }
@@ -103,6 +110,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?; 
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         ValidatorSequenceLength::<T>::insert( netuid, validator_sequence_length );
+        log::info!("ValidatorSequenceLengthSet( netuid: {:?} validator_sequence_length: {:?} ) ", netuid, validator_sequence_length );
         Self::deposit_event(Event::ValidatorSequenceLengthSet(netuid, validator_sequence_length));
         Ok(())
     }
@@ -113,6 +121,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_validator_batch_size( netuid, validator_batch_size );
+        log::info!("ValidatorBatchSizeSet( netuid: {:?} validator_batch_size: {:?} ) ", netuid, validator_batch_size);
         Self::deposit_event(Event::ValidatorBatchSizeSet(netuid, validator_batch_size));
         Ok(())
     }
@@ -123,6 +132,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_min_allowed_weights( netuid, min_allowed_weights );
+        log::info!("MinAllowedWeightSet( netuid: {:?} min_allowed_weights: {:?} ) ", netuid, min_allowed_weights);
         Self::deposit_event( Event::MinAllowedWeightSet( netuid, min_allowed_weights) );
         Ok(())
     }
@@ -133,6 +143,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
         Self::set_max_allowed_uids( netuid, max_allowed_uids );
+        log::info!("MaxAllowedUidsSet( netuid: {:?} max_allowed_uids: {:?} ) ", netuid, max_allowed_uids);
         Self::deposit_event( Event::MaxAllowedUidsSet( netuid, max_allowed_uids) );
         Ok(())
     }
@@ -143,6 +154,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_kappa( netuid, kappa );
+        log::info!("KappaSet( netuid: {:?} kappa: {:?} ) ", netuid, kappa );
         Self::deposit_event( Event::KappaSet( netuid, kappa) );
         Ok(())
     }
@@ -153,7 +165,8 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_rho( netuid, rho );
-        Self::deposit_event( Event::RhoSet( rho ) );
+        log::info!("RhoSet( netuid: {:?} rho: {:?} ) ", netuid, rho );
+        Self::deposit_event( Event::RhoSet( netuid, rho ) );
         Ok(())
     }
             
@@ -163,6 +176,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_activity_cutoff( netuid, activity_cutoff );
+        log::info!("ActivityCutoffSet( netuid: {:?} activity_cutoff: {:?} ) ", netuid, activity_cutoff);
         Self::deposit_event( Event::ActivityCutoffSet( netuid, activity_cutoff) );
         Ok(())
     }
@@ -173,6 +187,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_target_registrations_per_interval( netuid, target_registrations_per_interval );
+        log::info!("RegistrationPerIntervalSet( netuid: {:?} target_registrations_per_interval: {:?} ) ", netuid, target_registrations_per_interval );
         Self::deposit_event( Event::RegistrationPerIntervalSet( netuid, target_registrations_per_interval) );
         Ok(())
     }
@@ -183,6 +198,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_difficulty( netuid, difficulty );
+        log::info!("DifficultySet( netuid: {:?} difficulty: {:?} ) ", netuid, difficulty );
         Self::deposit_event( Event::DifficultySet( netuid, difficulty ) );
         Ok(())
     }
@@ -193,6 +209,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_n_allowed_validators( netuid, n_allowed_validators );
+        log::info!("NAllowedValidatorsSet( netuid: {:?} n_allowed_validators: {:?} ) ", netuid, n_allowed_validators );
         Self::deposit_event( Event::NAllowedValidatorsSet( netuid, n_allowed_validators ) );
         Ok(())
     }
@@ -203,6 +220,7 @@ impl<T: Config> Pallet<T> {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
         Self::set_bonds_moving_average( netuid, bonds_moving_average );
+        log::info!("BondsMovingAverageSet( netuid: {:?} bonds_moving_average: {:?} ) ", netuid, bonds_moving_average );
         Self::deposit_event( Event::BondsMovingAverageSet( netuid, bonds_moving_average ) );
         Ok(())
     }

@@ -126,6 +126,10 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
+	#[pallet::type_value] 
+	pub fn DefaultDebug<T: Config>() -> bool { true }
+	#[pallet::storage] /// --- ITEM ( debug )
+	pub type Debug<T> = StorageValue<_, bool, ValueQuery, DefaultDebug<T>>;
 
 	/// ============================
 	/// ==== Staking + Accounts ====
@@ -135,7 +139,7 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
-	pub fn DefaultBlockEmission<T: Config>() -> u64 {1000000000}
+	pub fn DefaultBlockEmission<T: Config>() -> u64 {1_000_000_000}
 	#[pallet::type_value] 
 	pub fn DefaultAllowsDelegation<T: Config>() -> bool { false }
 	#[pallet::type_value] 
@@ -424,7 +428,7 @@ pub mod pallet {
 		/// --- Event created when an activity cutoff is set for a subnet.
 		ActivityCutoffSet(u16, u16),
 		/// --- Event created when Rho value is set
-		RhoSet(u16),
+		RhoSet(u16, u16),
 		/// --- Event created when kappa is set for a subnet.
 		KappaSet(u16, u16),
 		/// --- Event created when minimun aloowed weight is set for a subnet.

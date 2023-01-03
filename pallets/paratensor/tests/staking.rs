@@ -646,7 +646,7 @@ fn test_full_with_delegating() {
 		// Emit inflation through non delegates.
 		ParatensorModule::emit_inflation_through_hotkey_account( &hotkey0, 100 );
 		ParatensorModule::emit_inflation_through_hotkey_account( &hotkey1, 100 );
-		assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &hotkey0 ), 200 );
+		assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &hotkey0 ), 200);
 		assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &hotkey1 ), 200 );
 
 

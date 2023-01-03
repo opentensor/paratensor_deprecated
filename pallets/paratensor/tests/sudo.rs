@@ -5,6 +5,43 @@ use mock::*;
 use frame_support::sp_runtime::DispatchError;
 use pallet_paratensor::{Error};
 
+
+#[test]
+fn test_defaults() {
+    new_test_ext().execute_with(|| {
+        let netuid = 0;
+        add_network(netuid, 10, 0);
+        assert_eq!( ParatensorModule::get_number_of_subnets(), 1 ); // There is a single network.
+        assert_eq!( ParatensorModule::get_subnetwork_n( netuid ), 0 ); // Network size is zero.
+        assert_eq!( ParatensorModule::get_rho( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_tempo( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_kappa( netuid ), 32_767 );
+        assert_eq!( ParatensorModule::get_min_difficulty( netuid ), 1 );
+        assert_eq!( ParatensorModule::get_max_difficulty( netuid ), u64::MAX );
+        assert_eq!( ParatensorModule::get_difficulty_as_u64( netuid ), 10000 );
+        assert_eq!( ParatensorModule::get_immunity_period( netuid ), 2 );
+        assert_eq!( ParatensorModule::get_emission_value( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_activity_cutoff( netuid ), 5000 );
+        assert_eq!( ParatensorModule::get_pending_emission( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_max_weight_limit( netuid ), u16::MAX );
+        assert_eq!( ParatensorModule::get_max_allowed_uids( netuid ), 2 );
+        assert_eq!( ParatensorModule::get_min_allowed_weights( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_adjustment_interval( netuid ), 100 );
+        assert_eq!( ParatensorModule::get_bonds_moving_average( netuid ), 500_000 );
+        assert_eq!( ParatensorModule::get_validator_batch_size( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_last_adjustment_block( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_last_mechanism_step_block( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_blocks_since_last_step( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_registrations_this_block( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_validator_epochs_per_reset( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_validator_sequence_length( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_validator_exclude_quantile( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_registrations_this_interval( netuid ), 0 );
+        assert_eq!( ParatensorModule::get_max_registratations_per_block( netuid ), 3 );
+        assert_eq!( ParatensorModule::get_target_registrations_per_interval( netuid ), 2 );
+    });
+}
+
 #[test]
 fn test_sudo_set_adjustment_interval() {
 	new_test_ext().execute_with(|| {

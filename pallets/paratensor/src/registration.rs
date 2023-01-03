@@ -143,6 +143,7 @@ impl<T: Config> Pallet<T> {
     
         // --- 15. Deposit successful event.
         Self::deposit_event( Event::NeuronRegistered( subnetwork_uid ) );
+        log::info!("NeuronRegistered( subnetwork_uid: {:?} ) ", subnetwork_uid );
 
         // --- 16. Ok and done.
         Ok(())
@@ -294,8 +295,6 @@ impl<T: Config> Pallet<T> {
         return false;
     }
 
-
-
     /// --- Sets new neuron information on the network under the specified uid with coldkey and hotkey information.
     /// The function ensures the the global account is created if not already existent.
     ///
@@ -433,7 +432,7 @@ impl<T: Config> Pallet<T> {
         let keccak_256_seal_hash_vec: [u8; 32] = keccak_256( &sha256_seal_hash_vec );
         let seal_hash: H256 = H256::from_slice( &keccak_256_seal_hash_vec );
 
-		 log::trace!(
+		log::trace!(
 			"\nblock_number: {:?}, \nnonce_u64: {:?}, \nblock_hash: {:?}, \nfull_bytes: {:?}, \nsha256_seal_hash_vec: {:?},  \nkeccak_256_seal_hash_vec: {:?}, \nseal_hash: {:?}",
 			block_number_u64,
 			nonce_u64,

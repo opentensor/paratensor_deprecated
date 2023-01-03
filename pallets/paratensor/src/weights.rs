@@ -90,6 +90,7 @@ impl<T: Config> Pallet<T> {
         LastUpdate::<T>::insert( netuid, neuron_uid, Self::get_current_block_as_u64() );
 
         // --- 14; Emit the tracking event.
+        log::info!("WeightsSet( netuid:{:?}, neuron_uid:{:?} )", netuid, neuron_uid );
         Self::deposit_event( Event::WeightsSet( netuid, neuron_uid ) );
 
         // --- 15. Return ok.
