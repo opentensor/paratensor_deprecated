@@ -24,18 +24,21 @@ impl<T: Config> Pallet<T> {
         log::trace!("activity_cutoff:\n{:?}\n", activity_cutoff );
 
         // Last update vector.
-        // TODO: remove Active::<T> storage if LastUpdate::<T> is used instead
         let last_update: Vec<u64> = Self::get_last_update( netuid );
         log::trace!("Last update:\n{:?}\n", last_update.clone() );
 
-        // Active mask.
+        // Inactive mask.
         let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
         log::trace!("Inactive:\n{:?}\n", inactive.clone() );
 
         // Access network stake as normalized vector.
         let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
+
+        // Remove inactive stake.
         let mut active_stake: Vec<I32F32> = stake.clone();
         inplace_mask_vector( &inactive, &mut active_stake );
+
+        // Normalize active stake.
         inplace_normalize( &mut active_stake );
         log::trace!("S:\n{:?}\n", active_stake.clone() );
 
@@ -50,10 +53,16 @@ impl<T: Config> Pallet<T> {
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
         log::trace!("W:\n{:?}\n", weights.clone() );
-        inplace_diag_mask( &mut weights ); // remove self-weight by masking diagonal
+
+        // Remove self-weight by masking diagonal.
+        inplace_diag_mask( &mut weights );
         log::trace!("W:\n{:?}\n", weights.clone() );
-        inplace_mask_matrix( &outdated, &mut weights ); // mask outdated weights: remove weights referring to deregistered neurons
+
+        // Mask outdated weights: remove weights referring to deregistered neurons.
+        inplace_mask_matrix( &outdated, &mut weights );
         log::trace!("W:\n{:?}\n", weights.clone() );
+
+        // Normalize remaining weights.
         inplace_row_normalize( &mut weights );
         log::trace!("W:\n{:?}\n", weights.clone() );
 
@@ -65,7 +74,7 @@ impl<T: Config> Pallet<T> {
         // Compute thresholded weights.
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
-        let threshold: I32F32 = I32F32::from_num(0.1) / I32F32::from_num( n + 1 );
+        let threshold: I32F32 = I32F32::from_num( 0.1 ) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
         log::trace!("tW:\n{:?}\n", clipped_weights.clone() );
 
@@ -111,6 +120,7 @@ impl<T: Config> Pallet<T> {
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
+        
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &active_stake ) { // no active stake
@@ -144,7 +154,7 @@ impl<T: Config> Pallet<T> {
         emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
     }
 
-    /// Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning, emission and bonds, and 
+    /// Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning_score, emission and bonds, and 
     /// returns the emissions for uids/hotkeys in a given `netuid`.
     ///
     /// # Args:
@@ -171,7 +181,6 @@ impl<T: Config> Pallet<T> {
         log::trace!("activity_cutoff: {:?}", activity_cutoff );
 
         // Last update vector.
-        // TODO: remove Active::<T> storage if LastUpdate::<T> is used instead
         let last_update: Vec<u64> = Self::get_last_update( netuid );
         log::trace!("Last update: {:?}", last_update.clone() );
 
@@ -182,9 +191,13 @@ impl<T: Config> Pallet<T> {
         // Access network stake as normalized vector.
         let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
         log::trace!("S: {:?}", stake.clone() );
+
+        // Remove inactive stake.
         let mut active_stake: Vec<I32F32> = stake.clone();
-        inplace_mask_vector( &inactive, &mut active_stake ); // mask inactive stake
+        inplace_mask_vector( &inactive, &mut active_stake );
         log::trace!("S (mask): {:?}", active_stake.clone() );
+
+        // Normalize active stake.
         inplace_normalize( &mut active_stake );
         log::trace!("S (mask+norm): {:?}", active_stake.clone() );
 
@@ -195,14 +208,20 @@ impl<T: Config> Pallet<T> {
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
         log::trace!("W: {:?}", weights.clone() );
-        weights = diag_mask_sparse( &weights ); // remove self-weight by masking diagonal
+
+        // Remove self-weight by masking diagonal.
+        weights = diag_mask_sparse( &weights );
         log::trace!("W (diagmask): {:?}", weights.clone() );
-        weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove weights referring to deregistered neurons
+
+        // Remove weights referring to deregistered neurons.
+        weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered );
         log::trace!("W (diag+outdatemask): {:?}", weights.clone() );
+
+        // Normalize remaining weights.
         inplace_row_normalize_sparse( &mut weights );
         log::trace!("W (mask+norm): {:?}", weights.clone() );
 
-        // Compute ranks: r_j = SUM(i) w_ij * s_i
+        // Compute ranks: r_j = SUM(i) w_ij * s_i.
         let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &active_stake, n );
         inplace_normalize( &mut ranks );
         log::trace!("R: {:?}", ranks.clone() );
@@ -210,7 +229,7 @@ impl<T: Config> Pallet<T> {
         // Compute thresholded weights.
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
-        let threshold: I32F32 = I32F32::from_num(0.1) / I32F32::from_num( n + 1 );
+        let threshold: I32F32 = I32F32::from_num( 0.1 ) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<(u16, I32F32)>> = sparse_clip( &weights, threshold, upper, lower );
         log::trace!("W (threshold): {:?}", clipped_weights.clone() );
 
@@ -233,25 +252,33 @@ impl<T: Config> Pallet<T> {
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse( netuid );
-        log::trace!("B: {:?}", bonds.clone() );  
-        bonds = vec_mask_sparse_matrix( &bonds, &last_update, &block_at_registration, &| updated, registered | updated <= registered ); // remove bonds referring to deregistered neurons
-        log::trace!("B (outdatedmask): {:?}", bonds.clone() );  
-        inplace_col_normalize_sparse( &mut bonds ); // sum_i b_ij = 1
+        log::trace!("B: {:?}", bonds.clone() );
+        
+        // Remove bonds referring to deregistered neurons.
+        bonds = vec_mask_sparse_matrix( &bonds, &last_update, &block_at_registration, &| updated, registered | updated <= registered );
+        log::trace!("B (outdatedmask): {:?}", bonds.clone() );
+
+        // Normalize remaining bonds: sum_i b_ij = 1.
+        inplace_col_normalize_sparse( &mut bonds );
         log::trace!("B (mask+norm): {:?}", bonds.clone() );        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
         log::trace!("ΔB: {:?}", bonds_delta.clone() );
+
+        // Normalize bonds delta.
         inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
         log::trace!("ΔB (norm): {:?}", bonds_delta.clone() );
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
         let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = sparse_mat_ema( &bonds_delta, &bonds, alpha );
+
+        // Normalize EMA bonds.
         inplace_col_normalize_sparse( &mut ema_bonds ); // sum_i b_ij = 1
         log::trace!("emaB: {:?}", ema_bonds.clone() );
 
-        // Compute dividends: d_i = SUM(j) b_ij * inc_j
+        // Compute dividends: d_i = SUM(j) b_ij * inc_j.
         let dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
         log::trace!("D: {:?}", dividends.clone() );
 
@@ -259,6 +286,7 @@ impl<T: Config> Pallet<T> {
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
+
         // If emission is zero, replace emission with normalized stake.
         if is_zero( &normalized_emission ) { // no weights set | outdated weights | self_weights
             if is_zero( &active_stake ) { // no active stake
