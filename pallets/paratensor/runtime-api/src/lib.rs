@@ -9,6 +9,6 @@ use pallet_paratensor::NeuronMetadata as NeuronMetadataStruct;
 sp_api::decl_runtime_apis! {
 	pub trait NeuronMetadataApi {
         // TODO (Cameron): fix return type
-		fn get_neurons(netuid: u16) -> NeuronMetadataStruct;
+		fn get_neurons(netuid: u16) -> Vec<NeuronMetadataStruct>;
 	}
 }
