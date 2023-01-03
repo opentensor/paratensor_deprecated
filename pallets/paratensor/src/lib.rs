@@ -101,7 +101,7 @@ pub mod pallet {
 		#[pallet::constant] /// Initial validator exclude quantile.
 		type InitialValidatorExcludeQuantile: Get<u16>;
 		#[pallet::constant] /// Initial allowed validators per network.
-		type InitialNAllowedValidators: Get<u16>;
+		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] /// Initial default delegation take.
 		type InitialDefaultTake: Get<u16>;
 	}
@@ -273,7 +273,7 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
 	#[pallet::type_value] 
-	pub fn DefaultNAllowedValidators<T: Config>() -> u16 { T::InitialNAllowedValidators::get() }
+	pub fn DefaultMaxAllowedValidators<T: Config>() -> u16 { T::InitialMaxAllowedValidators::get() }
 	#[pallet::type_value]
 	pub fn DefaultAdjustmentInterval<T: Config>() -> u16 { T::InitialAdjustmentInterval::get() }
 	#[pallet::type_value]
@@ -312,8 +312,8 @@ pub mod pallet {
 	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] /// --- MAP ( netuid ) --> min_allowed_weights
 	pub type MinAllowedWeights<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMinAllowedWeights<T> >;
-	#[pallet::storage] /// --- MAP ( netuid ) --> n_allowed_validators
-	pub type NAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultNAllowedValidators<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> max_allowed_validators
+	pub type MaxAllowedValidators<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultMaxAllowedValidators<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> adjustment_interval
 	pub type AdjustmentInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultAdjustmentInterval<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> bonds_moving_average
@@ -453,8 +453,8 @@ pub mod pallet {
 		ImmunityPeriodSet(u16, u16),
 		/// --- Event created when bonds moving average is set for a subnet
 		BondsMovingAverageSet(u16, u64),
-		/// --- Event created when setting the max n allowed validators on a subnet.
-		NAllowedValidatorsSet(u16, u16),
+		/// --- Event created when setting the max number of allowed validators on a subnet.
+		MaxAllowedValidatorsSet(u16, u16),
 		/// --- Event created when the validator exclude quantile has been set for a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ),
 		/// --- Event created when the axon server information is added to the network.
@@ -1049,8 +1049,8 @@ pub mod pallet {
 			Self::do_sudo_set_bonds_moving_average( origin, netuid, bonds_moving_average )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_n_allowed_validators( origin:OriginFor<T>, netuid: u16, n_allowed_validators: u16 ) -> DispatchResult {  
-			Self::do_sudo_set_n_allowed_validators( origin, netuid, n_allowed_validators )
+		pub fn sudo_set_max_allowed_validators( origin:OriginFor<T>, netuid: u16, max_allowed_validators: u16 ) -> DispatchResult {  
+			Self::do_sudo_set_max_allowed_validators( origin, netuid, max_allowed_validators )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_difficulty( origin:OriginFor<T>, netuid: u16, difficulty: u64 ) -> DispatchResult {

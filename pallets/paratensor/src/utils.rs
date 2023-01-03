@@ -222,14 +222,14 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
             
-    pub fn get_n_allowed_validators( netuid: u16 ) -> u16  { NAllowedValidators::<T>::get( netuid ) }
-    pub fn set_n_allowed_validators( netuid: u16, n_allowed_validators: u16 ) { NAllowedValidators::<T>::insert( netuid, n_allowed_validators ); }
-    pub fn do_sudo_set_n_allowed_validators( origin:T::Origin, netuid: u16, n_allowed_validators: u16 ) -> DispatchResult {
+    pub fn get_max_allowed_validators( netuid: u16 ) -> u16  { MaxAllowedValidators::<T>::get( netuid ) }
+    pub fn set_max_allowed_validators( netuid: u16, max_allowed_validators: u16 ) { MaxAllowedValidators::<T>::insert( netuid, max_allowed_validators ); }
+    pub fn do_sudo_set_max_allowed_validators( origin:T::Origin, netuid: u16, max_allowed_validators: u16 ) -> DispatchResult {
         ensure_root( origin )?;
         ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-        Self::set_n_allowed_validators( netuid, n_allowed_validators );
-        log::info!("NAllowedValidatorsSet( netuid: {:?} n_allowed_validators: {:?} ) ", netuid, n_allowed_validators );
-        Self::deposit_event( Event::NAllowedValidatorsSet( netuid, n_allowed_validators ) );
+        Self::set_max_allowed_validators( netuid, max_allowed_validators );
+        log::info!("MaxAllowedValidatorsSet( netuid: {:?} max_allowed_validators: {:?} ) ", netuid, max_allowed_validators );
+        Self::deposit_event( Event::MaxAllowedValidatorsSet( netuid, max_allowed_validators ) );
         Ok(())
     }
 

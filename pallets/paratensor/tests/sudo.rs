@@ -288,17 +288,17 @@ fn test_sudo_set_difficulty() {
         
 
 #[test]
-fn test_sudo_set_n_allowed_validators() {
+fn test_sudo_set_max_allowed_validators() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;
         let to_be_set: u16 = 10;
-        let init_value: u16 = ParatensorModule::get_n_allowed_validators( netuid );
+        let init_value: u16 = ParatensorModule::get_max_allowed_validators( netuid );
         add_network(netuid, 10, 0);
-		assert_eq!( ParatensorModule::sudo_set_n_allowed_validators(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
-        assert_eq!( ParatensorModule::sudo_set_n_allowed_validators(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
-        assert_eq!( ParatensorModule::get_n_allowed_validators(netuid), init_value);
-        assert_ok!( ParatensorModule::sudo_set_n_allowed_validators(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
-        assert_eq!( ParatensorModule::get_n_allowed_validators(netuid), to_be_set);
+		assert_eq!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), to_be_set);
     });
 }
 
