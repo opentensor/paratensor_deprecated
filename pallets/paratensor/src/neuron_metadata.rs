@@ -2,15 +2,14 @@ use super::*;
 use frame_support::storage::IterableStorageDoubleMap;
 use sp_std::vec::Vec;
 
-#[derive(Default)]
-struct NeuronMetadata<T:Config> {
-    hotkey: T::AccountId,
-    coldkey: T::AccountId,
+pub struct NeuronInfo {//<T:Config> {
+    //hotkey: T::AccountId,
+    //coldkey: T::AccountId,
     uid: u16,
     netuid: u16,
     active: bool,
     axon_metadata: AxonMetadata,
-    stake: Vec<(T::AccountId, u64)>, // map of coldkey to stake on this neuron/hotkey (includes delegations)
+    //stake: Vec<(T::AccountId, u64)>, // map of coldkey to stake on this neuron/hotkey (includes delegations)
     rank: u16,
     emission: u64,
     incentive: u16,
@@ -24,7 +23,7 @@ struct NeuronMetadata<T:Config> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn get_neurons(netuid: u16) -> Vec<NeuronMetadata<T>> {
+	pub fn get_neurons(netuid: u16) -> Vec<NeuronInfo> {//<T>> {
         if !Self::if_subnet_exist(netuid) {
             return Vec::new()
         }
@@ -44,7 +43,7 @@ impl<T: Config> Pallet<T> {
             }
 
             let hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
-            let coldkey = Owner::<T>::get( hotkey ).clone();
+            let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
             let last_update = LastUpdate::<T>::get( netuid, uid_i as u16 );
             
@@ -68,14 +67,14 @@ impl<T: Config> Pallet<T> {
             }
             let stake = stakes;
 
-            let neuron = NeuronMetadata {
-                hotkey,
-                coldkey,
+            let neuron = NeuronInfo {
+                //hotkey,
+                //coldkey,
                 uid,
                 netuid,
                 active,
                 axon_metadata,
-                stake,
+                //stake,
                 rank,
                 emission,
                 incentive,

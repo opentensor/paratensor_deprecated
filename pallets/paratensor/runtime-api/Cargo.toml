@@ -10,6 +10,7 @@ publish = false
 
 [dependencies]
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20", default_features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.20" }
 
 # local 
 pallet-paratensor = { version = "0.0.1-dev", path = "../../paratensor", default-features = false }

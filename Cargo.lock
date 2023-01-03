@@ -6409,6 +6409,7 @@ dependencies = [
 name = "paratensor-custom-rpc-runtime-api"
 version = "0.0.1"
 dependencies = [
+ "frame-support",
  "pallet-paratensor",
  "sp-api",
 ]
