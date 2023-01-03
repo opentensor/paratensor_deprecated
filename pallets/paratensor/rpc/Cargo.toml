@@ -6,12 +6,14 @@ authors = ['Cameron Fairchild <https://github.com/camfairchild>']
 repository = 'https://github.com/opentensor/paratensor'
 description = "A pallet that adds custom RPC calls to paratensor"
 license = "MIT"
+publish = false
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0" }
-jsonrpc-core = "15.0"
-jsonrpc-core-client = "15.0"
-jsonrpc-derive = "15.0"
+codec = { package = "parity-scale-codec", version = "3.0.0", default_features = false }
+jsonrpc-core = { version = "15.0", default_features = false}
+jsonrpc-core-client = { version = "15.0", default_features = false}
+jsonrpc-derive = { version = "15.0", default_features = false}
+getrandom = {version = "0.2.6", default-features = false, features = ["js"]}
 
 # Substrate packages
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
