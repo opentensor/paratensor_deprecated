@@ -102,6 +102,8 @@ pub mod pallet {
 		type InitialValidatorExcludeQuantile: Get<u16>;
 		#[pallet::constant] /// Initial allowed validators per network.
 		type InitialNAllowedValidators: Get<u16>;
+		#[pallet::constant] /// Initial default delegation take.
+		type InitialDefaultTake: Get<u16>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -135,7 +137,7 @@ pub mod pallet {
 	/// ==== Staking + Accounts ====
 	/// ============================
 	#[pallet::type_value] 
-	pub fn DefaultTake<T: Config>() -> u16 { 0 }
+	pub fn DefaultDefaultTake<T: Config>() -> u16 { T::InitialDefaultTake::get() }
 	#[pallet::type_value] 
 	pub fn DefaultAccountTake<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
@@ -149,18 +151,20 @@ pub mod pallet {
 
 	#[pallet::storage] /// --- ITEM ( total_stake )
 	pub type TotalStake<T> = StorageValue<_, u64, ValueQuery>;
+	#[pallet::storage] /// --- ITEM ( default_take )
+	pub type DefaultTake<T> = StorageValue<_, u16, ValueQuery, DefaultDefaultTake<T>>;
 	#[pallet::storage] /// --- ITEM ( global_block_emission )
 	pub type BlockEmission<T> = StorageValue<_, u64, ValueQuery, DefaultBlockEmission<T>>;
 	#[pallet::storage] /// --- ITEM ( total_issuance )
 	pub type TotalIssuance<T> = StorageValue<_, u64, ValueQuery, DefaultTotalIssuance<T>>;
-	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
-    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultTake<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> stake | Returns the total amount of stake under a hotkey.
     pub type TotalHotkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] /// --- MAP ( cold ) --> stake | Returns the total amount of stake under a coldkey.
     pub type TotalColdkeyStake<T:Config> = StorageMap<_, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 	#[pallet::storage] /// --- MAP ( hot ) --> cold | Returns the controlling coldkey for a hotkey.
     pub type Owner<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, ValueQuery, DefaultAccount<T>>;
+	#[pallet::storage] /// --- MAP ( hot ) --> take | Returns the hotkey delegation take. And signals that this key is open for delegation.
+    pub type Delegates<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u16, ValueQuery, DefaultDefaultTake<T>>;
 	#[pallet::storage] /// --- DMAP ( hot, cold ) --> stake | Returns the stake under a hotkey prefixed by hotkey.
     pub type Stake<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, T::AccountId, u64, ValueQuery, DefaultAccountTake<T>>;
 
@@ -462,7 +466,9 @@ pub mod pallet {
 		/// --- Event created when a network connection requirement is removed.
 		NetworkConnectionRemoved( u16, u16 ),
 		/// --- Event created to signal a hotkey has become a delegate.
-		DelegateAdded( T::AccountId, T::AccountId, u16 )
+		DelegateAdded( T::AccountId, T::AccountId, u16 ),
+		/// --- Event created when the default take is set.
+		DefaultTakeSet( u16 ),
 	}
 	
 	/// ================
@@ -669,10 +675,9 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn become_delegate(
 			origin: OriginFor<T>, 
-			hotkey: T::AccountId, 
-			take: u16	
+			hotkey: T::AccountId
 		) -> DispatchResult {
-			Self::do_become_delegate(origin, hotkey, take)
+			Self::do_become_delegate(origin, hotkey, Self::get_default_take() )
 		}
 
 		/// --- Adds stake to a hotkey. The call is made from the
@@ -1031,6 +1036,10 @@ pub mod pallet {
 		/// 	* `hyperparameter value` (u16):
 		/// 		- The value of the hyper parameter.
 		///   
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_default_take( origin:OriginFor<T>, default_take: u16 ) -> DispatchResult {  
+			Self::do_sudo_set_default_take( origin, default_take )
+		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )

@@ -485,7 +485,7 @@ parameter_types! {
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
 	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
-	
+	pub const ParatensorInitialDefaultTake: u16 = 11_140; // 17%
 }
 impl pallet_paratensor::Config for Runtime {
 	type Event = Event;
@@ -513,6 +513,7 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialPruningScore = ParatensorInitialPruningScore;
 	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
 	type InitialNAllowedValidators = ParatensorInitialNAllowedValidators;
+	type InitialDefaultTake = ParatensorInitialDefaultTake;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

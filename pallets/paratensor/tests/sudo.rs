@@ -42,6 +42,17 @@ fn test_defaults() {
     });
 }
 
+#[test]
+fn test_sudo_set_default_take() {
+	new_test_ext().execute_with(|| {
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_default_take();
+		assert_eq!( ParatensorModule::sudo_set_default_take(<<Test as Config>::Origin>::signed(0), to_be_set), Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::get_default_take(), init_value);
+        assert_ok!( ParatensorModule::sudo_set_default_take(<<Test as Config>::Origin>::root(), to_be_set) );
+        assert_eq!( ParatensorModule::get_default_take(), to_be_set);
+    });
+}
 
 #[test]
 fn test_sudo_set_weights_set_rate_limit() {

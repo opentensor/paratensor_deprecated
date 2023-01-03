@@ -9,7 +9,6 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Global Getters ====
 	/// ========================
-    pub fn set_debug( debug: bool ) { Debug::<T>::put( debug ) }
     pub fn set_min_difficulty( netuid: u16, min_difficulty: u64 ) { MinDifficulty::<T>::insert( netuid, min_difficulty) }
     pub fn set_max_difficulty( netuid: u16, max_difficulty: u64 ) { MaxDifficulty::<T>::insert( netuid, max_difficulty) }
     pub fn set_last_update_for_neuron(netuid: u16, neuron_uid: u16, update: u64){ LastUpdate::<T>::insert(netuid, neuron_uid, update); }
@@ -23,7 +22,6 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Global Getters ====
 	/// ========================
-    pub fn debug() -> bool { Debug::<T>::get() }
     pub fn get_total_issuance() -> u64 { TotalIssuance::<T>::get() }
     pub fn get_block_emission() -> u64 { BlockEmission::<T>::get() }
     pub fn get_current_block_as_u64( ) -> u64 { TryInto::try_into( system::Pallet::<T>::block_number() ).ok().expect("blockchain will not exceed 2^64 blocks; QED.") }
@@ -48,6 +46,15 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Sudo calls ========
 	/// ========================
+    pub fn get_default_take() -> u16 { DefaultTake::<T>::get() }
+    pub fn set_default_take( default_take: u16 ) { DefaultTake::<T>::put( default_take ) }
+    pub fn do_sudo_set_default_take( origin: T::Origin, default_take: u16 ) -> DispatchResult { 
+        ensure_root( origin )?;
+        Self::set_default_take( default_take );
+        log::info!("DefaultTakeSet( default_take: {:?} ) ", default_take);
+        Self::deposit_event( Event::DefaultTakeSet( default_take ) );
+        Ok(()) 
+    }
 
     pub fn get_weights_set_rate_limit( netuid: u16) -> u64 { WeightsSetRateLimit::<T>::get( netuid ) }
     pub fn set_weights_set_rate_limit( netuid: u16, weights_set_rate_limit: u64 ) { WeightsSetRateLimit::<T>::insert( netuid, weights_set_rate_limit ); }

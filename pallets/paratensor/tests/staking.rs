@@ -602,8 +602,8 @@ fn test_full_with_delegating() {
 		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 10), Err(Error::<Test>::NotRegistered.into()));
 
 		// Neither key can become a delegate either because we are not registered.
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 100), Err(Error::<Test>::NotRegistered.into()));
 		
 		// Register the 2 neurons to a new network.
 		let netuid = 1;
@@ -638,7 +638,6 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_total_stake_for_coldkey( &coldkey1 ), 100 );
 		assert_eq!( ParatensorModule::get_total_stake(), 200 );
 
-
 		// Cant remove these funds because we are not delegating.
 		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
 		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
@@ -649,21 +648,20 @@ fn test_full_with_delegating() {
 		assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &hotkey0 ), 200);
 		assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &hotkey1 ), 200 );
 
-
 		// Try allowing the keys to become delegates, fails because of incorrect coldkeys.
 		// Set take to be 0.
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey1, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey0, 0), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
 		// Become delegates all is ok.
-		assert_ok!( ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 10) ); 
-		assert_ok! (ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 10) );
+		assert_ok!( ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 10) ); 
+		assert_ok! (ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 10) );
 		assert!( ParatensorModule::hotkey_is_delegate( &hotkey0 ) );
 		assert!( ParatensorModule::hotkey_is_delegate( &hotkey1 ) );
 
 		// Cant become a delegate twice.
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
-		assert_eq!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey0), hotkey0, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
+		assert_eq!(ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey1), hotkey1, 1000), Err(Error::<Test>::AlreadyDelegate.into()));
 
 		// This add stake works for delegates.
 		assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &coldkey0, &hotkey0 ), 200 );
@@ -721,7 +719,7 @@ fn test_full_with_delegating() {
 		assert_eq!(ParatensorModule::remove_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey2, 10), Err(Error::<Test>::NonAssociatedColdKey.into()));
 
 		// Lets make this new key a delegate with a 50% take.
-		assert_ok!( ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, u16::MAX/2) ); 
+		assert_ok!( ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey2), hotkey2, u16::MAX/2) ); 
 
 		// Add nominate some stake.
 		assert_ok!(ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey2, 1000) );
@@ -748,7 +746,7 @@ fn test_full_with_delegating() {
 		register_ok_neuron( netuid, hotkey3, coldkey3, 4124124 );
 		ParatensorModule::add_balance_to_coldkey_account(&coldkey3, 60000);
 		assert_ok!( ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey3), hotkey3, 1000) );
-		assert_ok!( ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey3), hotkey3, u16::MAX ) ); // Full take. 
+		assert_ok!( ParatensorModule::do_become_delegate(<<Test as Config>::Origin>::signed(coldkey3), hotkey3, u16::MAX ) ); // Full take. 
 		assert_ok!( ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey0), hotkey3, 1000) );
 		assert_ok!( ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey1), hotkey3, 1000) );
 		assert_ok!( ParatensorModule::add_stake(<<Test as Config>::Origin>::signed(coldkey2), hotkey3, 1000) );
