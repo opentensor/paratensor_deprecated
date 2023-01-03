@@ -40,13 +40,6 @@ impl Extensions {
 
 type AccountPublic = <Signature as Verify>::Signer;
 
-/// Generate collator keys from seed.
-///
-/// This function's return type must always match the session keys of the chain in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-	get_public_from_seed::<AuraId>(seed)
-}
-
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
@@ -152,7 +145,7 @@ fn finney_genesis(
 	}
 }
 
-pub fn development_config() -> ChainSpec {
+pub fn kusama_testnet_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "UNIT".into());
@@ -161,198 +154,122 @@ pub fn development_config() -> ChainSpec {
 
 	ChainSpec::from_genesis(
 		// Name
-		"Development",
+		"Bittensor Kusama",
 		// ID
-		"dev",
-		ChainType::Development,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				2096.into(),
-				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
-
-			)
-		},
-		Vec::new(),
-		None,
-		None,
-		None,
-		None,
-		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
-		},
-	)
-}
-
-pub fn local_testnet_config() -> ChainSpec {
-	// Give your base currency a unit name and decimal places
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
-
-	ChainSpec::from_genesis(
-		// Name
-		"Local Testnet",
-		// ID
-		"local_testnet",
-		ChainType::Local,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
-						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				2096.into(),
-				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("template-local"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
-		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
-		},
-	)
-}
-
-pub fn nobunaga_testnet_config() -> ChainSpec {
-	// Give your base currency a unit name and decimal places
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
-
-	ChainSpec::from_genesis(
-		// Name
-		"Nobunaga Testnet",
-		// ID
-		"nobunaga_testnet",
-		ChainType::Local,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("5D5aodytzDt3v5wDhdY1mkj6BfhKNr95mJPWE79wXEZrLdF4"),
-						get_collator_keys_from_seed("5D5aodytzDt3v5wDhdY1mkj6BfhKNr95mJPWE79wXEZrLdF4"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("5CrU4XMxxiMQbWQiqCtHvnY91A3Zn6YajvScahup31AMZuZJ"),
-						get_collator_keys_from_seed("5CrU4XMxxiMQbWQiqCtHvnY91A3Zn6YajvScahup31AMZuZJ"),
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				2000.into(),
-				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
-			)
-		},
-		// Bootnodes
-		Vec::new(),
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("template-local"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties),
-		// Extensions
-		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000,
-		},
-	)
-}
-
-pub fn finney_config() -> ChainSpec {
-	// Give your base currency a unit name and decimal places
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
-
-	ChainSpec::from_genesis(
-		// Name
-		"Finney Mainnet",
-		// ID
-		"finney_mainnet",
+		"Bittensor",
 		ChainType::Live,
 		move || {
 			testnet_genesis(
 				// initial collators.
 				vec![
+					// Collator 1
 					(
-						get_account_id_from_seed::<sr25519::Public>("5D5aodytzDt3v5wDhdY1mkj6BfhKNr95mJPWE79wXEZrLdF4"),
-						get_collator_keys_from_seed("5D5aodytzDt3v5wDhdY1mkj6BfhKNr95mJPWE79wXEZrLdF4"),
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
 					),
 					(
-						get_account_id_from_seed::<sr25519::Public>("5CrU4XMxxiMQbWQiqCtHvnY91A3Zn6YajvScahup31AMZuZJ"),
-						get_collator_keys_from_seed("5CrU4XMxxiMQbWQiqCtHvnY91A3Zn6YajvScahup31AMZuZJ"),
+						Ss58Codec::from_ss58check("5FTs5Hawze8EXSQN7qx5cs9SboExFk7hmLA7rWZu95xptDAF").unwrap(),
+						Ss58Codec::from_ss58check("5FTs5Hawze8EXSQN7qx5cs9SboExFk7hmLA7rWZu95xptDAF").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5DUwBWrha8Rht55SyFLNXzK79UTBhNnut2q83hr1Q3ARWXih").unwrap(),
+						Ss58Codec::from_ss58check("5DUwBWrha8Rht55SyFLNXzK79UTBhNnut2q83hr1Q3ARWXih").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5CkHa4m4Kc4thsDxaoRJUJRS9pZ7xo7omqMboUoGereHFCXN").unwrap(),
+						Ss58Codec::from_ss58check("5CkHa4m4Kc4thsDxaoRJUJRS9pZ7xo7omqMboUoGereHFCXN").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5DsvShVtJp53Yhuc7hov2vUAVvQNQ7Bqz5eJc2PeWbEAUURB").unwrap(),
+						Ss58Codec::from_ss58check("5DsvShVtJp53Yhuc7hov2vUAVvQNQ7Bqz5eJc2PeWbEAUURB").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
+						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("Fk3FnurqREFZ7CW7Vc44k6magDAvmn1oNmWEiG9gJPjxZMP").unwrap(),
+						Ss58Codec::from_ss58check("Fk3FnurqREFZ7CW7Vc44k6magDAvmn1oNmWEiG9gJPjxZMP").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("HC4AUuwxHALGCcHo3JAo6XgLKA5nQhy4cjgGjLpFKhbpyzT").unwrap(),
+						Ss58Codec::from_ss58check("HC4AUuwxHALGCcHo3JAo6XgLKA5nQhy4cjgGjLpFKhbpyzT").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("GvUoJw9CVqdmmRTkGcAfPyUbBWU8k7bQXHYUg66dJZLypYA").unwrap(),
+						Ss58Codec::from_ss58check("GvUoJw9CVqdmmRTkGcAfPyUbBWU8k7bQXHYUg66dJZLypYA").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("GXk9MJ2xbcTrtwoLwShET6grTjW961b5ha8bwFSgukdtWLC").unwrap(),
+						Ss58Codec::from_ss58check("GXk9MJ2xbcTrtwoLwShET6grTjW961b5ha8bwFSgukdtWLC").unwrap(),
+					),
+				],
+				vec![
+					Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+				],
+				2001.into(),
+				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
+			)
+		},
+		// Bootnodes
+		Vec::new(),
+		// Telemetry
+		None,
+		// Protocol ID
+		Some("bittensor"),
+		// Fork ID
+		None,
+		// Properties
+		Some(properties),
+		// Extensions
+		Extensions {
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
+			para_id: 2244,
+		},
+	)
+}
+
+pub fn rococo_testnet_config() -> ChainSpec {
+	// Give your base currency a unit name and decimal places
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), 42.into());
+
+	ChainSpec::from_genesis(
+		// Name
+		"Bittensor Rococo Testnet",
+		// ID
+		"bittensor_rococo_testnet",
+		ChainType::Local,
+		move || {
+			testnet_genesis(
+				// initial collators.
+				vec![
+					// Collator 1
+					(
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+						Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5FTs5Hawze8EXSQN7qx5cs9SboExFk7hmLA7rWZu95xptDAF").unwrap(),
+						Ss58Codec::from_ss58check("5FTs5Hawze8EXSQN7qx5cs9SboExFk7hmLA7rWZu95xptDAF").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5DUwBWrha8Rht55SyFLNXzK79UTBhNnut2q83hr1Q3ARWXih").unwrap(),
+						Ss58Codec::from_ss58check("5DUwBWrha8Rht55SyFLNXzK79UTBhNnut2q83hr1Q3ARWXih").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5CkHa4m4Kc4thsDxaoRJUJRS9pZ7xo7omqMboUoGereHFCXN").unwrap(),
+						Ss58Codec::from_ss58check("5CkHa4m4Kc4thsDxaoRJUJRS9pZ7xo7omqMboUoGereHFCXN").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5DsvShVtJp53Yhuc7hov2vUAVvQNQ7Bqz5eJc2PeWbEAUURB").unwrap(),
+						Ss58Codec::from_ss58check("5DsvShVtJp53Yhuc7hov2vUAVvQNQ7Bqz5eJc2PeWbEAUURB").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
+						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
 					),
 				],
 				vec![
@@ -369,7 +286,93 @@ pub fn finney_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				2096.into(),
+				2004.into(),
+				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
+			)
+		},
+		// Bootnodes
+		Vec::new(),
+		// Telemetry
+		None,
+		// Protocol ID
+		Some("bittensor_rococo_testnet"),
+		// Fork ID
+		None,
+		// Properties
+		Some(properties),
+		// Extensions
+		Extensions {
+			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			para_id: 2004,
+		},
+	)
+}
+
+pub fn polkadot_config() -> ChainSpec {
+	// Give your base currency a unit name and decimal places
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "UNIT".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), 42.into());
+
+	ChainSpec::from_genesis(
+		// Name
+		"Bittensor Mainnet",
+		// ID
+		"bittensor",
+		ChainType::Live,
+		move || {
+			finney_genesis(
+				// initial collators.
+				vec![
+					// Collator 1
+					(
+						Ss58Codec::from_ss58check("5CyEApos33zYijdejJLKmtDe5G9ZHu8j5U5gAFLVtMbSH397").unwrap(),
+						Ss58Codec::from_ss58check("5CyEApos33zYijdejJLKmtDe5G9ZHu8j5U5gAFLVtMbSH397").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5C4vTsttJhs1EtgX8ud6zKD7Um7Nz7YSEGfMYHKYUnfRo7sB").unwrap(),
+						Ss58Codec::from_ss58check("5C4vTsttJhs1EtgX8ud6zKD7Um7Nz7YSEGfMYHKYUnfRo7sB").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5EfN5FdDkTLpvwWuFM5Nmv16u26badc7L7ZrcHFnUfjoiEaL").unwrap(),
+						Ss58Codec::from_ss58check("5EfN5FdDkTLpvwWuFM5Nmv16u26badc7L7ZrcHFnUfjoiEaL").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5CLmhtrxcR5Nr9JRg7fPCFeoKYpMKxwFv6zFJtvqcsRMEJYk").unwrap(),
+						Ss58Codec::from_ss58check("5CLmhtrxcR5Nr9JRg7fPCFeoKYpMKxwFv6zFJtvqcsRMEJYk").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5DhFds8pMw4zxf2Xo3QVyz6PJLnNr2mUR2ddhhVy4dMB6VeH").unwrap(),
+						Ss58Codec::from_ss58check("5DhFds8pMw4zxf2Xo3QVyz6PJLnNr2mUR2ddhhVy4dMB6VeH").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5FqXjUf4x4erYGZqEKFne4oRp1v59n5wTQLoYqsR4GQriThb").unwrap(),
+						Ss58Codec::from_ss58check("5FqXjUf4x4erYGZqEKFne4oRp1v59n5wTQLoYqsR4GQriThb").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5HEdfuYU8QgDYMEPztjSNr19VjsG6E3TvSyE411GiYLn6tuQ").unwrap(),
+						Ss58Codec::from_ss58check("5HEdfuYU8QgDYMEPztjSNr19VjsG6E3TvSyE411GiYLn6tuQ").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5FeBMdHzUSg92m7oC9m2Utard7R6frjzZCQi4tFLzvQfT7L6").unwrap(),
+						Ss58Codec::from_ss58check("5FeBMdHzUSg92m7oC9m2Utard7R6frjzZCQi4tFLzvQfT7L6").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5G9SwYm7maYMuEYG2WpFtN97BmyG6JnYuqpCAyUyKteJpPDv").unwrap(),
+						Ss58Codec::from_ss58check("5G9SwYm7maYMuEYG2WpFtN97BmyG6JnYuqpCAyUyKteJpPDv").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("5G42S5TM8RcmRtfGMwEpKcMt5Mj74UD2EvMRrS9oihv6c23e").unwrap(),
+						Ss58Codec::from_ss58check("5G42S5TM8RcmRtfGMwEpKcMt5Mj74UD2EvMRrS9oihv6c23e").unwrap(),
+					),
+				],
+				vec![
+					// Collator 1
+					Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
+										
+				],
+				2097.into(),
 				Ss58Codec::from_ss58check("5GmxWYKFb6ecktezdcCpeU6xQSTXvpqiw3tZ7sKSn3NbJAEC").unwrap()
 			)
 		},
@@ -386,7 +389,7 @@ pub fn finney_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "polkadot".into(), // You MUST set this to the correct network!
-			para_id: 2096,
+			para_id: 2097,
 		},
 	)
 }
