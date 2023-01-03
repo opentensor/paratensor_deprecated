@@ -48,6 +48,18 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Sudo calls ========
 	/// ========================
+
+    pub fn get_weights_set_rate_limit( netuid: u16) -> u64 { WeightsSetRateLimit::<T>::get( netuid ) }
+    pub fn set_weights_set_rate_limit( netuid: u16, weights_set_rate_limit: u64 ) { WeightsSetRateLimit::<T>::insert( netuid, weights_set_rate_limit ); }
+    pub fn do_sudo_set_weights_set_rate_limit( origin: T::Origin, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult { 
+        ensure_root( origin )?;
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+        Self::set_weights_set_rate_limit( netuid, weights_set_rate_limit );
+        log::info!("WeightsSetRateLimitSet( netuid: {:?} weights_set_rate_limit: {:?} ) ", netuid, weights_set_rate_limit);
+        Self::deposit_event( Event::WeightsSetRateLimitSet( netuid, weights_set_rate_limit) );
+        Ok(()) 
+    }
+
     pub fn get_adjustment_interval( netuid: u16) -> u16 { AdjustmentInterval::<T>::get( netuid ) }
     pub fn set_adjustment_interval( netuid: u16, adjustment_interval: u16 ) { AdjustmentInterval::<T>::insert( netuid, adjustment_interval ); }
     pub fn do_sudo_set_adjustment_interval( origin: T::Origin, netuid: u16, adjustment_interval: u16 ) -> DispatchResult { 

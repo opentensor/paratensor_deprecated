@@ -54,9 +54,7 @@ fn test_block_step_multi(){
 
         // Create keys.
 		let hotkey0: u64 = 0;
-		let hotkey1: u64 = 1;
 		let coldkey0: u64 = 0;
-		let coldkey1: u64 = 1;
 
         // Register 1 neuron to each network starting emission.
         register_ok_neuron( netuid0, hotkey0, coldkey0, 39420842 );

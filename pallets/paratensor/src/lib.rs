@@ -247,6 +247,8 @@ pub mod pallet {
 	/// ==== Subnetwork Hyperparam storage ====
 	/// =======================================	
 	#[pallet::type_value] 
+	pub fn DefaultWeightsSetRateLimit<T: Config>() -> u64 { 0 }
+	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
 	pub fn DefaultRho<T: Config>() -> u16 { T::InitialRho::get() }
@@ -314,6 +316,8 @@ pub mod pallet {
 	pub type BondsMovingAverage<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBondsMovingAverage<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_batch_size
 	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> weights_set_rate_limit
+	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_sequence_length
 	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_epochs_per_reset
@@ -439,6 +443,8 @@ pub mod pallet {
 		ValidatorSequenceLengthSet(u16, u16),
 		/// --- Event created when validator epoch per reset is set for a subnet.
 		ValidatorEpochPerResetSet(u16, u16),
+		/// --- Event create when weights set rate limit has been set for a subnet.
+		WeightsSetRateLimitSet( u16, u64 ),
 		/// --- Event created when immunity period is set for a subnet
 		ImmunityPeriodSet(u16, u16),
 		/// --- Event created when bonds moving average is set for a subnet
@@ -548,6 +554,8 @@ pub mod pallet {
 		DidNotPassConnectedNetworkRequirement,
 		// --- Thrown if the hotkey attempt to become delegate when they are already.
 		AlreadyDelegate,
+		// --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
+		SettingWeightsToFast,
 	}
 
 	/// ================
@@ -1023,6 +1031,10 @@ pub mod pallet {
 		/// 	* `hyperparameter value` (u16):
 		/// 		- The value of the hyper parameter.
 		///   
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )
+		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_bonds_moving_average( origin:OriginFor<T>, netuid: u16, bonds_moving_average: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_bonds_moving_average( origin, netuid, bonds_moving_average )

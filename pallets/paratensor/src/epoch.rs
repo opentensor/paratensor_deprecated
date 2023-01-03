@@ -312,6 +312,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_incentive( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
     pub fn get_dividend( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
     pub fn get_emission( netuid:u16, neuron_uid: u16 ) -> u64 { Emission::<T>::get( netuid, neuron_uid )  }
+    pub fn get_last_update_for_neuron( netuid:u16, neuron_uid: u16 ) -> u64 { LastUpdate::<T>::get( netuid, neuron_uid ) }
     pub fn get_is_validator( netuid: u16, neuron_uid: u16 ) -> bool { IsValidator::<T>::get( netuid, neuron_uid ) }
 
     pub fn get_normalized_stake( netuid:u16 ) -> Vec<I32F32> {

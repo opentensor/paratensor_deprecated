@@ -47,9 +47,10 @@ impl<T: Config> Pallet<T> {
     /// 		- Attempting to set weights with max value exceeding limit.
     ///
     pub fn do_set_weights( origin: T::Origin, netuid: u16, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
-        
+
         // --- 1. Check the caller's signature. This is the hotkey of a registered account.
         let hotkey = ensure_signed( origin )?;
+        log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", hotkey, netuid, uids, values );
 
         // --- 2. Check to see if this is a valid network.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
@@ -73,27 +74,31 @@ impl<T: Config> Pallet<T> {
         // --- 8. Ensure that the weights have the required length.
         ensure!( Self::check_length( netuid, neuron_uid, &uids, &values ), Error::<T>::NotSettingEnoughWeights );
 
-        // --- 9. Normalize the weights.
+        // --- 9. Ensure we are not setting weights beyond the rate limit ( block - last_update > tempo + epsilon )
+        let current_block: u64 = Self::get_current_block_as_u64();
+        ensure!( Self::passes_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsToFast );
+
+        // --- 10. Normalize the weights.
         let normalized_values = Self::normalize_weights( values );
 
-        // --- 10. Ensure the weights are max weight limited 
+        // --- 11. Ensure the weights are max weight limited 
         ensure!( Self::max_weight_limited( netuid, neuron_uid, &uids, &normalized_values ), Error::<T>::MaxWeightExceeded );
 
-        // --- 11. Zip weights for sinking to storage map.
+        // --- 12. Zip weights for sinking to storage map.
         let mut zipped_weights: Vec<( u16, u16 )> = vec![];
         for ( uid, val ) in uids.iter().zip(normalized_values.iter()) { zipped_weights.push((*uid, *val)) }
 
-        // --- 12. Set weights under netuid, uid double map entry.
+        // --- 13. Set weights under netuid, uid double map entry.
         Weights::<T>::insert( netuid, neuron_uid, zipped_weights );
 
-        // --- 13. Set the activity for the weights on this network.
-        LastUpdate::<T>::insert( netuid, neuron_uid, Self::get_current_block_as_u64() );
+        // --- 14. Set the activity for the weights on this network.
+        LastUpdate::<T>::insert( netuid, neuron_uid, current_block );
 
-        // --- 14; Emit the tracking event.
+        // --- 15; Emit the tracking event.
         log::info!("WeightsSet( netuid:{:?}, neuron_uid:{:?} )", netuid, neuron_uid );
         Self::deposit_event( Event::WeightsSet( netuid, neuron_uid ) );
 
-        // --- 15. Return ok.
+        // --- 16. Return ok.
         Ok(())
     }
 
@@ -101,6 +106,18 @@ impl<T: Config> Pallet<T> {
 	/// ==== Helper functions ====
 	/// ==========================
 
+    /// Checks if the neuron has set weights within the weights_set_block_rate_limit
+    ///
+    pub fn passes_rate_limit( netuid: u16, neuron_uid: u16, current_block: u64 ) -> bool {
+        if Self::is_uid_exist_on_network( netuid, neuron_uid ){ 
+            // --- 1. Ensure that the dif between current and last_set weights is greater than limit.
+            let last_set_weights: u64 = Self::get_last_update_for_neuron( netuid, neuron_uid );
+            if last_set_weights == 0 { return true; } // Never set weights.
+            return current_block - last_set_weights >= Self::get_weights_set_rate_limit( netuid );
+        }
+        // --- 3. Non registered peers cant pass.
+        return false;
+    }
 
     /// Checks for any invalid uids on this network.
     pub fn contains_invalid_uids( netuid: u16, uids: &Vec<u16> ) -> bool {

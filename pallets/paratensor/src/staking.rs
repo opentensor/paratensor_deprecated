@@ -33,7 +33,8 @@ impl<T: Config> Pallet<T> {
     ) -> dispatch::DispatchResult {
         // --- 1. We check the coldkey signuture.
         let coldkey = ensure_signed( origin )?;
- 
+        log::info!("do_become_delegate( origin:{:?} hotkey:{:?}, take:{:?} )", coldkey, hotkey, take );
+
         // --- 2. Ensure we are delegating an known key.
         ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    
   
@@ -91,7 +92,8 @@ impl<T: Config> Pallet<T> {
     ) -> dispatch::DispatchResult {
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
         let coldkey = ensure_signed( origin )?;
- 
+        log::info!("do_add_stake( origin:{:?} hotkey:{:?}, stake_to_be_added:{:?} )", coldkey, hotkey, stake_to_be_added );
+
         // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( stake_to_be_added );
         ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
@@ -157,6 +159,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 1. We check the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
         let coldkey = ensure_signed( origin )?;
+        log::info!("do_remove_stake( origin:{:?} hotkey:{:?}, stake_to_be_removed:{:?} )", coldkey, hotkey, stake_to_be_removed );
 
         // --- 2. Ensure that the hotkey account exists this is only possible through registration.
         ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    

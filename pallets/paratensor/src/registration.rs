@@ -76,8 +76,9 @@ impl<T: Config> Pallet<T> {
 
         // --- 1. Check that the caller has signed the transaction. 
         // TODO( const ): This not be the hotkey signature or else an exterior actor can register the hotkey and potentially control it?
-        ensure_signed( origin )?;        
-    
+        let signing_origin = ensure_signed( origin )?;        
+        log::info!("do_registration( origin:{:?} hotkey:{:?}, coldkey:{:?} )", signing_origin, hotkey, coldkey );
+
         // --- 2. Ensure the passed network is valid.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
