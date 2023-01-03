@@ -42,7 +42,7 @@ pub mod pallet {
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
-	use serde::Serialize;
+	use serde::{Serialize, Deserialize};
 
 	/// ================
 	/// ==== Config ====
@@ -107,7 +107,7 @@ pub mod pallet {
 	/// ==== Endpoint Struct ====
 	/// =========================
 	pub type AxonMetadataOf = AxonMetadata;
-	#[derive(Encode, Decode, Default, TypeInfo, Serialize)]
+	#[derive(Encode, Decode, Default, TypeInfo, Serialize, Deserialize)]
     pub struct AxonMetadata {
 		/// ---- The endpoint's code version.
         pub version: u32,

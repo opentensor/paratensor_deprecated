@@ -2,9 +2,10 @@ use super::*;
 use serde::{Serialize, Deserialize};
 use frame_support::storage::IterableStorageDoubleMap;
 use frame_support::pallet_prelude::{Decode, Encode};
-use sp_std::vec::Vec;
+use frame_support::inherent::Vec;
 
 #[derive(Decode, Encode, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NeuronInfo {//<T:Config> {
     //hotkey: T::AccountId,
     //coldkey: T::AccountId,
@@ -20,7 +21,9 @@ pub struct NeuronInfo {//<T:Config> {
     trust: u16,
     dividends: u16,
     last_update: u64,
+    #[serde(with = "tuple_vec_map")]
     weights: Vec<(u16, u16)>,
+    #[serde(with = "tuple_vec_map")]
     bonds: Vec<(u16, u16)>,
     pruning_score: u16
 }
