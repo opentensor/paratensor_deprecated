@@ -9,11 +9,11 @@ license = "MIT"
 publish = false
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default_features = false }
-jsonrpc-core = { version = "15.0", default_features = false}
-jsonrpc-core-client = { version = "15.0", default_features = false}
-jsonrpc-derive = { version = "15.0", default_features = false}
-getrandom = {version = "0.2.6", default-features = false, features = ["js"]}
+codec = { package = "parity-scale-codec", version = "3.0.0", deafult-features = false }
+jsonrpc-core = { version = "15.0", deafult-features = false}
+jsonrpc-core-client = { version = "15.0", deafult-features = false}
+jsonrpc-derive = { version = "15.0", deafult-features = false}
+serde = { version = "1.0.132", features = ["derive"], default-features = false }
 
 # Substrate packages
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.20" }
@@ -24,6 +24,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 # local packages
 
 paratensor-custom-rpc-runtime-api = { version = "0.0.1", path = "../runtime-api", default-features = false }
+pallet-paratensor = { version = "0.0.1-dev", path = "../../paratensor", default-features = false }
 
 [features]
 default = ["std"]
