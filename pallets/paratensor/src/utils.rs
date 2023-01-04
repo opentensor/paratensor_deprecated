@@ -9,8 +9,6 @@ impl<T: Config> Pallet<T> {
     /// ========================
 	/// ==== Global Getters ====
 	/// ========================
-    pub fn set_min_difficulty( netuid: u16, min_difficulty: u64 ) { MinDifficulty::<T>::insert( netuid, min_difficulty) }
-    pub fn set_max_difficulty( netuid: u16, max_difficulty: u64 ) { MaxDifficulty::<T>::insert( netuid, max_difficulty) }
     pub fn set_last_update_for_neuron(netuid: u16, neuron_uid: u16, update: u64){ LastUpdate::<T>::insert(netuid, neuron_uid, update); }
     pub fn set_last_adjustment_block( netuid: u16, last_adjustment_block: u64 ) { LastAdjustmentBlock::<T>::insert( netuid, last_adjustment_block ); }
     pub fn set_max_registrations_per_block( netuid: u16, max_registrations: u16 ){ MaxRegistrationsPerBlock::<T>::insert( netuid, max_registrations ); }
@@ -30,8 +28,6 @@ impl<T: Config> Pallet<T> {
 	/// ==== Subnetwork Getters ====
 	/// ============================
     pub fn get_tempo( netuid:u16 ) -> u16{ Tempo::<T>::get( netuid ) }
-    pub fn get_min_difficulty( netuid: u16 ) -> u64 { MinDifficulty::<T>::get( netuid ) }
-    pub fn get_max_difficulty( netuid: u16 ) -> u64 { MaxDifficulty::<T>::get( netuid ) }
     pub fn get_emission_value( netuid: u16 ) -> u64 { EmissionValues::<T>::get( netuid ) }
     pub fn get_pending_emission( netuid:u16 ) -> u64{ PendingEmission::<T>::get( netuid ) }
     pub fn get_last_adjustment_block( netuid: u16) -> u64 { LastAdjustmentBlock::<T>::get( netuid ) }
@@ -53,6 +49,28 @@ impl<T: Config> Pallet<T> {
         Self::set_default_take( default_take );
         log::info!("DefaultTakeSet( default_take: {:?} ) ", default_take);
         Self::deposit_event( Event::DefaultTakeSet( default_take ) );
+        Ok(()) 
+    }
+
+    pub fn get_min_difficulty( netuid: u16) -> u64 { MinDifficulty::<T>::get( netuid ) }
+    pub fn set_min_difficulty( netuid: u16, min_difficulty: u64 ) { MinDifficulty::<T>::insert( netuid, min_difficulty ); }
+    pub fn do_sudo_set_min_difficulty( origin: T::Origin, netuid: u16, min_difficulty: u64 ) -> DispatchResult { 
+        ensure_root( origin )?;
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+        Self::set_min_difficulty( netuid, min_difficulty );
+        log::info!("MinDifficultySet( netuid: {:?} min_difficulty: {:?} ) ", netuid, min_difficulty);
+        Self::deposit_event( Event::MinDifficultySet( netuid, min_difficulty) );
+        Ok(()) 
+    }
+
+    pub fn get_max_difficulty( netuid: u16) -> u64 { MaxDifficulty::<T>::get( netuid ) }
+    pub fn set_max_difficulty( netuid: u16, max_difficulty: u64 ) { MaxDifficulty::<T>::insert( netuid, max_difficulty ); }
+    pub fn do_sudo_set_max_difficulty( origin: T::Origin, netuid: u16, max_difficulty: u64 ) -> DispatchResult { 
+        ensure_root( origin )?;
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+        Self::set_max_difficulty( netuid, max_difficulty );
+        log::info!("MaxDifficultySet( netuid: {:?} max_difficulty: {:?} ) ", netuid, max_difficulty);
+        Self::deposit_event( Event::MaxDifficultySet( netuid, max_difficulty) );
         Ok(()) 
     }
 

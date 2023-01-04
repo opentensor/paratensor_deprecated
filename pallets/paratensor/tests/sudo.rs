@@ -54,6 +54,36 @@ fn test_sudo_set_default_take() {
     });
 }
 
+#[test]
+fn test_sudo_set_min_difficulty() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u64 = 10;
+        let init_value: u64 = ParatensorModule::get_min_difficulty( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_min_difficulty(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_min_difficulty(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_min_difficulty(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_min_difficulty(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_min_difficulty(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_max_difficulty() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u64 = 10;
+        let init_value: u64 = ParatensorModule::get_max_difficulty( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_max_difficulty(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_max_difficulty(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_max_difficulty(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_max_difficulty(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_max_difficulty(netuid), to_be_set);
+    });
+}
+
 
 #[test]
 fn test_sudo_set_weights_version_key() {

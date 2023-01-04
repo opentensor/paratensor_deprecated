@@ -270,7 +270,6 @@ impl<T: Config> Pallet<T> {
         if !ImmunityPeriod::<T>::contains_key( netuid ) { ImmunityPeriod::<T>::insert( netuid, ImmunityPeriod::<T>::get( netuid ));}
         if !ActivityCutoff::<T>::contains_key( netuid ) { ActivityCutoff::<T>::insert( netuid, ActivityCutoff::<T>::get( netuid ));}
         if !EmissionValues::<T>::contains_key( netuid ) { EmissionValues::<T>::insert( netuid, EmissionValues::<T>::get( netuid ));}   
-        if !StakePruningMin::<T>::contains_key( netuid ) { StakePruningMin::<T>::insert( netuid, StakePruningMin::<T>::get( netuid ));}
         if !MaxWeightsLimit::<T>::contains_key( netuid ) { MaxWeightsLimit::<T>::insert( netuid, MaxWeightsLimit::<T>::get( netuid ));}
         if !ValidatorEpochLen::<T>::contains_key( netuid ) { ValidatorEpochLen::<T>::insert( netuid, ValidatorEpochLen::<T>::get( netuid ));}
         if !MinAllowedWeights::<T>::contains_key( netuid ) { MinAllowedWeights::<T>::insert( netuid, MinAllowedWeights::<T>::get( netuid )); }
@@ -306,7 +305,6 @@ impl<T: Config> Pallet<T> {
         ImmunityPeriod::<T>::remove( netuid );
         ActivityCutoff::<T>::remove( netuid );
         EmissionValues::<T>::remove( netuid );
-        StakePruningMin::<T>::remove( netuid );
         MaxWeightsLimit::<T>::remove( netuid );
         ValidatorEpochLen::<T>::remove( netuid );
         MinAllowedWeights::<T>::remove( netuid );

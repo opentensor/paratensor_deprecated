@@ -481,12 +481,14 @@ parameter_types! {
 	pub const ParatensorInitialImmunityPeriod: u16 = 200;
 	pub const ParatensorInitialActivityCutoff: u16 = 5000;
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
-	pub const ParatensorInitialStakePruningMin: u16 = 0;
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
 	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
-	pub const ParatensorInitialDefaultTake: u16 = 11_140; // 17%
+	pub const ParatensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
 	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
+	pub const ParatensorInitialMinDifficulty: u64 = 1;
+	pub const ParatensorInitialMaxDifficulty: u64 = u64::MAX;
+
 }
 impl pallet_paratensor::Config for Runtime {
 	type Event = Event;
@@ -510,12 +512,14 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialImmunityPeriod = ParatensorInitialImmunityPeriod;
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
-	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
 	type InitialPruningScore = ParatensorInitialPruningScore;
 	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
 	type InitialMaxAllowedValidators = ParatensorInitialMaxAllowedValidators;
 	type InitialDefaultTake = ParatensorInitialDefaultTake;
 	type InitialWeightsVersionKey = ParatensorInitialWeightsVersionKey;
+	type InitialMaxDifficulty = ParatensorInitialMaxDifficulty;
+	type InitialMinDifficulty = ParatensorInitialMinDifficulty;
+
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
