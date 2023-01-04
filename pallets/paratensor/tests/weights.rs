@@ -25,6 +25,33 @@ fn test_set_weights_dispatch_info_ok() {
 	});
 }
 
+/// Test ensures that uid has validator permit to set non-self weights.
+#[test]
+fn test_weights_err_no_validator_permit() {
+	new_test_ext().execute_with(|| {
+        let hotkey_account_id: u64 = 55;
+		let netuid: u16 = 1;
+		let tempo: u16 = 13;
+		add_network(netuid, tempo, 0);
+		ParatensorModule::set_max_allowed_uids(netuid, 3);
+    	register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+		register_ok_neuron( netuid, 1, 1, 65555 );
+		register_ok_neuron( netuid, 2, 2, 75555 );
+		
+		let weights_keys: Vec<u16> = vec![1, 2];
+		let weight_values: Vec<u16> = vec![1, 2];
+		let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys, weight_values);
+		assert_eq!(result, Err(Error::<Test>::NoValidatorPermit.into()));
+
+		let weights_keys: Vec<u16> = vec![1, 2];
+		let weight_values: Vec<u16> = vec![1, 2];
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
+		let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys, weight_values);
+		assert_ok!(result);
+	});
+}
+
 /// Test ensures that uids -- weights must have the same size.
 #[test]
 fn test_weights_err_weights_vec_not_equal_size() {
