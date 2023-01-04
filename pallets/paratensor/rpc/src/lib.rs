@@ -10,8 +10,8 @@ use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 #[rpc]
 pub trait NeuronInfoApi<BlockHash> {
     // TODO (Cameron): fix return type
-	#[rpc(name = "NeuronInfo_getNeurons")]
-	fn get_neurons(&self, at: Option<BlockHash>, netuid: u16) -> Result<NeuronInfoStruct>;
+	#[rpc(name = "neuronInfo_getNeurons")]
+	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
 }
 
 pub struct NeuronInfo<C, M> {
@@ -29,31 +29,26 @@ impl<C, M> NeuronInfo<C, M> {
 }
 
 /// Error type of this RPC api.
-// pub enum Error {
-// 	/// The transaction was not decodable.
-// 	DecodeError,
-// 	/// The call to runtime failed.
-// 	RuntimeError,
-// }
-//
-// impl From<Error> for i64 {
-// 	fn from(e: Error) -> i64 {
-// 		match e {
-// 			Error::RuntimeError => 1,
-// 			Error::DecodeError => 2,
-// 		}
-// 	}
-// }
+pub enum Error {
+	/// The call to runtime failed.
+	RuntimeError,
+}
+
+impl From<Error> for i64 {
+	fn from(e: Error) -> i64 {
+		match e {
+			Error::RuntimeError => 1,
+		}
+	}
+}
 
 impl<C, Block> NeuronInfoApi<<Block as BlockT>::Hash> for NeuronInfo<C, Block>
 where
 	Block: BlockT,
-	C: Send + Sync + 'static,
-	C: ProvideRuntimeApi<Block>,
-	C: HeaderBackend<Block>,
+	C: 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: NeuronInfoRuntimeApi<Block>,
 	{   // TODO (Cameron): fix return type
-	fn get_neurons(&self, at: Option<<Block as BlockT>::Hash>, netuid: u16) -> Result<<Vec<NeuronInfoStruct>> {
+	fn get_neurons(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NeuronInfoStruct>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
@@ -61,7 +56,7 @@ where
 
 		let runtime_api_result = api.get_neurons(&at, netuid);
 		runtime_api_result.map_err(|e| RpcError {
-			code: ErrorCode::ServerError(9876), // No real reason for this value
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Something wrong".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
