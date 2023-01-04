@@ -1,6 +1,7 @@
 mod mock;
 use mock::*;
 use pallet_paratensor::{Error};
+use frame_system::Config;
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
 use frame_support::{assert_ok};
 use sp_runtime::DispatchError;
@@ -84,6 +85,46 @@ fn test_weights_version_key() {
 		// Setting fails with incorrect keys.
 		assert_eq!( ParatensorModule::set_weights(Origin::signed(hotkey), netuid0, weights_keys.clone(), weight_values.clone(), key1), Err(Error::<Test>::IncorrectNetworkVersionKey.into()) );
 		assert_eq!( ParatensorModule::set_weights(Origin::signed(hotkey), netuid1, weights_keys.clone(), weight_values.clone(), key0), Err(Error::<Test>::IncorrectNetworkVersionKey.into()) );
+	});
+}
+
+/// Test ensures that uid has validator permit to set non-self weights.
+#[test]
+fn test_weights_err_setting_weights_too_fast() {
+	new_test_ext().execute_with(|| {
+        let hotkey_account_id: u64 = 55;
+		let netuid: u16 = 1;
+		let tempo: u16 = 13;
+		add_network(netuid, tempo, 0);
+		ParatensorModule::set_max_allowed_uids(netuid, 3);
+    	register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+		register_ok_neuron( netuid, 1, 1, 65555 );
+		register_ok_neuron( netuid, 2, 2, 75555 );
+
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
+		assert_ok!( ParatensorModule::sudo_set_weights_set_rate_limit(<<Test as Config>::Origin>::root(), netuid, 10) );
+		assert_eq!( ParatensorModule::get_weights_set_rate_limit(netuid), 10);
+		
+		let weights_keys: Vec<u16> = vec![1, 2];
+		let weight_values: Vec<u16> = vec![1, 2];
+
+		// Note that LastUpdate has default 0 for new uids, but if they have actually set weights on block 0
+		// then they are allowed to set weights again once more without a wait restriction, to accommodate the default.
+		let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys.clone(), weight_values.clone(), 0);
+		assert_ok!(result);
+		run_to_block(1);
+
+		for i in 1..100 {
+			let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys.clone(), weight_values.clone(), 0);
+			if i % 10 == 1 {
+				assert_ok!(result);
+			}
+			else {
+				assert_eq!(result, Err(Error::<Test>::SettingWeightsTooFast.into()));
+			}
+			run_to_block(i + 1);
+		}
 	});
 }
 

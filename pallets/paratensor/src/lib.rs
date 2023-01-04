@@ -571,8 +571,8 @@ pub mod pallet {
 		DidNotPassConnectedNetworkRequirement,
 		/// --- Thrown if the hotkey attempt to become delegate when they are already.
 		AlreadyDelegate,
-		/// --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
-		SettingWeightsToFast,
+		/// --- Thrown if the hotkey attempts to set weights faster than the weights_set_rate_limit.
+		SettingWeightsTooFast,
 		/// --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
 		IncorrectNetworkVersionKey,
 	}

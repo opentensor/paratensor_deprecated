@@ -34,6 +34,15 @@ impl<T: Config> Pallet<T> {
     /// 	* 'NotRegistered':
     /// 		- Attempting to set weights from a non registered account.
     ///
+    /// 	* 'IncorrectNetworkVersionKey':
+    /// 		- Attempting to set weights without having an up-to-date version_key.
+    ///
+    /// 	* 'SettingWeightsTooFast':
+    /// 		- Attempting to set weights faster than the weights_set_rate_limit.
+    ///
+    /// 	* 'NoValidatorPermit':
+    /// 		- Attempting to set non-self weights without a validator permit.
+    ///
     /// 	* 'WeightVecNotEqualSize':
     /// 		- Attempting to set weights with uids not of same length.
     ///
@@ -61,53 +70,53 @@ impl<T: Config> Pallet<T> {
         // --- 3. Check to see if the hotkey is registered to the passed network.
         ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
 
-        // --- 2. Ensure version_key is up to date.
+        // --- 4. Ensure version_key is up-to-date.
         ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
 
-        // --- 4. Get the neuron uid of associated hotkey on network netuid.
+        // --- 5. Get the neuron uid of associated hotkey on network netuid.
         let neuron_uid;
         match Self::get_uid_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
-        // --- x. Check that the neuron uid is an allowed validator permitted to set non-self weights.
+        // --- 6. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
+        let current_block: u64 = Self::get_current_block_as_u64();
+        ensure!( Self::check_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsTooFast );
+
+        // --- 7. Check that the neuron uid is an allowed validator permitted to set non-self weights.
         ensure!( Self::check_validator_permit( netuid, neuron_uid, &uids, &values ), Error::<T>::NoValidatorPermit );
 
-        // --- 5. Check that the length of uid list and value list are equal for this network.
+        // --- 8. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
 
-        // --- 6. Ensure the passed uids contain no duplicates.
+        // --- 9. Ensure the passed uids contain no duplicates.
         ensure!( !Self::has_duplicate_uids( &uids ), Error::<T>::DuplicateUids );
 
-        // --- 7. Ensure that the passed uids are valid for the network.
+        // --- 10. Ensure that the passed uids are valid for the network.
         ensure!( !Self::contains_invalid_uids( netuid, &uids ), Error::<T>::InvalidUid );
 
-        // --- 8. Ensure that the weights have the required length.
+        // --- 11. Ensure that the weights have the required length.
         ensure!( Self::check_length( netuid, neuron_uid, &uids, &values ), Error::<T>::NotSettingEnoughWeights );
 
-        // --- 9. Ensure we are not setting weights beyond the rate limit ( block - last_update > tempo + epsilon )
-        let current_block: u64 = Self::get_current_block_as_u64();
-        ensure!( Self::check_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsToFast );
-
-        // --- 10. Normalize the weights.
+        // --- 12. Normalize the weights.
         let normalized_values = Self::normalize_weights( values );
 
-        // --- 11. Ensure the weights are max weight limited 
+        // --- 13. Ensure the weights are max weight limited 
         ensure!( Self::max_weight_limited( netuid, neuron_uid, &uids, &normalized_values ), Error::<T>::MaxWeightExceeded );
 
-        // --- 12. Zip weights for sinking to storage map.
+        // --- 14. Zip weights for sinking to storage map.
         let mut zipped_weights: Vec<( u16, u16 )> = vec![];
         for ( uid, val ) in uids.iter().zip(normalized_values.iter()) { zipped_weights.push((*uid, *val)) }
 
-        // --- 13. Set weights under netuid, uid double map entry.
+        // --- 15. Set weights under netuid, uid double map entry.
         Weights::<T>::insert( netuid, neuron_uid, zipped_weights );
 
-        // --- 14. Set the activity for the weights on this network.
+        // --- 16. Set the activity for the weights on this network.
         LastUpdate::<T>::insert( netuid, neuron_uid, current_block );
 
-        // --- 15; Emit the tracking event.
+        // --- 17; Emit the tracking event.
         log::info!("WeightsSet( netuid:{:?}, neuron_uid:{:?} )", netuid, neuron_uid );
         Self::deposit_event( Event::WeightsSet( netuid, neuron_uid ) );
 
-        // --- 16. Return ok.
+        // --- 18. Return ok.
         Ok(())
     }
 
@@ -115,7 +124,7 @@ impl<T: Config> Pallet<T> {
 	/// ==== Helper functions ====
 	/// ==========================
     
-    /// Returns True if setting self-weight or has validator permit.
+    /// Returns true if version_key is up-to-date.
     ///
     pub fn check_version_key( netuid: u16, version_key: u64) -> bool {
         let network_version_key: u64 = WeightsVersionKey::<T>::get( netuid );
@@ -123,13 +132,13 @@ impl<T: Config> Pallet<T> {
         return network_version_key == 0 || version_key == network_version_key;
     }
 
-    /// Checks if the neuron has set weights within the weights_set_block_rate_limit
+    /// Checks if the neuron has set weights within the weights_set_rate_limit.
     ///
     pub fn check_rate_limit( netuid: u16, neuron_uid: u16, current_block: u64 ) -> bool {
         if Self::is_uid_exist_on_network( netuid, neuron_uid ){ 
-            // --- 1. Ensure that the dif between current and last_set weights is greater than limit.
+            // --- 1. Ensure that the diff between current and last_set weights is greater than limit.
             let last_set_weights: u64 = Self::get_last_update_for_neuron( netuid, neuron_uid );
-            if last_set_weights == 0 { return true; } // Never set weights.
+            if last_set_weights == 0 { return true; } // (Storage default) Never set weights.
             return current_block - last_set_weights >= Self::get_weights_set_rate_limit( netuid );
         }
         // --- 3. Non registered peers cant pass.

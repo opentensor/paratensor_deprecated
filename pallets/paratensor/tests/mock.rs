@@ -112,7 +112,7 @@ parameter_types! {
 	pub const InitialStakePruningMin: u16 = 0;
 	pub const InitialFoundationDistribution: u64 = 0;
 	pub const InitialDefaultTake: u16 = 11_140; // 17%
-	pub const InitialWeightsVersionKey: u16 = 0; // 17%
+	pub const InitialWeightsVersionKey: u16 = 0;
 
 	pub const InitialValidatorBatchSize: u16 = 10;
 	pub const InitialValidatorSequenceLen: u16 = 10;
