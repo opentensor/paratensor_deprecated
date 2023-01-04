@@ -10,9 +10,9 @@ publish = false
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-jsonrpc-core = { version = "15.0", default-features = false}
-jsonrpc-core-client = { version = "15.0", default-features = false}
-jsonrpc-derive = { version = "15.0", default-features = false}
+jsonrpc-core = { version = "18.0", default-features = false}
+jsonrpc-core-client = { version = "18.0", default-features = false}
+jsonrpc-derive = { version = "18.0", default-features = false}
 serde = { version = "1.0.132", features = ["derive"], default-features = false }
 
 # Substrate packages
