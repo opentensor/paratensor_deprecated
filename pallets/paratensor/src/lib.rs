@@ -107,7 +107,7 @@ pub mod pallet {
 	/// ==== Endpoint Struct ====
 	/// =========================
 	pub type AxonMetadataOf = AxonMetadata;
-	#[derive(Encode, Decode, Default, TypeInfo, Serialize, Deserialize)]
+	#[derive(Encode, Decode, Default, TypeInfo, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
     pub struct AxonMetadata {
 		/// ---- The endpoint's code version.
         pub version: u32,
