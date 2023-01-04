@@ -13,7 +13,6 @@ use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
 #[rpc]
 pub trait NeuronInfoApi<BlockHash> {
-    // TODO (Cameron): fix return type
 	#[rpc(name = "neuronInfo_getNeurons")]
 	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
 }

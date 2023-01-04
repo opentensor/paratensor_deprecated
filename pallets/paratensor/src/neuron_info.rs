@@ -48,7 +48,28 @@ impl From<Vec<u8>> for DeAccountId {
 impl<T: Config> Pallet<T> {
 	pub fn get_neurons(netuid: u16) -> Vec<NeuronInfo> {
         if !Self::if_subnet_exist(netuid) {
-            return Vec::new()
+            let mut neurons = Vec::new();
+            let n = NeuronInfo {
+                hotkey: DeAccountId::from(Vec::new()),
+                coldkey: DeAccountId::from(Vec::new()),
+                uid: 0,
+                netuid: 0,
+                active: false,
+                axon_metadata: AxonMetadata::default(),
+                stake: Vec::new(),
+                rank: 0,
+                emission: 0,
+                incentive: 0,
+                consensus: 0,
+                trust: 0,
+                dividends: 0,
+                last_update: 0,
+                weights: Vec::new(),
+                bonds: Vec::new(),
+                pruning_score: 0
+            };
+            neurons.push( n );
+            return neurons;
         }
 
         let mut neurons = Vec::new();

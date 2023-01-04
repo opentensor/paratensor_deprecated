@@ -43,6 +43,7 @@ pub mod pallet {
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
 	use serde::{Serialize, Deserialize};
+	use serde_with::{serde_as, DisplayFromStr};
 
 	/// ================
 	/// ==== Config ====
@@ -107,11 +108,14 @@ pub mod pallet {
 	/// ==== Endpoint Struct ====
 	/// =========================
 	pub type AxonMetadataOf = AxonMetadata;
-	#[derive(Encode, Decode, Default, TypeInfo, Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+
+	#[serde_as]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
     pub struct AxonMetadata {
 		/// ---- The endpoint's code version.
         pub version: u32,
         /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
+		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
         pub ip: u128,
         /// ---- The endpoint's u16 encoded port.
         pub port: u16,
