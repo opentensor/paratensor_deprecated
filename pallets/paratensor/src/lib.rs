@@ -509,6 +509,9 @@ pub mod pallet {
 		/// ---- Thrown when the caller tries to add stake, but for some reason the requested
 		/// amount could not be withdrawn from the coldkey account
 		BalanceWithdrawalError,
+		/// ---- Thrown when the caller attempts to set non-self weights without being
+		/// a permitted validator.
+		NoValidatorPermit,
 		/// ---- Thrown when the caller attempts to set the weight keys
 		/// and values but these vectors have different size.
 		WeightVecNotEqualSize,

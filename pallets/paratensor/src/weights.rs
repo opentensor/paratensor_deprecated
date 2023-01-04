@@ -62,6 +62,9 @@ impl<T: Config> Pallet<T> {
         let neuron_uid;
         match Self::get_uid_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
+        // --- x. Check that the neuron uid is an allowed validator permitted to set non-self weights.
+        ensure!( Self::check_validator_permit( netuid, neuron_uid, &uids, &values ), Error::<T>::NoValidatorPermit );
+
         // --- 5. Check that the length of uid list and value list are equal for this network.
         ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
 
@@ -142,6 +145,16 @@ impl<T: Config> Pallet<T> {
             parsed.push(item.clone());
         }
         return false;
+    }
+
+    /// Returns True if setting self-weight or has validator permit.
+    pub fn check_validator_permit( netuid: u16, uid: u16, uids: &Vec<u16>, weights: &Vec<u16> ) -> bool {
+        // Check self weight. Allowed to set single value for self weight.
+        if Self::is_self_weight(uid, uids, weights) {
+            return true;
+        }
+        // Check if uid has validator permit.
+        Self::get_validator_permit(netuid, uid)
     }
 
     /// Returns True if the uids and weights are have a valid length for uid on network.

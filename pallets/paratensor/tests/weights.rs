@@ -29,11 +29,13 @@ fn test_set_weights_dispatch_info_ok() {
 #[test]
 fn test_weights_err_weights_vec_not_equal_size() {
 	new_test_ext().execute_with(|| {
-        let hotkey_account_id:u64 = 55;
+        let hotkey_account_id: u64 = 55;
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		add_network(netuid, tempo, 0);
     	register_ok_neuron(1, hotkey_account_id, 66, 0);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
 		let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
 		let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5]; // Uneven sizes
 		let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), 1, weights_keys, weight_values);
@@ -45,10 +47,13 @@ fn test_weights_err_weights_vec_not_equal_size() {
 #[test]
 fn test_weights_err_has_duplicate_ids() {
 	new_test_ext().execute_with(|| {
+		let hotkey_account_id: u64 = 666;
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		add_network(netuid, tempo, 0);
-		register_ok_neuron( 1, 666, 77, 0);
+		register_ok_neuron( netuid, hotkey_account_id, 77, 0);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
 		let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 6, 6]; // Contains duplicates
 		let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
 		let result = ParatensorModule::set_weights(Origin::signed(666), 1, weights_keys, weight_values);
@@ -72,6 +77,8 @@ fn test_weights_err_max_weight_limit() { //TO DO SAM: uncomment when we implemen
 		// Add 5 accounts.
 		println!( "+Registering: net:{:?}, cold:{:?}, hot:{:?}", netuid, 0, 0 );
 		register_ok_neuron( netuid, 0, 0, 55555 );
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &0 ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
 		assert_eq!( ParatensorModule::get_subnetwork_n(netuid), 1 );
 		assert!( ParatensorModule::is_hotkey_registered_on_network( netuid, &0 ) );
 		step_block(1);
@@ -140,10 +147,13 @@ fn test_set_weights_err_not_active() {
 #[test]
 fn test_set_weights_err_invalid_uid() {
 	new_test_ext().execute_with(|| {
+		let hotkey_account_id: u64 = 55;
         let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		add_network(netuid, tempo, 0);
-		register_ok_neuron( 1, 55, 66, 0);
+		register_ok_neuron( 1, hotkey_account_id, 66, 0);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
 		let weight_keys : Vec<u16> = vec![9999]; // Does not exist
 		let weight_values : Vec<u16> = vec![88]; // random value
 		let result = ParatensorModule::set_weights(Origin::signed(55), 1, weight_keys, weight_values);
@@ -158,8 +168,12 @@ fn test_set_weight_not_enough_values() {
         
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
-		add_network(netuid, tempo, 0);		
+		add_network(netuid, tempo, 0);
+		
 		register_ok_neuron(1, 1, 2, 100000);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &1 ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
+
 		register_ok_neuron(1, 3, 4, 300000);
 		ParatensorModule::set_min_allowed_weights(1, 2);
 
