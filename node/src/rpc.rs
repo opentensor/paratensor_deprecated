@@ -42,19 +42,18 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,
-	C::Api: paratensor_custom_rpc_runtime_api::NeuronInfoApi<Block>,
+	C::Api: paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
+	use paratensor_custom_rpc::{NeuronInfoApi, NeuronInfo};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	// Custom RPC for getting neuron info
-	io.extend_with(paratensor_custom_rpc::NeuronInfoApi::to_delegate(
-		paratensor_custom_rpc::NeuronInfo::new(client),
-	));
+	io.extend_with(NeuronInfoApi::to_delegate(NeuronInfo::new(client.clone())));
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client)));

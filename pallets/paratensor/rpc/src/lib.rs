@@ -2,9 +2,13 @@ use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::{
+	generic::BlockId,
+	traits::Block as BlockT,
+};
 use std::sync::Arc;
-use paratensor_custom_rpc_runtime_api::NeuronInfoApi as NeuronInfoRuntimeApi;
+
+pub use paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
 use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
 #[rpc]
@@ -47,18 +51,17 @@ where
 	Block: BlockT,
 	C: 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: NeuronInfoRuntimeApi<Block>,
-	{   // TODO (Cameron): fix return type
+	{ 
 	fn get_neurons(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NeuronInfoStruct>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash));
 
-		let runtime_api_result = api.get_neurons(&at, netuid);
-		runtime_api_result.map_err(|e| RpcError {
+		api.get_neurons(&at, netuid).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Something wrong".into(),
-			data: Some(format!("{:?}", e).into()),
+			message: "Unable to get neurons info.".into(),
+			data: Some(e.to_string().into()),
 		})
 	}
 }

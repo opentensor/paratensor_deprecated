@@ -2,7 +2,8 @@ use super::*;
 use serde::{Serialize, Deserialize};
 use frame_support::storage::IterableStorageDoubleMap;
 use frame_support::pallet_prelude::{Decode, Encode};
-use frame_support::inherent::Vec;
+extern crate alloc;
+use alloc::vec::Vec;
 
 #[derive(Decode, Encode, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 #[serde(deny_unknown_fields)]
