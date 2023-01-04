@@ -108,34 +108,16 @@ pub mod pallet {
 		type InitialDefaultTake: Get<u16>;
 		#[pallet::constant] /// Initial weights version key.
 		type InitialWeightsVersionKey: Get<u64>;
+		#[pallet::constant] /// Initial serving rate limit.
+		type InitialServingRateLimit: Get<u64>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
-	/// =====================
-	/// ==== Axon Struct ====
-	/// =====================
-	pub type AxonMetadataOf = AxonMetadata;
-	#[derive(Encode, Decode, Default, TypeInfo)]
-    pub struct AxonMetadata {
-		/// ---- The endpoint's code version.
-        pub version: u32,
-        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
-        pub ip: u128,
-        /// ---- The endpoint's u16 encoded port.
-        pub port: u16,
-        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
-        pub ip_type: u8,
-	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
-	#[pallet::type_value] 
-	pub fn DefaultDebug<T: Config>() -> bool { true }
-	#[pallet::storage] /// --- ITEM ( debug )
-	pub type Debug<T> = StorageValue<_, bool, ValueQuery, DefaultDebug<T>>;
 
 	/// ============================
 	/// ==== Staking + Accounts ====
@@ -250,6 +232,45 @@ pub mod pallet {
 	pub type BlocksSinceLastStep<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultBlocksSinceLastStep<T>>;
 	#[pallet::storage] /// --- MAP ( netuid ) --> last_mechanism_step_block
 	pub type LastMechansimStepBlock<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultLastMechansimStepBlock<T> >;
+
+	/// =================================
+	/// ==== Axon / Promo Endpoints =====
+	/// =================================
+	
+	// --- Struct for Axon.
+	pub type AxonInfoOf = AxonInfo;
+	#[derive(Encode, Decode, Default, TypeInfo)]
+    pub struct AxonInfo {
+		pub block: u64, // --- Axon serving block.
+        pub version: u32, // --- Axon version
+        pub ip: u128, // --- Axon u128 encoded ip address of type v6 or v4.
+        pub port: u16, // --- Axon u16 encoded port.
+        pub ip_type: u8, // --- Axon ip type, 4 for ipv4 and 6 for ipv6.
+		pub protocol: u8, // --- Axon protocol. TCP, UDP, other.
+		pub placeholder1: u8, // --- Axon proto placeholder 1.
+		pub placeholder2: u8, // --- Axon proto placeholder 1.
+	}
+
+	// --- Struct for Prometheus.
+	pub type PrometheusInfoOf = PrometheusInfo;
+	#[derive(Encode, Decode, Default, TypeInfo)]
+	pub struct PrometheusInfo{
+		pub block: u64, // --- Prometheus serving block.
+        pub version: u32, // --- Prometheus version.
+        pub ip: u128, // --- Prometheus u128 encoded ip address of type v6 or v4.
+        pub port: u16, // --- Prometheus u16 encoded port.
+        pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
+	}
+
+	#[pallet::type_value] 
+	pub fn DefaultServingRateLimit<T: Config>() -> u64 { T::InitialServingRateLimit::get() }
+
+	#[pallet::storage] /// --- ITEM ( serving_rate_limit )
+	pub(super) type ServingRateLimit<T> = StorageValue<_, u64, ValueQuery, DefaultServingRateLimit<T>>;
+	#[pallet::storage] /// --- MAP ( netuid, uid ) --> axon_info
+	pub(super) type Axons<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonInfoOf, OptionQuery>;
+	#[pallet::storage] /// --- MAP ( netuid, uid ) --> prometheus_info
+	pub(super) type Prometheus<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, PrometheusInfoOf, OptionQuery>;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam storage ====
@@ -375,8 +396,6 @@ pub mod pallet {
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
-	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> (version, ip address, port, ip type)
-	pub(super) type AxonsMetaData<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonMetadataOf, OptionQuery>;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> active
 	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> hotkey
@@ -406,32 +425,33 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		NetworkAdded(u16, u16),	// --- Event created when a new network is added.
-		NetworkRemoved(u16), // --- Event created when a network is removed.
-		StakeAdded(T::AccountId, u64), // --- Event created when stake has been transfered from the a coldkey account onto the hotkey staking account.
-		StakeRemoved(T::AccountId, u64), // --- Event created when stake has been removed from the hotkey staking account onto the coldkey account.
-		WeightsSet(u16, u16), // ---- Event created when a caller successfully set's their weights on a subnetwork.
-		NeuronRegistered(u16), // --- Event created when a new neuron account has been registered to the chain.
-		BulkNeuronsRegistered(u16, u16), // --- Event created when multiple uids have been concurrently registered.
-		MaxAllowedUidsSet(u16, u16), // --- Event created when max allowed uids has been set for a subnetwor.
-		TotalStakeIncreased(u64), // --- Event created when total stake increased.
+		NetworkAdded( u16, u16 ),	// --- Event created when a new network is added.
+		NetworkRemoved( u16 ), // --- Event created when a network is removed.
+		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the hotkey staking account.
+		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the hotkey staking account onto the coldkey account.
+		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
+		NeuronRegistered( u16 ), // --- Event created when a new neuron account has been registered to the chain.
+		BulkNeuronsRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
+		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
+		TotalStakeIncreased( u64), // --- Event created when total stake increased.
 		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
-		DifficultySet(u16, u64), // --- Event created when the difficulty has been set for a subnet.
-		AdjustmentIntervalSet(u16, u16), // --- Event created when the adjustment interval is set for a subnet.
-		RegistrationPerIntervalSet(u16, u16), // --- Event created when registeration per interval is set for a subnet.
-		ActivityCutoffSet(u16, u16), // --- Event created when an activity cutoff is set for a subnet.
-		RhoSet(u16, u16), // --- Event created when Rho value is set.
-		KappaSet(u16, u16), // --- Event created when kappa is set for a subnet.
-		MinAllowedWeightSet(u16, u16), // --- Event created when minimun allowed weight is set for a subnet.
-		ValidatorBatchSizeSet(u16, u16), // --- Event created when validator batch size is set for a subnet.
-		ValidatorSequenceLengthSet(u16, u16), // --- Event created when validator sequence length i set for a subnet.
-		ValidatorEpochPerResetSet(u16, u16), // --- Event created when validator epoch per reset is set for a subnet.
+		DifficultySet( u16, u64 ), // --- Event created when the difficulty has been set for a subnet.
+		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
+		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a subnet.
+		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
+		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
+		KappaSet( u16, u16 ), // --- Event created when kappa is set for a subnet.
+		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
+		ValidatorBatchSizeSet( u16, u16 ), // --- Event created when validator batch size is set for a subnet.
+		ValidatorSequenceLengthSet( u16, u16 ), // --- Event created when validator sequence length i set for a subnet.
+		ValidatorEpochPerResetSet( u16, u16 ), // --- Event created when validator epoch per reset is set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
-		ImmunityPeriodSet(u16, u16), // --- Event created when immunity period is set for a subnet.
-		BondsMovingAverageSet(u16, u64), // --- Event created when bonds moving average is set for a subnet.
-		MaxAllowedValidatorsSet(u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
+		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
+		BondsMovingAverageSet( u16, u64), // --- Event created when bonds moving average is set for a subnet.
+		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ), // --- Event created when the validator exclude quantile has been set for a subnet.
-		AxonServed(u16), // --- Event created when the axon server information is added to the network.
+		AxonServed( u16, u16 ), // --- Event created when the axon server information is added to the network.
+		PrometheusServed( u16, u16 ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		NetworkConnectionAdded( u16, u16, u16 ), // --- Event created when a network connection requirement is added.
 		NetworkConnectionRemoved( u16, u16 ), // --- Event created when a network connection requirement is removed.
@@ -440,6 +460,7 @@ pub mod pallet {
 		WeightsVersionKeySet( u16, u64 ), // --- Event created when weights version key is set for a network.
 		MinDifficultySet( u16, u64 ), // --- Event created when setting min difficutly on a network.
 		MaxDifficultySet( u16, u64 ), // --- Event created when setting max difficutly on a network.
+		ServingRateLimitSet( u64 ), // --- Event created when setting the prometheus serving rate limit.
 	}
 	
 	/// ================
@@ -482,6 +503,7 @@ pub mod pallet {
 		AlreadyDelegate, // --- Thrown if the hotkey attempt to become delegate when they are already.
 		SettingWeightsTooFast, // --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
 		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
+		ServingRateLimitExceeded, // --- Thrown when an axon or prometheus serving exceeds the rate limit for a registered neuron.
 	}
 
 	/// ================
@@ -688,31 +710,56 @@ pub mod pallet {
 			Self::do_remove_stake(origin, hotkey, amount_unstaked)
 		}
 
-		/// ---- Serves or updates axon information for the neuron associated with the caller. If the caller
-		/// already registered the metadata is updated. If the caller is not registered this call throws NotRegsitered.
+		/// ---- Serves or updates axon /promethteus information for the neuron associated with the caller. If the caller is
+		/// already registered the metadata is updated. If the caller is not registered this call throws NotRegistered.
 		///
 		/// # Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
-		/// 		- The caller, a hotkey associated of the registered neuron.
+		/// 		- The signature of the caller.
 		///
 		/// 	* 'netuid' (u16):
 		/// 		- The u16 network identifier.
 		///
-		/// 	* 'ip' (u128):
-		/// 		- The u64 encoded IP address of type 6 or 4.
+		/// 	* 'version' (u64):
+		/// 		- The bittensor version identifier.
+		///
+		/// 	* 'ip' (u64):
+		/// 		- The endpoint ip information as a u128 encoded integer.
 		///
 		/// 	* 'port' (u16):
-		/// 		- The port number where this neuron receives RPC requests.
-		///
+		/// 		- The endpoint port information as a u16 encoded integer.
+		/// 
 		/// 	* 'ip_type' (u8):
-		/// 		- The ip type one of (4,6).
+		/// 		- The endpoint ip version as a u8, 4 or 6.
 		///
-		/// 	* 'modality' (u8):
-		/// 		- The neuron modality type.
+		/// 	* 'protocol' (u8):
+		/// 		- UDP:1 or TCP:0 
+		///
+		/// 	* 'placeholder1' (u8):
+		/// 		- Placeholder for further extra params.
+		///
+		/// 	* 'placeholder2' (u8):
+		/// 		- Placeholder for further extra params.
 		///
 		/// # Event:
-		/// 	* 'AxonServed':
-		/// 		- On subscription of a new neuron to the active set.
+		/// 	* AxonServed;
+		/// 		- On successfully serving the axon info.
+		///
+		/// # Raises:
+		/// 	* 'NetworkDoesNotExist':
+		/// 		- Attempting to set weights on a non-existent network.
+		///
+		/// 	* 'NotRegistered':
+		/// 		- Attempting to set weights from a non registered account.
+		///
+		/// 	* 'InvalidIpType':
+		/// 		- The ip type is not 4 or 6.
+		///
+		/// 	* 'InvalidIpAddress':
+		/// 		- The numerically encoded ip address does not resolve to a proper ip.
+		///
+		/// 	* 'ServingRateLimitExceeded':
+		/// 		- Attempting to set prometheus information withing the rate limit min.
 		///
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn serve_axon(
@@ -721,13 +768,29 @@ pub mod pallet {
 			version: u32, 
 			ip: u128, 
 			port: u16, 
-			ip_type: u8
+			ip_type: u8,
+			protocol: u8, 
+			placeholder1: u8, 
+			placeholder2: u8,
 		) -> DispatchResult {
-			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type ) 
+			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
 		}
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn serve_prometheus(
+			origin:OriginFor<T>, 
+			netuid: u16,
+			version: u32, 
+			ip: u128, 
+			port: u16, 
+			ip_type: u8,
+		) -> DispatchResult {
+			Self::do_serve_prometheus( origin, netuid, version, ip, port, ip_type ) 
+		}
+
+
 		/// ---- Registers a new neuron to the subnetwork. 
 		///
-		 /// # Args:
+		/// # Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The signature of the calling hotkey.
 		///
@@ -963,6 +1026,10 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_default_take( origin:OriginFor<T>, default_take: u16 ) -> DispatchResult {  
 			Self::do_sudo_set_default_take( origin, default_take )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_serving_rate_limit( origin:OriginFor<T>, serving_rate_limit: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_serving_rate_limit( origin, serving_rate_limit )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_difficulty( origin:OriginFor<T>, netuid: u16, max_difficulty: u64 ) -> DispatchResult {  

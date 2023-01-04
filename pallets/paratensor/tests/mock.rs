@@ -113,6 +113,7 @@ parameter_types! {
 	pub const InitialFoundationDistribution: u64 = 0;
 	pub const InitialDefaultTake: u16 = 11_796; // 18% honest number.
 	pub const InitialWeightsVersionKey: u16 = 0; 
+	pub const InitialServingRateLimit: u64 = 0; // No limit.
 
 	pub const InitialValidatorBatchSize: u16 = 10;
 	pub const InitialValidatorSequenceLen: u16 = 10;
@@ -133,6 +134,7 @@ parameter_types! {
 	pub const InitialRegistrationRequirement: u16 = u16::MAX; // Top 100%
 	pub const InitialMinDifficulty: u64 = 1;
 	pub const InitialMaxDifficulty: u64 = u64::MAX;
+
 }
 impl pallet_paratensor::Config for Test {
 	type Event = Event;
@@ -164,7 +166,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialWeightsVersionKey = InitialWeightsVersionKey;
 	type InitialMaxDifficulty = InitialMaxDifficulty;
 	type InitialMinDifficulty = InitialMinDifficulty;
-
+	type InitialServingRateLimit = InitialServingRateLimit;
 }
 
 // Build genesis storage according to the mock runtime.

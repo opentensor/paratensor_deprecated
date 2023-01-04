@@ -488,6 +488,7 @@ parameter_types! {
 	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
 	pub const ParatensorInitialMinDifficulty: u64 = 1;
 	pub const ParatensorInitialMaxDifficulty: u64 = u64::MAX;
+	pub const ParatensorInitialServingRateLimit: u64 = 1000; // Can reserve information on network every 1000 blocks.
 
 }
 impl pallet_paratensor::Config for Runtime {
@@ -519,7 +520,7 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialWeightsVersionKey = ParatensorInitialWeightsVersionKey;
 	type InitialMaxDifficulty = ParatensorInitialMaxDifficulty;
 	type InitialMinDifficulty = ParatensorInitialMinDifficulty;
-
+	type InitialServingRateLimit = ParatensorInitialServingRateLimit;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -2,6 +2,7 @@ use crate::{mock::*};
 mod mock;
 use frame_support::assert_ok;
 use frame_support::dispatch::{GetDispatchInfo, DispatchInfo};
+use pallet_paratensor::Error;
 use frame_support::weights::{DispatchClass, Pays};
 use frame_system::Config;
 
@@ -25,39 +26,223 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 #[test]
 fn test_serving_subscribe_ok_dispatch_info_ok() {
 	new_test_ext().execute_with(|| {
-		
-        let netuid: u16 = 1;
-		let version : u32 = 2;
-        let ip: u128 = 1676056785;
-        let port: u16 = 128;
-        let ip_type: u8 = 4;
-        let call = Call::ParatensorModule(ParatensorCall::serve_axon { netuid, version, ip, port, ip_type });
-		assert_eq!(call.get_dispatch_info(), DispatchInfo {
-			weight: 0,
-			class: DispatchClass::Normal,
-			pays_fee: Pays::No
-		});
+                let netuid: u16 = 1;
+                let version : u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let protocol: u8 = 0;
+                let placeholder1: u8 = 0;
+                let placeholder2: u8 = 0;
+                let call = Call::ParatensorModule(ParatensorCall::serve_axon { netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2});
+                assert_eq!(call.get_dispatch_info(), DispatchInfo {
+                        weight: 0,
+                        class: DispatchClass::Normal,
+                        pays_fee: Pays::No
+                });
 	});
 }
 
 #[test]
 fn test_serving_ok() {
 	new_test_ext().execute_with(|| {
-        let hotkey_account_id = 1;
-        let netuid: u16 = 1;
-        let tempo: u16 = 13;
-	let version : u32 = 2;
-        let ip: u128 = 1676056785;
-        let port: u16 = 128;
-        let ip_type: u8 = 4;
-        let modality: u16 = 0;
-        //
-        add_network(netuid, tempo, modality);
-        register_ok_neuron( netuid, hotkey_account_id, 66, 0);
-        //
-        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version : u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                let protocol: u8 = 0;
+                let placeholder1: u8 = 0;
+                let placeholder2: u8 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_axon_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip);
+                assert_eq!(neuron.version, version);
+                assert_eq!(neuron.port, port);
+                assert_eq!(neuron.ip_type, ip_type);
+                assert_eq!(neuron.protocol, protocol);
+                assert_eq!(neuron.placeholder1, placeholder1);
+                assert_eq!(neuron.placeholder2, placeholder2);
 	});
 }
+
+#[test]
+fn test_serving_set_metadata_update() {
+	new_test_ext().execute_with(|| {
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version: u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                let protocol: u8 = 0;
+                let placeholder1: u8 = 0;
+                let placeholder2: u8 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_axon_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip);
+                assert_eq!(neuron.version, version);
+                assert_eq!(neuron.port, port);
+                assert_eq!(neuron.ip_type, ip_type);
+                assert_eq!(neuron.protocol, protocol);
+                assert_eq!(neuron.placeholder1, placeholder1);
+                assert_eq!(neuron.placeholder2, placeholder2);
+                let version2: u32 = version + 1;
+                let ip2: u128 = ip + 1;
+                let port2: u16 = port + 1;
+                let ip_type2: u8 = 6;
+                let protocol2: u8 = protocol + 1;
+                let placeholder12: u8 = placeholder1 + 1;
+                let placeholder22: u8 = placeholder2 + 1;
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version2, ip2, port2, ip_type2, protocol2, placeholder12, placeholder22));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_axon_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip2);
+                assert_eq!(neuron.version, version2);
+                assert_eq!(neuron.port, port2);
+                assert_eq!(neuron.ip_type, ip_type2);
+                assert_eq!(neuron.protocol, protocol2);
+                assert_eq!(neuron.placeholder1, placeholder12);
+                assert_eq!(neuron.placeholder2, placeholder22);
+    
+        });
+}
+
+#[test]
+fn test_axon_serving_rate_limit_exceeded() {
+	new_test_ext().execute_with(|| {
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version: u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                let protocol: u8 = 0;
+                let placeholder1: u8 = 0;
+                let placeholder2: u8 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                // No issue on multiple
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));
+                assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2));    
+                ParatensorModule::set_serving_rate_limit( 1 );
+                assert_eq!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2), Err(Error::<Test>::ServingRateLimitExceeded.into()) );    
+        });
+}
+
+#[test]
+fn test_prometheus_serving_subscribe_ok_dispatch_info_ok() {
+	new_test_ext().execute_with(|| {
+                let netuid: u16 = 1;
+                let version : u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let call = Call::ParatensorModule(ParatensorCall::serve_prometheus{ netuid, version, ip, port, ip_type});
+                assert_eq!(call.get_dispatch_info(), DispatchInfo {
+                        weight: 0,
+                        class: DispatchClass::Normal,
+                        pays_fee: Pays::No
+                });
+	});
+}
+
+#[test]
+fn test_prometheus_serving_ok() {
+	new_test_ext().execute_with(|| {
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version : u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_prometheus_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip);
+                assert_eq!(neuron.version, version);
+                assert_eq!(neuron.port, port);
+                assert_eq!(neuron.ip_type, ip_type);
+	});
+}
+
+#[test]
+fn test_prometheus_serving_set_metadata_update() {
+	new_test_ext().execute_with(|| {
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version: u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_prometheus_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip);
+                assert_eq!(neuron.version, version);
+                assert_eq!(neuron.port, port);
+                assert_eq!(neuron.ip_type, ip_type);
+                let version2: u32 = version + 1;
+                let ip2: u128 = ip + 1;
+                let port2: u16 = port + 1;
+                let ip_type2: u8 = 6;
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version2, ip2, port2, ip_type2));
+                let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id).unwrap();
+                let neuron = ParatensorModule::get_prometheus_info( netuid, neuron_uid );
+                assert_eq!(neuron.ip, ip2);
+                assert_eq!(neuron.version, version2);
+                assert_eq!(neuron.port, port2);
+                assert_eq!(neuron.ip_type, ip_type2);
+    
+        });
+}
+
+#[test]
+fn test_prometheus_serving_rate_limit_exceeded() {
+	new_test_ext().execute_with(|| {
+                let hotkey_account_id = 1;
+                let netuid: u16 = 1;
+                let tempo: u16 = 13;
+                let version: u32 = 2;
+                let ip: u128 = 1676056785;
+                let port: u16 = 128;
+                let ip_type: u8 = 4;
+                let modality: u16 = 0;
+                add_network(netuid, tempo, modality);
+                register_ok_neuron( netuid, hotkey_account_id, 66, 0);
+                // No issue on multiple
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
+                assert_ok!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));    
+                ParatensorModule::set_serving_rate_limit( 1 );
+                assert_eq!(ParatensorModule::serve_prometheus(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type), Err(Error::<Test>::ServingRateLimitExceeded.into()) );    
+        });
+}
+
 
 #[test]
 fn test_serving_is_valid_ip_type_ok_ipv4() {
@@ -110,36 +295,6 @@ fn test_serving_is_invalid_ipv6_address() {
 	new_test_ext().execute_with(|| {
         assert_eq!(ParatensorModule::is_valid_ip_address(6, test::ipv6(0, 0, 0, 0, 0, 0, 0, 0)), false);
         assert_eq!(ParatensorModule::is_valid_ip_address(4, test::ipv6(0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)), false);
-	});
-}
-
-#[test]
-fn test_serving_set_metadata() {
-	new_test_ext().execute_with(|| {
-        let hotkey_account_id = 1;
-        let netuid: u16 = 1;
-        let tempo: u16 = 13;
-	let version : u32 = 2;
-        let ip: u128 = 1676056785;
-        let port: u16 = 128;
-        let ip_type: u8 = 4;
-        let modality: u16 = 0;
-        //
-        add_network(netuid, tempo, modality);
-        register_ok_neuron( netuid, hotkey_account_id, 66, 0);
-        //
-        assert_ok!(ParatensorModule::serve_axon(<<Test as Config>::Origin>::signed(hotkey_account_id), netuid, version, ip, port, ip_type));
-        //
-        let neuron_uid ;
-        match ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id) {
-            Ok(k) => neuron_uid = k,
-            Err(e) => panic!("Error: {:?}", e),
-        } 
-	let neuron = ParatensorModule::get_neuron_metadata( netuid, neuron_uid);
-	assert_eq!(neuron.ip, 1676056785);
-	assert_eq!(neuron.version, 2);
-	assert_eq!(neuron.port, 128);
-        assert_eq!(neuron.ip_type, 4);
 	});
 }
 

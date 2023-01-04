@@ -1,4 +1,4 @@
-use pallet_paratensor::{Error, AxonMetadataOf};
+use pallet_paratensor::{Error, AxonInfoOf};
 use frame_support::{assert_ok};
 use frame_system::Config;
 use crate::{mock::*};
@@ -307,7 +307,7 @@ fn test_registration_get_neuron_metadata() {
 		//
 		//let neuron_id = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
 		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
-		let neuron: AxonMetadataOf = ParatensorModule::get_neuron_metadata(netuid, neuron_uid);
+		let neuron: AxonInfoOf = ParatensorModule::get_axon_info(netuid, neuron_uid );
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);
