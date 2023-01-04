@@ -1,4 +1,4 @@
-// RUST_BACKTRACE=1 SKIP_WASM_BUILD=1 RUST_LOG=debug cargo test epoch -- test_nill_epoch_paratensor test_1_graph test_10_graph test_512_graph test_4096_graph test_4096_graph_random_weights test_active_stake test_outdated_weights test_zero_weights --exact --nocapture
+// RUST_BACKTRACE=1 cargo test epoch -- test_nill_epoch_paratensor test_1_graph test_10_graph test_512_graph test_4096_graph test_4096_graph_random_weights test_active_stake test_outdated_weights test_zero_weights --exact
 
 use crate::mock::*;
 use rand::{Rng, thread_rng, SeedableRng, rngs::StdRng, seq::SliceRandom, distributions::Uniform};
@@ -12,7 +12,7 @@ mod mock;
 // Test an epoch on an empty graph.
 fn test_nill_epoch_paratensor() {
 	new_test_ext().execute_with(|| {
-        log::info!("test_nill_epoch:" );
+        log::info!( "test_nill_epoch:" );
 		ParatensorModule::epoch( 0, 0 );
 	});
 }
@@ -21,7 +21,7 @@ fn test_nill_epoch_paratensor() {
 // Test an epoch on a graph with a single item.
 fn test_1_graph() {
 	new_test_ext().execute_with(|| {
-    	log::info!("test_1_graph:" );
+    	log::info!( "test_1_graph:" );
 		let netuid: u16 = 0;
 		let coldkey: u64 = 0;
 		let hotkey: u64 = 0;
@@ -111,13 +111,13 @@ fn test_10_graph() {
 
 #[allow(dead_code)]
 fn uid_stats(netuid: u16, uid: u16) {
-	log::info!("stake: {:?}", ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ));
-	log::info!("rank: {:?}", ParatensorModule::get_rank( netuid, uid ));
-	log::info!("trust: {:?}", ParatensorModule::get_trust( netuid, uid ));
-	log::info!("consensus: {:?}", ParatensorModule::get_consensus( netuid, uid ));
-	log::info!("incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ));
-	log::info!("dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ));
-	log::info!("emission: {:?}", ParatensorModule::get_emission( netuid, uid ));
+	log::info!( "stake: {:?}", ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ));
+	log::info!( "rank: {:?}", ParatensorModule::get_rank( netuid, uid ));
+	log::info!( "trust: {:?}", ParatensorModule::get_trust( netuid, uid ));
+	log::info!( "consensus: {:?}", ParatensorModule::get_consensus( netuid, uid ));
+	log::info!( "incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ));
+	log::info!( "dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ));
+	log::info!( "emission: {:?}", ParatensorModule::get_emission( netuid, uid ));
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_512_graph() {
 		let servers: Vec<u16> = (validators_n..n).collect();
 		let server: usize = servers[0] as usize;
 		let epochs: u16 = 100;
-		log::info!("test_{n:?}_graph ({validators_n:?} validators)" );
+		log::info!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, 1, false, 0, false);
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in validators {
@@ -169,7 +169,7 @@ fn test_4096_graph() {
 	let mut servers: Vec<u16> = vec![];
 	let epochs: u16 = 1;
 	let max_stake_per_validator: u64 = 82_031_250_000_000; // 21_000_000_000_000_000 / 256
-	log::info!("test_{n:?}_graph ({validators_n:?} validators)" );
+	log::info!( "test_{n:?}_graph ({validators_n:?} validators)" );
 	for k in 0..3 {
 		if k == 0 { // blockwise [validator_block, server_block]
 			validators = (0..validators_n).collect();
@@ -226,7 +226,7 @@ fn test_4096_graph_random_weights() {
 	let mut validators: Vec<u16> = vec![];
 	let mut servers: Vec<u16> = vec![];
 	let epochs: u16 = 1;
-	log::info!("test_{n:?}_graph_random_weights ({validators_n:?} validators)" );
+	log::info!( "test_{n:?}_graph_random_weights ({validators_n:?} validators)" );
 	for k in 0..3 {
 		if k == 0 { // blockwise [validator_block, server_block]
 			validators = (0..validators_n).collect();
@@ -289,7 +289,7 @@ fn test_16384_graph_sparse() {
 		let servers: Vec<u16> = (validators_n..n).collect();
 		let server: u16 = servers[0];
 		let epochs: u16 = 1;
-		log::info!("test_{n:?}_graph ({validators_n:?} validators)" );
+		log::info!( "test_{n:?}_graph ({validators_n:?} validators)" );
 		init_run_epochs(netuid, n, &validators, &servers, epochs, 1, false, 0, true);
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in validators {
@@ -335,7 +335,7 @@ fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16
 	// === Issue validator permits
 	assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, validators.len() as u16) );
     assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), validators.len() as u16);
-	ParatensorModule::epoch( netuid, 1_000_000_000, debug ); // run first epoch to set allowed validators
+	ParatensorModule::epoch( netuid, 1_000_000_000 ); // run first epoch to set allowed validators
 	run_to_block( 1 ); // run to next block to ensure weights are set on nodes after their registration block
 
 	// === Set weights
@@ -355,7 +355,7 @@ fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16
 	}
 
 	// === Run the epochs.
-	log::info!("Start {epochs} epoch(s)");
+	log::info!( "Start {epochs} epoch(s)" );
 	let start = Instant::now();
 	for _ in 0..epochs {
 		if sparse {
@@ -366,7 +366,7 @@ fn init_run_epochs(netuid: u16, n: u16, validators: &Vec<u16>, servers: &Vec<u16
 		}
 	}
 	let duration = start.elapsed();
-	log::info!("Time elapsed in (sparse={sparse}) epoch() is: {:?}", duration);
+	log::info!( "Time elapsed in (sparse={sparse}) epoch() is: {:?}", duration );
 
 	// let bonds = ParatensorModule::get_bonds( netuid );
 	// for (uid, node) in vec![ (validators[0], "validator"), (servers[0], "server") ] {
@@ -412,7 +412,7 @@ fn test_active_stake() {
 		// === Issue validator permits
 		assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, n) );
 		assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), n);
-		ParatensorModule::epoch( netuid, 1_000_000_000, debug ); // run first epoch to set allowed validators
+		ParatensorModule::epoch( netuid, 1_000_000_000 ); // run first epoch to set allowed validators
 		run_to_block( 1 ); // run to next block to ensure weights are set on nodes after their registration block
 
 		// === Set weights [val1->srv1: 0.5, val1->srv2: 0.5, val2->srv1: 0.5, val2->srv2: 0.5]
@@ -549,7 +549,7 @@ fn test_outdated_weights() {
 		// === Issue validator permits
 		assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, n) );
 		assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), n);
-		ParatensorModule::epoch( netuid, 1_000_000_000, debug ); // run first epoch to set allowed validators
+		ParatensorModule::epoch( netuid, 1_000_000_000 ); // run first epoch to set allowed validators
 		run_to_block( 1 ); block_number += 1; // run to next block to ensure weights are set on nodes after their registration block
 
 		// === Set weights [val1->srv1: 2/3, val1->srv2: 1/3, val2->srv1: 2/3, val2->srv2: 1/3, srv1->srv1: 1, srv2->srv2: 1]
