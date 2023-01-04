@@ -104,6 +104,8 @@ pub mod pallet {
 		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] /// Initial default delegation take.
 		type InitialDefaultTake: Get<u16>;
+		#[pallet::constant] /// Initial weights version key.
+		type InitialWeightsVersionKey: Get<u64>;
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -269,6 +271,8 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultStakePruningMin<T: Config>() -> u16 { T::InitialStakePruningMin::get() }
 	#[pallet::type_value] 
+	pub fn DefaultWeightsVersionKey<T: Config>() -> u64 { T::InitialWeightsVersionKey::get() }
+	#[pallet::type_value] 
 	pub fn DefaultMinAllowedWeights<T: Config>() -> u16 { T::InitialMinAllowedWeights::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochLen<T: Config>() -> u16 { T::InitialValidatorEpochLen::get() }
@@ -308,6 +312,8 @@ pub mod pallet {
 	pub type StakePruningMin<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultStakePruningMin<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> max_weight_limit
 	pub type MaxWeightsLimit<T> = StorageMap< _, Identity, u16, u16, ValueQuery, DefaultMaxWeightsLimit<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> weights_version_key
+	pub type WeightsVersionKey<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsVersionKey<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_epoch_len
 	pub type ValidatorEpochLen<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochLen<T> >; 
 	#[pallet::storage] /// --- MAP ( netuid ) --> min_allowed_weights
@@ -469,6 +475,8 @@ pub mod pallet {
 		DelegateAdded( T::AccountId, T::AccountId, u16 ),
 		/// --- Event created when the default take is set.
 		DefaultTakeSet( u16 ),
+		/// --- Event created when weights version key is set for a network.
+		WeightsVersionKeySet( u16, u64 )
 	}
 	
 	/// ================
@@ -550,21 +558,23 @@ pub mod pallet {
 		MaxWeightExceeded,
 		/// ---- Thrown when the caller attempts to set a storage value outside of its allowed range.
 		StorageValueOutOfRange,
-		// --- Thrown when tempo has not set
+		/// --- Thrown when tempo has not set
 		TempoHasNotSet,
-		// --- Thrown when tempo is not valid
+		/// --- Thrown when tempo is not valid
 		InvalidTempo,
-		// --- Thrown when number or recieved emission rates does not match number of networks
+		/// --- Thrown when number or recieved emission rates does not match number of networks
 		EmissionValuesDoesNotMatchNetworks,
-		// --- Thrown when emission ratios are not valid (did not sum up to 10^9)
+		/// --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		InvalidEmissionValues,
-		// --- Thrown when a hotkey attempts to register into a network without passing the 
-		// registration requirment from another network.
+		/// --- Thrown when a hotkey attempts to register into a network without passing the 
+		/// registration requirment from another network.
 		DidNotPassConnectedNetworkRequirement,
-		// --- Thrown if the hotkey attempt to become delegate when they are already.
+		/// --- Thrown if the hotkey attempt to become delegate when they are already.
 		AlreadyDelegate,
-		// --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
+		/// --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
 		SettingWeightsToFast,
+		/// --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
+		IncorrectNetworkVersionKey,
 	}
 
 	/// ================
@@ -616,6 +626,9 @@ pub mod pallet {
 		/// 		- The u16 integer encoded weights. Interpreted as rational
 		/// 		values in the range [0,1]. They must sum to in32::MAX.
 		///
+		/// 	* 'version_key' ( u64 ):
+    	/// 		- The network version key to check if the validator is up to date.
+		///
 		/// # Event:
 		/// 	* WeightsSet;
 		/// 		- On successfully setting the weights on chain.
@@ -646,9 +659,10 @@ pub mod pallet {
 			origin:OriginFor<T>, 
 			netuid: u16,
 			dests: Vec<u16>, 
-			weights: Vec<u16>
+			weights: Vec<u16>,
+			version_key: u64 
 		) -> DispatchResult {
-			Self::do_set_weights( origin, netuid, dests, weights )
+			Self::do_set_weights( origin, netuid, dests, weights, version_key )
 		}
 
 		/// --- Sets the key as a delegate.
@@ -1046,6 +1060,10 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_weights_set_rate_limit( origin:OriginFor<T>, netuid: u16, weights_set_rate_limit: u64 ) -> DispatchResult {  
 			Self::do_sudo_set_weights_set_rate_limit( origin, netuid, weights_set_rate_limit )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_weights_version_key( origin:OriginFor<T>, netuid: u16, weights_version_key: u64 ) -> DispatchResult {  
+			Self::do_sudo_set_weights_version_key( origin, netuid, weights_version_key )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_bonds_moving_average( origin:OriginFor<T>, netuid: u16, bonds_moving_average: u64 ) -> DispatchResult {  

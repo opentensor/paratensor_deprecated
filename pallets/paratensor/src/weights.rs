@@ -20,6 +20,9 @@ impl<T: Config> Pallet<T> {
     /// 	* 'values' ( Vec<u16> ):
     /// 		- The values of the weights to set on the chain.
     ///
+    /// 	* 'version_key' ( u64 ):
+    /// 		- The network version key.
+    ///
     /// # Event:
     /// 	* WeightsSet;
     /// 		- On successfully setting the weights on chain.
@@ -46,7 +49,7 @@ impl<T: Config> Pallet<T> {
     /// 	* 'MaxWeightExceeded':
     /// 		- Attempting to set weights with max value exceeding limit.
     ///
-    pub fn do_set_weights( origin: T::Origin, netuid: u16, uids: Vec<u16>, values: Vec<u16> ) -> dispatch::DispatchResult{
+    pub fn do_set_weights( origin: T::Origin, netuid: u16, uids: Vec<u16>, values: Vec<u16>, version_key:u64 ) -> dispatch::DispatchResult{
 
         // --- 1. Check the caller's signature. This is the hotkey of a registered account.
         let hotkey = ensure_signed( origin )?;
@@ -57,6 +60,9 @@ impl<T: Config> Pallet<T> {
 
         // --- 3. Check to see if the hotkey is registered to the passed network.
         ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
+
+        // --- 2. Ensure version_key is up to date.
+        ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
 
         // --- 4. Get the neuron uid of associated hotkey on network netuid.
         let neuron_uid;
@@ -79,7 +85,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 9. Ensure we are not setting weights beyond the rate limit ( block - last_update > tempo + epsilon )
         let current_block: u64 = Self::get_current_block_as_u64();
-        ensure!( Self::passes_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsToFast );
+        ensure!( Self::check_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsToFast );
 
         // --- 10. Normalize the weights.
         let normalized_values = Self::normalize_weights( values );
@@ -108,10 +114,18 @@ impl<T: Config> Pallet<T> {
     /// ==========================
 	/// ==== Helper functions ====
 	/// ==========================
+    
+    /// Returns True if setting self-weight or has validator permit.
+    ///
+    pub fn check_version_key( netuid: u16, version_key: u64) -> bool {
+        let network_version_key: u64 = WeightsVersionKey::<T>::get( netuid );
+        log::info!("check_version_key( network_version_key:{:?}, version_key:{:?} )", network_version_key, version_key );
+        return network_version_key == 0 || version_key == network_version_key;
+    }
 
     /// Checks if the neuron has set weights within the weights_set_block_rate_limit
     ///
-    pub fn passes_rate_limit( netuid: u16, neuron_uid: u16, current_block: u64 ) -> bool {
+    pub fn check_rate_limit( netuid: u16, neuron_uid: u16, current_block: u64 ) -> bool {
         if Self::is_uid_exist_on_network( netuid, neuron_uid ){ 
             // --- 1. Ensure that the dif between current and last_set weights is greater than limit.
             let last_set_weights: u64 = Self::get_last_update_for_neuron( netuid, neuron_uid );

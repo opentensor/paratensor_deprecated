@@ -112,6 +112,7 @@ parameter_types! {
 	pub const InitialStakePruningMin: u16 = 0;
 	pub const InitialFoundationDistribution: u64 = 0;
 	pub const InitialDefaultTake: u16 = 11_140; // 17%
+	pub const InitialWeightsVersionKey: u16 = 0; // 17%
 
 	pub const InitialValidatorBatchSize: u16 = 10;
 	pub const InitialValidatorSequenceLen: u16 = 10;
@@ -159,6 +160,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 	type InitialMaxAllowedValidators = InitialMaxAllowedValidators;
 	type InitialDefaultTake = InitialDefaultTake;
+	type InitialWeightsVersionKey = InitialWeightsVersionKey;
 }
 
 // Build genesis storage according to the mock runtime.
