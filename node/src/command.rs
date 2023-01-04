@@ -434,7 +434,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn default_heap_pages(&self) -> Result<Option<u64>> {
 		// Default heap pages (2048) is way too small.
 		// TODO(shibshib): Figure out better way to measure how much heap space required.
-		Ok(Some(8192))
+		Ok(Some(81920))
 	}
 
 	fn force_authoring(&self) -> Result<bool> {
