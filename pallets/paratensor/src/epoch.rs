@@ -15,6 +15,10 @@ impl<T: Config> Pallet<T> {
         let n: u16 = Self::get_subnetwork_n( netuid );
         log::trace!("n:\n{:?}\n", n );
 
+        // ======================
+        // == Active & updated ==
+        // ======================
+
         // Get current block.
         let current_block: u64 = Self::get_current_block_as_u64();
         log::trace!("current_block:\n{:?}\n", current_block );
@@ -29,7 +33,19 @@ impl<T: Config> Pallet<T> {
 
         // Inactive mask.
         let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
-        log::trace!("Inactive:\n{:?}\n", inactive.clone() );
+        log::trace!("Inactive:\n{:?}\n", inactive.clone());
+
+        // Block at registration vector (block when each neuron was most recently registered).
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
+        log::trace!("Block at registration:\n{:?}\n", block_at_registration.clone());
+
+        // Outdated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
+        let outdated: Vec<Vec<bool>> = last_update.iter().map(| updated | block_at_registration.iter().map(| registered | updated <= registered ).collect() ).collect();
+        log::trace!("Outdated:\n{:?}\n", outdated.clone());
+
+        // ===========
+        // == Stake ==
+        // ===========
 
         // Access network stake as normalized vector.
         let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
@@ -42,29 +58,52 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut active_stake );
         log::trace!("S:\n{:?}\n", active_stake.clone() );
 
-        // Block at registration vector (block when each neuron was most recently registered).
-        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
-        log::trace!("Block at registration:\n{:?}\n", block_at_registration.clone() );
+        // =======================
+        // == Validator permits ==
+        // =======================
 
-        // Outdated matrix, updated_ij=True if i has last updated (weights) after j has last registered.
-        let outdated: Vec<Vec<bool>> = last_update.iter().map(| updated | block_at_registration.iter().map(| registered | updated <= registered ).collect() ).collect();
-        log::trace!("Outdated:\n{:?}\n", outdated.clone() );
+        // Get validator permits.
+        let validator_permits: Vec<bool> = Self::get_validator_permits( netuid );
+        log::trace!("validator_permits: {:?}", validator_permits);
+
+        // Logical negation of validator_permits.
+        let validator_forbids: Vec<bool> = validator_permits.iter().map(|&b| !b).collect();
+
+        // Get max allowed validators.
+        let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
+        log::trace!("max_allowed_validators: {:?}", max_allowed_validators);
+
+        // Get new validator permits.
+        let new_validator_permits: Vec<bool> = is_topk( &stake, max_allowed_validators as usize );
+        log::trace!("new_validator_permits: {:?}", new_validator_permits);
+
+        // =============
+        // == Weights ==
+        // =============
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<I32F32>> = Self::get_weights( netuid );
         log::trace!("W:\n{:?}\n", weights.clone() );
 
+        // Mask weights that are not from permitted validators.
+        inplace_mask_rows( &validator_forbids, &mut weights );
+        log::trace!("W (permit): {:?}", weights.clone());
+
         // Remove self-weight by masking diagonal.
-        inplace_diag_mask( &mut weights );
-        log::trace!("W:\n{:?}\n", weights.clone() );
+        inplace_mask_diag( &mut weights );
+        log::trace!("W (permit+diag):\n{:?}\n", weights.clone());
 
         // Mask outdated weights: remove weights referring to deregistered neurons.
         inplace_mask_matrix( &outdated, &mut weights );
-        log::trace!("W:\n{:?}\n", weights.clone() );
+        log::trace!("W (permit+diag+outdate):\n{:?}\n", weights.clone());
 
         // Normalize remaining weights.
         inplace_row_normalize( &mut weights );
-        log::trace!("W:\n{:?}\n", weights.clone() );
+        log::trace!("W (mask+norm):\n{:?}\n", weights.clone());
+
+        // ========================================
+        // == Ranks, Trust, Consensus, Incentive ==
+        // ========================================
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i
         let mut ranks: Vec<I32F32> = matmul( &weights, &active_stake );
@@ -93,7 +132,11 @@ impl<T: Config> Pallet<T> {
         // Compute incentive.
         let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus.clone() ).map( |(ri, ci)| ri * ci ).collect();
         inplace_normalize( &mut incentive );
-        log::trace!("I:\n{:?}\n", incentive.clone() );
+        log::trace!("I:\n{:?}\n", incentive.clone());
+
+        // =========================
+        // == Bonds and Dividends ==
+        // =========================
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
@@ -114,7 +157,11 @@ impl<T: Config> Pallet<T> {
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j
         let dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
-        log::trace!("D:\n{:?}\n", dividends.clone() );
+        log::trace!("D:\n{:?}\n", dividends.clone());
+
+        // =================================
+        // == Emission and Pruning scores ==
+        // =================================
 
         // Compute emission scores.
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
@@ -134,8 +181,12 @@ impl<T: Config> Pallet<T> {
         log::trace!("E: {:?}", emission.clone() );
 
         // Set pruning scores.
-        let pruning: Vec<I32F32> = normalized_emission.clone();
-        log::trace!("P: {:?}", pruning.clone() );
+        let pruning_scores: Vec<I32F32> = normalized_emission.clone();
+        log::trace!("P: {:?}", pruning_scores.clone());
+
+        // ===================
+        // == Value storage ==
+        // ===================
 
         // Sync parameter updates.
         for i in 0..n {
@@ -144,9 +195,17 @@ impl<T: Config> Pallet<T> {
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
+            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
-            Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
+            Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
+            
+            // Set bonds only if uid retains validator permit, otherwise clear bonds.
+            if new_validator_permits[i as usize] {
+                Self::set_bonds( netuid, i, (0..n).zip( vec_fixed_proportions_to_u16( ema_bonds[i as usize].clone() ) ).collect() );
+            }
+            else {
+                Self::set_bonds( netuid, i, vec![] );
+            }
         }  
 
         // Returning the tao emission here which will be distributed at a higher level.
@@ -170,7 +229,11 @@ impl<T: Config> Pallet<T> {
     pub fn epoch( netuid: u16, rao_emission: u64 ) -> Vec<u64> {
         // Get subnetwork size.
         let n: u16 = Self::get_subnetwork_n( netuid );
-        log::trace!("n: {:?}", n );
+        log::trace!("n: {:?}", n);
+
+        // ======================
+        // == Active & updated ==
+        // ======================
 
         // Get current block.
         let current_block: u64 = Self::get_current_block_as_u64();
@@ -186,7 +249,15 @@ impl<T: Config> Pallet<T> {
 
         // Inactive mask.
         let inactive: Vec<bool> = last_update.iter().map(| updated | *updated + activity_cutoff < current_block ).collect();
-        log::trace!("Inactive: {:?}", inactive.clone() );
+        log::trace!("Inactive: {:?}", inactive.clone());
+
+        // Block at registration vector (block when each neuron was most recently registered).
+        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
+        log::trace!("Block at registration: {:?}", block_at_registration.clone());
+
+        // ===========
+        // == Stake ==
+        // ===========
 
         // Access network stake as normalized vector.
         let stake: Vec<I32F32> = Self::get_normalized_stake( netuid );
@@ -201,25 +272,52 @@ impl<T: Config> Pallet<T> {
         inplace_normalize( &mut active_stake );
         log::trace!("S (mask+norm): {:?}", active_stake.clone() );
 
-        // Block at registration vector (block when each neuron was most recently registered).
-        let block_at_registration: Vec<u64> = Self::get_block_at_registration( netuid );
-        log::trace!("Block at registration: {:?}", block_at_registration.clone() );
+        // =======================
+        // == Validator permits ==
+        // =======================
+
+        // Get current validator permits.
+        let validator_permits: Vec<bool> = Self::get_validator_permits( netuid );
+        log::trace!("validator_permits: {:?}", validator_permits );
+
+        // Logical negation of validator_permits.
+        let validator_forbids: Vec<bool> = validator_permits.iter().map(|&b| !b).collect();
+
+        // Get max allowed validators.
+        let max_allowed_validators: u16 = Self::get_max_allowed_validators( netuid );
+        log::trace!("max_allowed_validators: {:?}", max_allowed_validators );
+
+        // Get new validator permits.
+        let new_validator_permits: Vec<bool> = is_topk( &stake, max_allowed_validators as usize );
+        log::trace!("new_validator_permits: {:?}", new_validator_permits);
+
+        // =============
+        // == Weights ==
+        // =============
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
-        log::trace!("W: {:?}", weights.clone() );
+        log::trace!("W: {:?}", weights.clone());
+
+        // Mask weights that are not from permitted validators.
+        weights = mask_rows_sparse( &validator_forbids, &weights );
+        log::trace!("W (permit): {:?}", weights.clone());
 
         // Remove self-weight by masking diagonal.
-        weights = diag_mask_sparse( &weights );
-        log::trace!("W (diagmask): {:?}", weights.clone() );
+        weights = mask_diag_sparse( &weights );
+        log::trace!("W (permit+diag): {:?}", weights.clone());
 
         // Remove weights referring to deregistered neurons.
         weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered );
-        log::trace!("W (diag+outdatemask): {:?}", weights.clone() );
+        log::trace!("W (permit+diag+outdate): {:?}", weights.clone());
 
         // Normalize remaining weights.
         inplace_row_normalize_sparse( &mut weights );
-        log::trace!("W (mask+norm): {:?}", weights.clone() );
+        log::trace!("W (mask+norm): {:?}", weights.clone());
+
+        // ========================================
+        // == Ranks, Trust, Consensus, Incentive ==
+        // ========================================
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i.
         let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &active_stake, n );
@@ -248,7 +346,11 @@ impl<T: Config> Pallet<T> {
         // Compute incentive.
         let mut incentive: Vec<I32F32> = ranks.iter().zip( consensus.clone() ).map( |(ri, ci)| ri * ci ).collect();
         inplace_normalize( &mut incentive );
-        log::trace!("I: {:?}", incentive.clone() );
+        log::trace!("I: {:?}", incentive.clone());
+
+        // =========================
+        // == Bonds and Dividends ==
+        // =========================
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse( netuid );
@@ -280,7 +382,11 @@ impl<T: Config> Pallet<T> {
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
         let dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
-        log::trace!("D: {:?}", dividends.clone() );
+        log::trace!("D: {:?}", dividends.clone());
+
+        // =================================
+        // == Emission and Pruning scores ==
+        // =================================
 
         // Compute emission scores.
         let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
@@ -300,9 +406,13 @@ impl<T: Config> Pallet<T> {
         log::trace!("E: {:?}", emission.clone() );
 
         // Set pruning scores.
-        let pruning: Vec<I32F32> = normalized_emission.clone();
-        log::trace!("P: {:?}", pruning.clone() );
+        let pruning_scores: Vec<I32F32> = normalized_emission.clone();
+        log::trace!("P: {:?}", pruning_scores.clone());
 
+        // ===================
+        // == Value storage ==
+        // ===================
+        
         // Sync parameter updates.
         for i in 0..n {
             // TODO(taco): set is active.
@@ -311,10 +421,18 @@ impl<T: Config> Pallet<T> {
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
-            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning[i as usize] ) );
+            Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
             Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
-            Self::set_bonds( netuid, i, ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect())
-        }  
+            Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
+
+            // Set bonds only if uid retains validator permit, otherwise clear bonds.
+            if new_validator_permits[i as usize] {
+                Self::set_bonds( netuid, i, ema_bonds[i as usize].iter().map( |(j, value)| (*j, fixed_proportion_to_u16(*value))).collect())
+            }
+            else {
+                Self::set_bonds( netuid, i, vec![] );
+            }
+        }
 
         // Returning the tao emission here which will be distributed at a higher level.
         // Translate the emission into u64 values to be returned.
@@ -418,6 +536,15 @@ impl<T: Config> Pallet<T> {
         }
         bonds
     }
+
+    pub fn get_validator_permits( netuid:u16 ) -> Vec<bool> { 
+        let n: usize = Self::get_subnetwork_n( netuid ) as usize;
+        let mut validator_permits: Vec<bool> = vec![ false; n ];
+        for neuron_uid in 0..n {
+            validator_permits[ neuron_uid ] = Self::get_validator_permit(netuid, neuron_uid as u16);
+        }
+        validator_permits
+    }
 }
 
 #[allow(dead_code)]
@@ -455,6 +582,20 @@ pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
 pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
     let vector_sum: I32F32 = sum( &vector );
     vector_sum == I32F32::from_num( 0 )
+}
+
+/// Returns a bool vector where an item is true if the vector item is in topk values.
+#[allow(dead_code)]
+pub fn is_topk( vector: &Vec<I32F32>, k: usize ) -> Vec<bool> {
+    let n: usize = vector.len();
+    let mut result: Vec<bool> = vec![ true; n ];
+    if n < k { return result; }
+    let mut idxs: Vec<usize> = (0..n).collect();
+    idxs.sort_by_key( | &idx | &vector[ idx ] ); // ascending stable sort
+    for &idx in &idxs[0..(n-k)] {
+        result[ idx ] = false;
+    }
+    result
 }
 
 /// Returns a normalized (sum to 1 except 0) copy of the input vector.
@@ -578,9 +719,24 @@ pub fn inplace_mask_matrix( mask: &Vec<Vec<bool>>, matrix: &mut Vec<Vec<I32F32>>
     }
 }
 
+/// Apply row mask to matrix, mask=true will mask out, i.e. set to 0.
+#[allow(dead_code)]
+pub fn inplace_mask_rows( mask: &Vec<bool>, matrix: &mut Vec<Vec<I32F32>> ) {
+    let rows = matrix.len();
+    if rows == 0 { return }
+    let cols = matrix[0].len();
+    assert_eq!( mask.len(), rows );
+    let zero: I32F32 = I32F32::from_num( 0 );
+    for i in 0..rows {
+        if mask[i] {
+            matrix[i] = vec![zero; cols];
+        }
+    }
+}
+
 /// Mask out the diagonal of the input matrix in-place.
 #[allow(dead_code)]
-pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
+pub fn inplace_mask_diag( matrix: &mut Vec<Vec<I32F32>> ) {
     if matrix.len() == 0 { return }
     if matrix[0].len() == 0 { return }
     assert_eq!( matrix.len(), matrix[0].len() );
@@ -590,9 +746,23 @@ pub fn inplace_diag_mask( matrix: &mut Vec<Vec<I32F32>> ) {
     }
 }
 
+/// Return a new sparse matrix that replaces masked rows with an empty vector placeholder.
+#[allow(dead_code)]
+pub fn mask_rows_sparse( mask: &Vec<bool>, sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u16, I32F32)>> {
+    let n: usize = sparse_matrix.len();
+    assert_eq!( n, mask.len() );
+    let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n];
+    for (i, sparse_row) in sparse_matrix.iter().enumerate() {
+        if !mask[i] {
+            result[i] = sparse_row.clone();
+        }
+    }
+    result
+}
+
 /// Return a new sparse matrix with a masked out diagonal of input sparse matrix.
 #[allow(dead_code)]
-pub fn diag_mask_sparse( sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u16, I32F32)>> {
+pub fn mask_diag_sparse( sparse_matrix: &Vec<Vec<(u16, I32F32)>> ) -> Vec<Vec<(u16, I32F32)>> {
     let n: usize = sparse_matrix.len();
     let mut result: Vec<Vec<(u16, I32F32)>> = vec![ vec![]; n];
     for (i, sparse_row) in sparse_matrix.iter().enumerate() {
@@ -1002,6 +1172,42 @@ mod tests {
     }
 
     #[test]
+    fn test_is_topk() {
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![]);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![];
+        assert_eq!(&result, &target);
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![0., 1., 2., 3., 4., 5., 6., 7., 8., 9.]);
+        let result = epoch::is_topk(&vector, 0);
+        let target: Vec<bool> = vec![false, false, false, false, false, false, false, false, false, false];
+        assert_eq!(&result, &target);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![false, false, false, false, false, true, true, true, true, true];
+        assert_eq!(&result, &target);
+        let result = epoch::is_topk(&vector, 10);
+        let target: Vec<bool> = vec![true, true, true, true, true, true, true, true, true, true];
+        assert_eq!(&result, &target);
+        let result = epoch::is_topk(&vector, 100);
+        assert_eq!(&result, &target);
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![9., 8., 7., 6., 5., 4., 3., 2., 1., 0.]);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![true, true, true, true, true, false, false, false, false, false];
+        assert_eq!(&result, &target);
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![9., 0., 8., 1., 7., 2., 6., 3., 5., 4.]);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![true, false, true, false, true, false, true, false, true, false];
+        assert_eq!(&result, &target);
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![0.9, 0., 0.8, 0.1, 0.7, 0.2, 0.6, 0.3, 0.5, 0.4]);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![true, false, true, false, true, false, true, false, true, false];
+        assert_eq!(&result, &target);
+        let vector: Vec<I32F32> = vec_to_fixed(&vec![0., 1., 2., 3., 4., 5., 5., 5., 5., 6.]);
+        let result = epoch::is_topk(&vector, 5);
+        let target: Vec<bool> = vec![false, false, false, false, false, true, true, true, true, true];
+        assert_eq!(&result, &target);
+    }
+
+    #[test]
     fn test_math_sum() {
         assert!( epoch::sum(&vec![]) == I32F32::from_num(0));
         assert!( epoch::sum(&vec![ I32F32::from_num(1.0),  I32F32::from_num(10.0),  I32F32::from_num(30.0)]) == I32F32::from_num(41));
@@ -1187,7 +1393,45 @@ mod tests {
     }
 
     #[test]
-    fn test_math_inplace_diag_mask() {
+    fn test_math_inplace_mask_rows() {
+        let input:Vec<f32> = vec![  1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let mask:Vec<bool> = vec![false, false, false];
+        let target:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let mut mat = vec_to_mat_fixed(&input, 3, false);
+        epoch::inplace_mask_rows(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![true, true, true];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mut mat = vec_to_mat_fixed(&input, 3, false);
+        epoch::inplace_mask_rows(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![true, false, true];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    4., 5., 6., 
+                                    0., 0., 0.];
+        let mut mat = vec_to_mat_fixed(&input, 3, false);
+        epoch::inplace_mask_rows(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let input:Vec<f32> = vec![  0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mut mat = vec_to_mat_fixed(&input, 3, false);
+        let mask:Vec<bool> = vec![false, false, false];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        epoch::inplace_mask_rows(&mask, &mut mat);
+        assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_inplace_mask_diag() {
         let vector:Vec<f32> = vec![ 1., 2., 3., 
                                     4., 5., 6., 
                                     7., 8., 9.];
@@ -1195,12 +1439,48 @@ mod tests {
                                     4., 0., 6., 
                                     7., 8., 0.];
         let mut mat = vec_to_mat_fixed(&vector, 3, false);
-        epoch::inplace_diag_mask(&mut mat);
+        epoch::inplace_mask_diag(&mut mat);
         assert_mat_compare(&mat, &vec_to_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
     }
 
     #[test]
-    fn test_math_diag_mask_sparse() {
+    fn test_math_mask_rows_sparse() {
+        let input:Vec<f32> = vec![  1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let mat = vec_to_sparse_mat_fixed(&input, 3, false);
+        let mask:Vec<bool> = vec![false, false, false];
+        let target:Vec<f32> = vec![ 1., 2., 3., 
+                                    4., 5., 6., 
+                                    7., 8., 9.];
+        let result = epoch::mask_rows_sparse(&mask, &mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![true, true, true];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let result = epoch::mask_rows_sparse(&mask, &mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mask:Vec<bool> = vec![true, false, true];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    4., 5., 6., 
+                                    0., 0., 0.];
+        let result = epoch::mask_rows_sparse(&mask, &mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let input:Vec<f32> = vec![  0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let mat = vec_to_sparse_mat_fixed(&input, 3, false);
+        let mask:Vec<bool> = vec![false, false, false];
+        let target:Vec<f32> = vec![ 0., 0., 0., 
+                                    0., 0., 0., 
+                                    0., 0., 0.];
+        let result = epoch::mask_rows_sparse(&mask, &mat);
+        assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+    }
+
+    #[test]
+    fn test_math_mask_diag_sparse() {
         let vector:Vec<f32> = vec![ 1., 2., 3., 
                                     4., 5., 6., 
                                     7., 8., 9.];
@@ -1208,7 +1488,7 @@ mod tests {
                                     4., 0., 6., 
                                     7., 8., 0.];
         let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
-        let result = epoch::diag_mask_sparse(&mat);
+        let result = epoch::mask_diag_sparse(&mat);
         assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
         let vector:Vec<f32> = vec![ 1., 0., 0., 
                                     0., 5., 0., 
@@ -1217,7 +1497,7 @@ mod tests {
                                     0., 0., 0., 
                                     0., 0., 0.];
         let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
-        let result = epoch::diag_mask_sparse(&mat);
+        let result = epoch::mask_diag_sparse(&mat);
         assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
         let vector:Vec<f32> = vec![ 0., 0., 0., 
                                     0., 0., 0., 
@@ -1226,7 +1506,7 @@ mod tests {
                                     0., 0., 0., 
                                     0., 0., 0.];
         let mat = vec_to_sparse_mat_fixed(&vector, 3, false);
-        let result = epoch::diag_mask_sparse(&mat);
+        let result = epoch::mask_diag_sparse(&mat);
         assert_sparse_mat_compare(&result, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
     }
 
