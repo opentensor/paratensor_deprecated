@@ -111,13 +111,13 @@ fn test_10_graph() {
 
 #[allow(dead_code)]
 fn uid_stats(netuid: u16, uid: u16) {
-	log::info!( "stake: {:?}", ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ));
-	log::info!( "rank: {:?}", ParatensorModule::get_rank( netuid, uid ));
-	log::info!( "trust: {:?}", ParatensorModule::get_trust( netuid, uid ));
-	log::info!( "consensus: {:?}", ParatensorModule::get_consensus( netuid, uid ));
-	log::info!( "incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ));
-	log::info!( "dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ));
-	log::info!( "emission: {:?}", ParatensorModule::get_emission( netuid, uid ));
+	log::info!( "stake: {:?}", ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ) );
+	log::info!( "rank: {:?}", ParatensorModule::get_rank( netuid, uid ) );
+	log::info!( "trust: {:?}", ParatensorModule::get_trust( netuid, uid ) );
+	log::info!( "consensus: {:?}", ParatensorModule::get_consensus( netuid, uid ) );
+	log::info!( "incentive: {:?}", ParatensorModule::get_incentive( netuid, uid ) );
+	log::info!( "dividend: {:?}", ParatensorModule::get_dividend( netuid, uid ) );
+	log::info!( "emission: {:?}", ParatensorModule::get_emission( netuid, uid ) );
 }
 
 #[test]
