@@ -480,7 +480,7 @@ pub mod pallet {
 		InvalidEmissionValues, // --- Thrown when emission ratios are not valid (did not sum up to 10^9)
 		DidNotPassConnectedNetworkRequirement, // --- Thrown when a hotkey attempts to register into a network without passing the  registration requirment from another network.
 		AlreadyDelegate, // --- Thrown if the hotkey attempt to become delegate when they are already.
-		SettingWeightsToFast, // --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
+		SettingWeightsTooFast, // --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
 		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
 	}
 
