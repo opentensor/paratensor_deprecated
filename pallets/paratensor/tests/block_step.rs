@@ -70,3 +70,40 @@ fn test_block_step_multi(){
 
     });
 }
+
+
+
+#[test]
+fn test_nakamoto(){
+    new_test_ext().execute_with(|| { 
+
+        // Create nakamoto.
+        let n: u16 = 10;
+        let netuid: u16 = 0;
+        let tempo: u16 = 100;
+        add_network( netuid, tempo, 0 );
+        let netuids: Vec<u16> = vec![ 0 ];
+        let emission: Vec<u64> = vec![ 1_000_000_000 ];
+        assert_ok!( ParatensorModule::sudo_set_emission_values(<<Test as Config>::Origin>::root(), netuids, emission) );
+
+        // Increase network size to 4096
+        ParatensorModule::set_max_allowed_uids( netuid, n );
+        ParatensorModule::set_max_registrations_per_block( netuid, n * 2 );
+
+        // Register neurons.
+        for i in 0..n as u64 {
+            log::trace!( "Register:\n{:?}\n", i );
+            register_ok_neuron( netuid, i, i, i * 1_000_000_000 + i * 1_000_000 );
+            assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, i as u16 ).unwrap(), i );
+        }
+
+        // Register the next batch to replace the older ones.
+        for i in 0..n as u64 {
+            log::trace!( "Register:\n{:?}\n", i );
+            register_ok_neuron( netuid, i + n as u64, i + n as u64 , i * 2_200_100_500 + i * 2_000_000 + 124124 );
+            assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid, i as u16 ).unwrap(), i + n as u64 );
+        }
+
+    });
+}
+

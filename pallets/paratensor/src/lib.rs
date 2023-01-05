@@ -438,7 +438,6 @@ pub mod pallet {
 		NeuronRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
 		BulkNeuronsRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
-		TotalStakeIncreased( u64), // --- Event created when total stake increased.
 		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
 		DifficultySet( u16, u64 ), // --- Event created when the difficulty has been set for a subnet.
 		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
