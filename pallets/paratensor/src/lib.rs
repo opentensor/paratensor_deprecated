@@ -261,7 +261,7 @@ pub mod pallet {
 	pub type PrometheusInfoOf = PrometheusInfo;
 
 	#[serde_as]
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Serialize, Deserialize)]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 	pub struct PrometheusInfo {
 		pub block: u64, // --- Prometheus serving block.
         pub version: u32, // --- Prometheus version.

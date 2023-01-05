@@ -14,6 +14,7 @@ pub struct NeuronInfo {
     netuid: u16,
     active: bool,
     axon_info: AxonInfo,
+    prometheus_info: PrometheusInfo,
     stake: Vec<(DeAccountId, u64)>, // map of coldkey to stake on this neuron/hotkey (includes delegations)
     rank: u16,
     emission: u64,
@@ -62,6 +63,14 @@ impl<T: Config> Pallet<T> {
                 axon_info = AxonInfo::default();
             }
 
+            let promo_ = Prometheus::<T>::get( netuid, uid_i as u16 );
+            let prometheus_info;
+            if promo_.is_some() {
+                prometheus_info = promo_.unwrap();
+            } else {
+                prometheus_info = PrometheusInfo::default();
+            }
+
             let hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
             let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
@@ -95,6 +104,7 @@ impl<T: Config> Pallet<T> {
                 netuid,
                 active,
                 axon_info,
+                prometheus_info,
                 stake,
                 rank,
                 emission,
