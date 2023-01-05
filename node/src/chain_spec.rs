@@ -68,7 +68,10 @@ fn testnet_genesis(
 				.to_vec(),
 		},
 		balances: bittensor_parachain::BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+			//balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+			balances: vec![ 
+				(Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap(),6058535716465)
+				],
 		},
 		sudo: bittensor_parachain::SudoConfig { key: Some(root_key) },
 		parachain_info: bittensor_parachain::ParachainInfoConfig { parachain_id: id },
