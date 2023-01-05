@@ -272,10 +272,10 @@ pub mod pallet {
 
 	#[pallet::storage] /// --- ITEM ( serving_rate_limit )
 	pub(super) type ServingRateLimit<T> = StorageValue<_, u64, ValueQuery, DefaultServingRateLimit<T>>;
-	#[pallet::storage] /// --- MAP ( netuid, uid ) --> axon_info
-	pub(super) type Axons<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, AxonInfoOf, OptionQuery>;
-	#[pallet::storage] /// --- MAP ( netuid, uid ) --> prometheus_info
-	pub(super) type Prometheus<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, PrometheusInfoOf, OptionQuery>;
+	#[pallet::storage] /// --- MAP ( hotkey ) --> axon_info
+	pub(super) type Axons<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, AxonInfoOf, OptionQuery>;
+	#[pallet::storage] /// --- MAP ( hotkey ) --> prometheus_info
+	pub(super) type Prometheus<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, PrometheusInfoOf, OptionQuery>;
 
 	/// =======================================
 	/// ==== Subnetwork Hyperparam storage ====
@@ -455,8 +455,8 @@ pub mod pallet {
 		BondsMovingAverageSet( u16, u64), // --- Event created when bonds moving average is set for a subnet.
 		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
 		ValidatorExcludeQuantileSet( u16, u16 ), // --- Event created when the validator exclude quantile has been set for a subnet.
-		AxonServed( u16, u16 ), // --- Event created when the axon server information is added to the network.
-		PrometheusServed( u16, u16 ), // --- Event created when the axon server information is added to the network.
+		AxonServed( T::AccountId ), // --- Event created when the axon server information is added to the network.
+		PrometheusServed( T::AccountId ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
 		NetworkConnectionAdded( u16, u16, u16 ), // --- Event created when a network connection requirement is added.
 		NetworkConnectionRemoved( u16, u16 ), // --- Event created when a network connection requirement is removed.
@@ -769,7 +769,6 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn serve_axon(
 			origin:OriginFor<T>, 
-			netuid: u16,
 			version: u32, 
 			ip: u128, 
 			port: u16, 
@@ -778,18 +777,17 @@ pub mod pallet {
 			placeholder1: u8, 
 			placeholder2: u8,
 		) -> DispatchResult {
-			Self::do_serve_axon( origin, netuid, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
+			Self::do_serve_axon( origin, version, ip, port, ip_type, protocol, placeholder1, placeholder2 ) 
 		}
 		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
 		pub fn serve_prometheus(
 			origin:OriginFor<T>, 
-			netuid: u16,
 			version: u32, 
 			ip: u128, 
 			port: u16, 
 			ip_type: u8,
 		) -> DispatchResult {
-			Self::do_serve_prometheus( origin, netuid, version, ip, port, ip_type ) 
+			Self::do_serve_prometheus( origin, version, ip, port, ip_type ) 
 		}
 
 

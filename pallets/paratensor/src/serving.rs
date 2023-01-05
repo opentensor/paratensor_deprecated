@@ -57,7 +57,6 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn do_serve_axon( 
         origin: T::Origin, 
-        netuid: u16, 
         version: u32, 
         ip: u128, 
         port: u16, 
@@ -69,19 +68,15 @@ impl<T: Config> Pallet<T> {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
 
-        // --- 2. We check if the network exist.
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
-
-        // --- 3. We make validy checks on the passed data.
-        ensure!( Self::is_hotkey_registered_on_network(netuid, &hotkey_id), Error::<T>::NotRegistered );        
+        // --- 2. Ensure the hotkey is registered somewhere.
+        ensure!( Self::is_hotkey_registered_on_any_network( &hotkey_id ), Error::<T>::NotRegistered );  
+        
+        // --- 3. Check the ip signature validity.
         ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
-        // --- 4. We get the uid associated with this hotkey account.
-        let neuron_uid = Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id).unwrap();
-
-        // --- 5. We get the previous axon info assoicated with this (n etuid, uid )
-        let mut prev_axon = Self::get_axon_info(netuid, neuron_uid);
+        // --- 4. Get the previous axon information.
+        let mut prev_axon = Self::get_axon_info( &hotkey_id );
         let current_block:u64 = Self::get_current_block_as_u64();
         ensure!( Self::axon_passes_rate_limit( &prev_axon, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
@@ -94,11 +89,11 @@ impl<T: Config> Pallet<T> {
         prev_axon.protocol = protocol;
         prev_axon.placeholder1 = placeholder1;
         prev_axon.placeholder2 = placeholder2;
-        Axons::<T>::insert( netuid, neuron_uid, prev_axon );
+        Axons::<T>::insert( hotkey_id.clone(), prev_axon );
 
         // --- 7. We deposit axon served event.
-        Self::deposit_event(Event::AxonServed( netuid, neuron_uid ));
-        log::info!("AxonServed( netuid: {:?} neuron_uid:{:?} ) ", netuid, neuron_uid );
+        log::info!("AxonServed( hotkey:{:?} ) ", hotkey_id.clone() );
+        Self::deposit_event(Event::AxonServed( hotkey_id ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -147,7 +142,6 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn do_serve_prometheus( 
         origin: T::Origin, 
-        netuid: u16, 
         version: u32, 
         ip: u128, 
         port: u16, 
@@ -156,19 +150,15 @@ impl<T: Config> Pallet<T> {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
 
-        // --- 2. We check if the network exist.
-        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+        // --- 2. Ensure the hotkey is registered somewhere.
+        ensure!( Self::is_hotkey_registered_on_any_network( &hotkey_id ), Error::<T>::NotRegistered );  
 
-        // --- 3. We make validy checks on the passed data.
-        ensure!( Self::is_hotkey_registered_on_network(netuid, &hotkey_id), Error::<T>::NotRegistered );        
+        // --- 3. Check the ip signature validity.
         ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
-        // --- 4. We get the uid associated with this hotkey account.
-        let neuron_uid = Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id).unwrap();
-
         // --- 5. We get the previous axon info assoicated with this ( netuid, uid )
-        let mut prev_prometheus = Self::get_prometheus_info( netuid, neuron_uid );
+        let mut prev_prometheus = Self::get_prometheus_info( &hotkey_id );
         let current_block:u64 = Self::get_current_block_as_u64();
         ensure!( Self::prometheus_passes_rate_limit( &prev_prometheus, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
@@ -178,11 +168,11 @@ impl<T: Config> Pallet<T> {
         prev_prometheus.ip = ip;
         prev_prometheus.port = port;
         prev_prometheus.ip_type = ip_type;
-        Prometheus::<T>::insert( netuid, neuron_uid, prev_prometheus );
+        Prometheus::<T>::insert( hotkey_id.clone(), prev_prometheus );
 
         // --- 7. We deposit prometheus served event.
-        Self::deposit_event(Event::PrometheusServed( netuid, neuron_uid ));
-        log::info!("PrometheusServed( netuid: {:?} neuron_uid:{:?} ) ", netuid, neuron_uid );
+        log::info!("PrometheusServed( hotkey:{:?} ) ", hotkey_id.clone() );
+        Self::deposit_event(Event::PrometheusServed( hotkey_id ));
 
         // --- 8. Return is successful dispatch. 
         Ok(())
@@ -204,13 +194,45 @@ impl<T: Config> Pallet<T> {
         return rate_limit == 0 || current_block - last_serve >= rate_limit;
     }
 
-
-    pub fn get_axon_info( netuid: u16, neuron_id: u16 ) -> AxonInfoOf {
-        return Axons::<T>::get(netuid, neuron_id).unwrap();
+    pub fn has_axon_info( hotkey: &T::AccountId ) -> bool {
+        return Axons::<T>::contains_key( hotkey );
     }
 
-    pub fn get_prometheus_info( netuid: u16, neuron_id: u16 ) -> PrometheusInfoOf {
-        return Prometheus::<T>::get( netuid, neuron_id ).unwrap();
+    pub fn has_prometheus_info( hotkey: &T::AccountId ) -> bool {
+        return Prometheus::<T>::contains_key( hotkey );
+    }
+
+    pub fn get_axon_info( hotkey: &T::AccountId ) -> AxonInfoOf {
+        if Self::has_axon_info( hotkey ) {
+            return Axons::<T>::get( hotkey ).unwrap();
+        } else{
+            return AxonInfo { 
+                block: 0,
+                version: 0,
+                ip: 0,
+                port: 0,
+                ip_type: 0,
+                protocol: 0,
+                placeholder1: 0,
+                placeholder2: 0
+            }
+
+        }
+    }
+
+    pub fn get_prometheus_info( hotkey: &T::AccountId ) -> PrometheusInfoOf {
+        if Self::has_prometheus_info( hotkey ) {
+            return Prometheus::<T>::get( hotkey ).unwrap();
+        } else {
+            return PrometheusInfo { 
+                block: 0,
+                version: 0,
+                ip: 0,
+                port: 0,
+                ip_type: 0,
+            }
+
+        }
     }
 
     pub fn is_valid_ip_type(ip_type: u8) -> bool {

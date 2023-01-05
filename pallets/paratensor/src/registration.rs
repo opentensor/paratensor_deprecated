@@ -204,8 +204,6 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16, hotkey: &T::AccountId, current_block_number: u64 ) {
         log::debug!("fill_new_neuron_account_in_subnetwork( netuid: {:?}, uid: {:?}, hotkey: {:?}, current_block_number: {:?} ) ", netuid, uid, hotkey, current_block_number );
-        Axons::<T>::insert( netuid, uid, AxonInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0, protocol: 0, placeholder1: 0, placeholder2: 0} ); // Fill null Axon info.
-        Prometheus::<T>::insert( netuid, uid, PrometheusInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null prometheus info.
         Active::<T>::insert( netuid, uid, true ); // Set to active by default.
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); // Make hotkey - uid association.
         Uids::<T>::insert( netuid, hotkey.clone(), uid ); // Make uid - hotkey association.
@@ -234,8 +232,6 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::remove( netuid, uid_to_prune );
         ValidatorPermit::<T>::remove( netuid, uid_to_prune );
         PruningScores::<T>::remove( netuid, uid_to_prune );
-        Axons::<T>::remove( netuid, uid_to_prune );
-        Prometheus::<T>::remove( netuid, uid_to_prune );
     }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
@@ -449,10 +445,6 @@ impl<T: Config> Pallet<T> {
             Consensus::<T>::remove( netuid, uid_i as u16 );
             Incentive::<T>::remove( netuid, uid_i as u16 );
             PruningScores::<T>::remove( netuid, uid_i as u16 );
-            Axons::<T>::remove( netuid, uid_i as u16 );
-            Axons::<T>::insert( netuid, uid_i as u16, AxonInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0, protocol: 0, placeholder1: 0, placeholder2: 0} ); // Fill null Axon info.
-            Prometheus::<T>::remove( netuid, uid_i as u16 );
-            Prometheus::<T>::insert( netuid, uid_i as u16, PrometheusInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null Prometheus info.
             Active::<T>::insert( netuid, uid_i as u16, true ); // Set to active by default.
             Keys::<T>::insert( netuid, uid_i as u16, new_hotkey.clone() ); // Make hotkey - uid association.
             Uids::<T>::insert( netuid, new_hotkey.clone(), uid_i as u16 ); // Make uid - hotkey association.

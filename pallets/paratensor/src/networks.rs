@@ -408,6 +408,16 @@ impl<T: Config> Pallet<T> {
         all_networks
     }
 
+    /// Return true if a hotkey is registered on any network.
+    ///
+    pub fn is_hotkey_registered_on_any_network( hotkey: &T::AccountId )-> bool {
+        for ( _, is_registered)  in <IsNetworkMember<T> as IterableStorageDoubleMap< T::AccountId, u16, bool >>::iter_prefix( hotkey ){
+            if is_registered { return true }
+        }
+        false
+    }
+
+
     /// --- Returns true if a network connection exists.
     ///
     pub fn network_connection_requirement_exists( netuid_a: u16, netuid_b: u16 ) -> bool {
