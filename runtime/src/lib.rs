@@ -753,7 +753,7 @@ impl_runtime_apis! {
 			Paratensor::get_neurons(netuid)
 		}
 
-		fn get_neuron(netuid: u16, uid: u16) -> pallet_paratensor::neuron_info::NeuronInfo {
+		fn get_neuron(netuid: u16, uid: u16) -> Option<pallet_paratensor::neuron_info::NeuronInfo> {
 			Paratensor::get_neuron(netuid, uid)
 		}
 	}
