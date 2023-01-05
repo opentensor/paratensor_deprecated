@@ -10,7 +10,7 @@ build-validator:
 	DOCKER_BUILDKIT=1 docker build \
 		--file Dockerfile \
 		--target validator \
-		--build-arg POLKADOT_VERSION=v0.9.10 \
+		--build-arg POLKADOT_VERSION=v0.9.26 \
 		--tag opentensor/parachain/validator \
 		.
 

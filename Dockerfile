@@ -1,12 +1,6 @@
 FROM ubuntu:22.10 AS base
 SHELL ["/bin/bash", "-c"]
 
-# metadata
-ARG VCS_REF
-ARG BUILD_DATE
-ARG SNAPSHOT_DIR
-ARG SNAPSHOT_FILE
-
 # This is being set so that no interactive components are allowed when updating.
 ARG DEBIAN_FRONTEND=noninteractive
 
