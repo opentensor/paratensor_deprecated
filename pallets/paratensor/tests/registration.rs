@@ -307,7 +307,7 @@ fn test_registration_get_neuron_metadata() {
 		//
 		//let neuron_id = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
 		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
-		let neuron: AxonInfoOf = ParatensorModule::get_axon_info(netuid, neuron_uid );
+		let neuron: AxonInfoOf = ParatensorModule::get_axon_info( &hotkey_account_id );
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);
@@ -415,6 +415,28 @@ fn test_full_pass_through() {
 		register_ok_neuron( netuid2, hotkey0, coldkey0, 251232207 );
     	register_ok_neuron( netuid2, hotkey1, coldkey1, 159184122 );
 
+		// Check uids.
+		// n0 [ h0, h1 ]
+		// n1 [ h0, h1 ]
+		// n2 [ h0, h1 ]
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 0 ).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 0 ).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 0 ).unwrap(), hotkey0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 1 ).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 1 ).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 1 ).unwrap(), hotkey1 );
+		
+		// Check registered networks.
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
+
 		// Check the number of registrations.
 		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid0), 2);
 		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid1), 2);
@@ -459,6 +481,29 @@ fn test_full_pass_through() {
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 2);
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid1), 2);
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid2), 2);
+
+		// Check uids.
+		// n0 [ h0, h1 ]
+		// n1 [ h0, h1 ]
+		// n2 [ h0, h1 ]
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 0 ).unwrap(), hotkey2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid0, 1 ).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid1, 1 ).unwrap(), hotkey1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( netuid2, 1 ).unwrap(), hotkey1 );
+
+		// Check registered networks.
+		// hotkey0 has been deregistered.
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid0 ) );
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid1 ) );
+		assert!( !ParatensorModule::get_registered_networks_for_hotkey( &hotkey0 ).contains( &netuid2 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid0 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid1 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey1 ).contains( &netuid2 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid0 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid1 ) );
+		assert!( ParatensorModule::get_registered_networks_for_hotkey( &hotkey2 ).contains( &netuid2 ) );
 
 		// Check the registration counters.
 		assert_eq!(ParatensorModule::get_registrations_this_interval(netuid0), 3);
