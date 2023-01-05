@@ -8,5 +8,6 @@ use alloc::vec::Vec;
 sp_api::decl_runtime_apis! {
 	pub trait NeuronInfoRuntimeApi {
 		fn get_neurons(netuid: u16) -> Vec<NeuronInfoStruct>;
+		fn get_neuron(netuid: u16, uid: u16) -> Option<NeuronInfoStruct>;
 	}
 }

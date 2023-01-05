@@ -51,11 +51,11 @@ impl<T: Config> Pallet<T> {
 
         let mut neurons = Vec::new();
         let n = SubnetworkN::<T>::get( netuid ); 
-        for uid_i in 0..n {
-            let uid = uid_i;
+        for uid in 0..n {
+            let uid = uid;
             let netuid = netuid;
 
-            let axon_ = Axons::<T>::get( netuid, uid_i as u16 );
+            let axon_ = Axons::<T>::get( netuid, uid as u16 );
             let axon_info;
             if axon_.is_some() {
                 axon_info = axon_.unwrap();
@@ -63,7 +63,7 @@ impl<T: Config> Pallet<T> {
                 axon_info = AxonInfo::default();
             }
 
-            let promo_ = Prometheus::<T>::get( netuid, uid_i as u16 );
+            let promo_ = Prometheus::<T>::get( netuid, uid as u16 );
             let prometheus_info;
             if promo_.is_some() {
                 prometheus_info = promo_.unwrap();
@@ -71,24 +71,24 @@ impl<T: Config> Pallet<T> {
                 prometheus_info = PrometheusInfo::default();
             }
 
-            let hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
+            let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
             let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
-            let last_update = LastUpdate::<T>::get( netuid, uid_i as u16 );
+            let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
             
             // TODO: replace with last_update check if we remove Active storage
-            let active = Active::<T>::get( netuid, uid_i as u16 );
+            let active = Active::<T>::get( netuid, uid as u16 );
 
-            let rank = Rank::<T>::get( netuid, uid_i as u16 );
-            let emission = Emission::<T>::get( netuid, uid_i as u16 );
-            let incentive = Incentive::<T>::get( netuid, uid_i as u16 );
-            let consensus = Consensus::<T>::get( netuid, uid_i as u16 );
-            let trust = Trust::<T>::get( netuid, uid_i as u16 );
-            let dividends = Dividends::<T>::get( netuid, uid_i as u16 );
-            let pruning_score = PruningScores::<T>::get( netuid, uid_i as u16 );
+            let rank = Rank::<T>::get( netuid, uid as u16 );
+            let emission = Emission::<T>::get( netuid, uid as u16 );
+            let incentive = Incentive::<T>::get( netuid, uid as u16 );
+            let consensus = Consensus::<T>::get( netuid, uid as u16 );
+            let trust = Trust::<T>::get( netuid, uid as u16 );
+            let dividends = Dividends::<T>::get( netuid, uid as u16 );
+            let pruning_score = PruningScores::<T>::get( netuid, uid as u16 );
             
-            let weights = Weights::<T>::get( netuid, uid_i as u16 );
-            let bonds = Bonds::<T>::get( netuid, uid_i as u16 );
+            let weights = Weights::<T>::get( netuid, uid as u16 );
+            let bonds = Bonds::<T>::get( netuid, uid as u16 );
             
             let mut stakes = Vec::<(DeAccountId, u64)>::new();
             for ( coldkey, stake ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64> >::iter_prefix( hotkey.clone() ) {
@@ -121,6 +121,77 @@ impl<T: Config> Pallet<T> {
             neurons.push( neuron );
         }
         neurons
+	}
+
+    pub fn get_neuron(netuid: u16, uid: u16) -> Option<NeuronInfo> {
+        if !Self::if_subnet_exist(netuid) {
+            return None;
+        }
+
+        let axon_ = Axons::<T>::get( netuid, uid as u16 );
+        let axon_info;
+        if axon_.is_some() {
+            axon_info = axon_.unwrap();
+        } else {
+            axon_info = AxonInfo::default();
+        }
+
+        let promo_ = Prometheus::<T>::get( netuid, uid as u16 );
+        let prometheus_info;
+        if promo_.is_some() {
+            prometheus_info = promo_.unwrap();
+        } else {
+            prometheus_info = PrometheusInfo::default();
+        }
+
+        let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
+        let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
+
+        let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
+        
+        // TODO: replace with last_update check if we remove Active storage
+        let active = Active::<T>::get( netuid, uid as u16 );
+
+        let rank = Rank::<T>::get( netuid, uid as u16 );
+        let emission = Emission::<T>::get( netuid, uid as u16 );
+        let incentive = Incentive::<T>::get( netuid, uid as u16 );
+        let consensus = Consensus::<T>::get( netuid, uid as u16 );
+        let trust = Trust::<T>::get( netuid, uid as u16 );
+        let dividends = Dividends::<T>::get( netuid, uid as u16 );
+        let pruning_score = PruningScores::<T>::get( netuid, uid as u16 );
+        
+        let weights = Weights::<T>::get( netuid, uid as u16 );
+        let bonds = Bonds::<T>::get( netuid, uid as u16 );
+        
+        let mut stakes = Vec::<(DeAccountId, u64)>::new();
+        for ( coldkey, stake ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64> >::iter_prefix( hotkey.clone() ) {
+            stakes.push( (coldkey.clone().encode().into(), stake) );
+        }
+
+        let stake = stakes;
+
+        let neuron = NeuronInfo {
+            hotkey: hotkey.clone().encode().into(),
+            coldkey: coldkey.clone().encode().into(),
+            uid,
+            netuid,
+            active,
+            axon_info,
+            prometheus_info,
+            stake,
+            rank,
+            emission,
+            incentive,
+            consensus,
+            trust,
+            dividends,
+            last_update,
+            weights,
+            bonds,
+            pruning_score
+        };
+        
+        return Some(neuron);
 	}
 }
 

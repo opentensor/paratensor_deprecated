@@ -15,6 +15,8 @@ use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 pub trait NeuronInfoApi<BlockHash> {
 	#[rpc(name = "neuronInfo_getNeurons")]
 	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
+	#[rpc(name = "neuronInfo_getNeuron")]
+	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> Result<Option<NeuronInfoStruct>>;
 }
 
 pub struct NeuronInfo<C, M> {
@@ -60,6 +62,19 @@ where
 		api.get_neurons(&at, netuid).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get neurons info.".into(),
+			data: Some(e.to_string().into()),
+		})
+	}
+
+	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Option<NeuronInfoStruct>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_neuron(&at, netuid, uid).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get neuron info.".into(),
 			data: Some(e.to_string().into()),
 		})
 	}
