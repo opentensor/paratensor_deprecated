@@ -196,6 +196,9 @@ pub mod pallet {
 	pub fn DefaultHotkeys<T:Config>() -> Vec<u16> { vec![ ] }
 	#[pallet::type_value]
 	pub fn DefaultNeworksAdded<T: Config>() ->  bool { false }
+	#[pallet::type_value]
+	pub fn DefaultIsNetworkMember<T: Config>() ->  bool { false }
+
 
 	#[pallet::storage] /// --- ITEM( tota_number_of_existing_networks )
 	pub type TotalNetworks<T> = StorageValue<_, u16, ValueQuery>;
@@ -207,6 +210,8 @@ pub mod pallet {
 	pub type NetworksAdded<T:Config> = StorageMap<_, Identity, u16, bool, ValueQuery, DefaultNeworksAdded<T>>;	
 	#[pallet::storage] /// --- DMAP ( netuid, netuid ) -> registration_requirement
 	pub type NetworkConnect<T:Config> = StorageDoubleMap<_, Identity, u16, Identity, u16, u16, OptionQuery>;
+	#[pallet::storage] /// --- DMAP ( hotkey, netuid ) --> bool
+	pub type IsNetworkMember<T:Config> = StorageDoubleMap<_, Blake2_128Concat, T::AccountId, Identity, u16, bool, ValueQuery, DefaultIsNetworkMember<T>>;
 
 	/// ==============================
 	/// ==== Subnetwork Features =====
@@ -430,7 +435,7 @@ pub mod pallet {
 		StakeAdded( T::AccountId, u64 ), // --- Event created when stake has been transfered from the a coldkey account onto the hotkey staking account.
 		StakeRemoved( T::AccountId, u64 ), // --- Event created when stake has been removed from the hotkey staking account onto the coldkey account.
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
-		NeuronRegistered( u16 ), // --- Event created when a new neuron account has been registered to the chain.
+		NeuronRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
 		BulkNeuronsRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
 		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
 		TotalStakeIncreased( u64), // --- Event created when total stake increased.

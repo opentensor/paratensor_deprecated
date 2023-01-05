@@ -4,6 +4,7 @@ use sp_std::vec::Vec;
 use crate::system::ensure_root;
 use frame_support::storage::IterableStorageMap;
 use frame_support::pallet_prelude::DispatchError;
+use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> { 
 
@@ -395,6 +396,16 @@ impl<T: Config> Pallet<T> {
             number_of_subnets = number_of_subnets + 1;
         }
         return number_of_subnets;
+    }
+
+    /// Return a list of all networks a hotkey is registered on.
+    ///
+    pub fn get_registered_networks_for_hotkey( hotkey: &T::AccountId )-> Vec<u16> {
+        let mut all_networks: Vec<u16> = vec![];
+        for ( network, is_registered)  in <IsNetworkMember<T> as IterableStorageDoubleMap< T::AccountId, u16, bool >>::iter_prefix( hotkey ){
+            if is_registered { all_networks.push( network ) }
+        }
+        all_networks
     }
 
     /// --- Returns true if a network connection exists.
