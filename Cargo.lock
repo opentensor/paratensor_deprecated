@@ -581,6 +581,7 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-xcm",
  "parachain-info",
+ "paratensor-custom-rpc-runtime-api",
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-runtime-common",
@@ -2011,6 +2012,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0dd3cd20dc6b5a876612a6e5accfe7f3dd883db6d07acfbf14c128f61550dfa"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a784d2ccaf7c98501746bf0be29b2022ba41fd62a2e622af997a03e9f972859f"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7618812407e9402654622dd402b0a89dff9ba93badd6540781526117b92aab7e"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3343,6 +3379,12 @@ dependencies = [
  "tokio-rustls 0.23.4",
  "webpki-roots 0.22.3",
 ]
+
+[[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
@@ -5860,6 +5902,9 @@ dependencies = [
  "rand 0.8.5",
  "scale-info",
  "serde",
+ "serde-tuple-vec-map",
+ "serde_bytes",
+ "serde_with",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -6240,6 +6285,8 @@ dependencies = [
  "jsonrpc-core",
  "log",
  "pallet-transaction-payment-rpc",
+ "paratensor-custom-rpc",
+ "paratensor-custom-rpc-runtime-api",
  "parity-scale-codec",
  "polkadot-cli",
  "polkadot-parachain",
@@ -6279,6 +6326,33 @@ dependencies = [
  "substrate-prometheus-endpoint",
  "try-runtime-cli",
  "xcm",
+]
+
+[[package]]
+name = "paratensor-custom-rpc"
+version = "0.0.1"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-paratensor",
+ "paratensor-custom-rpc-runtime-api",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "paratensor-custom-rpc-runtime-api"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
+ "pallet-paratensor",
+ "serde",
+ "sp-api",
 ]
 
 [[package]]
@@ -9743,6 +9817,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-tuple-vec-map"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a04d0ebe0de77d7d445bb729a895dcb0a288854b267ca85f030ce51cdc578c82"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "718dc5fff5b36f99093fc49b280cfc96ce6fc824317783bff5a1fed0c7a64819"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9771,6 +9863,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e44969a61f5d316be20a42ff97816efb3b407a924d06824c3d8a49fa8450de0e"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "serde_with"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89df7a26519371a3cce44fbb914c2819c84d9b897890987fa3ab096491cc0ea8"
+dependencies = [
+ "serde",
+ "serde_with_macros",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3452b4c0f6c1e357f73fdb87cd1efabaa12acf328c7a528e252893baeb3f4aa"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
