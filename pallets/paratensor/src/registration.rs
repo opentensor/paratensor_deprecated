@@ -88,27 +88,27 @@ impl<T: Config> Pallet<T> {
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
 
-        // --- 5. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
-
-        // --- 6. Ensure the passed block number is valid, not in the future or too old.
+        // --- 5. Ensure the passed block number is valid, not in the future or too old.
         // Work must have been done within 3 blocks (stops long range attacks).
         let current_block_number: u64 = Self::get_current_block_as_u64();
         ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
         ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); 
 
-        // --- 7. Ensure the passed work has not already been used.
+        // --- 6. Ensure the passed work has not already been used.
         ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated ); 
 
-        // --- 8. Ensure the supplied work passes the difficulty.
+        // --- 7. Ensure the supplied work passes the difficulty.
         let difficulty: U256 = Self::get_difficulty( netuid );
         let work_hash: H256 = Self::vec_to_hash( work.clone() );
         ensure! ( Self::hash_meets_difficulty( &work_hash, difficulty ), Error::<T>::InvalidDifficulty ); // Check that the work meets difficulty.
         
-        // --- 9. Check Work is the product of the nonce and the block number. Add this as used work.
+        // --- 8. Check Work is the product of the nonce and the block number. Add this as used work.
         let seal: H256 = Self::create_seal_hash( block_number, nonce );
         ensure! ( seal == work_hash, Error::<T>::InvalidSeal );
         UsedWork::<T>::insert( &work.clone(), current_block_number );
+
+        // --- 9. Ensure that the key passes the registration requirement
+        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
 
         // --- 10. If the network account does not exist we will create it here.
         Self::create_account_if_non_existent( &coldkey, &hotkey);         
