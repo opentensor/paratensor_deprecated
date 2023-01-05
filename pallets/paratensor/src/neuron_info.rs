@@ -14,7 +14,6 @@ pub struct NeuronInfo {
     netuid: u16,
     active: bool,
     axon_metadata: AxonMetadata,
-    #[serde(with = "tuple_vec_map")]
     stake: Vec<(DeAccountId, u64)>, // map of coldkey to stake on this neuron/hotkey (includes delegations)
     rank: u16,
     emission: u64,
@@ -23,10 +22,8 @@ pub struct NeuronInfo {
     trust: u16,
     dividends: u16,
     last_update: u64,
-    #[serde(with = "tuple_vec_map")]
-    weights: Vec<(u16, u16)>,
-    #[serde(with = "tuple_vec_map")]
-    bonds: Vec<(u16, u16)>,
+    weights: Vec<(u16, u16)>, // map of uid to weight
+    bonds: Vec<(u16, u16)>, // map of uid to bond
     pruning_score: u16
 }
 
