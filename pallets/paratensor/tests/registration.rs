@@ -570,7 +570,7 @@ fn test_network_connection_requirement() {
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[0] ), netuid_a, 0, nonce, work, hotkeys[0], coldkeys[0]) );
 
 		// Lets attempt the key registration on A. Fails because we are not in B.
-		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 6942084);
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 634242084);
 		assert_eq!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[1] ), netuid_a, 0, nonce, work, hotkeys[1], coldkeys[1]), Err(Error::<Test>::DidNotPassConnectedNetworkRequirement.into()) );
 
 		// Lets register the next key on B. Passes, np.
