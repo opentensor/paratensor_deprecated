@@ -55,7 +55,7 @@ impl<T: Config> Pallet<T> {
             let netuid = netuid;
 
             let axon_ = Axons::<T>::get( netuid, uid_i as u16 );
-            let mut axon_info;
+            let axon_info;
             if axon_.is_some() {
                 axon_info = axon_.unwrap();
             } else {
