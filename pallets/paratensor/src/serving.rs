@@ -26,13 +26,45 @@ impl<T: Config> Pallet<T> {
     /// 	* 'ip_type' (u8):
     /// 		- The endpoint ip version as a u8, 4 or 6.
     ///
+    /// 	* 'protocol' (u8):
+    /// 		- UDP:1 or TCP:0 
+    ///
+    /// 	* 'placeholder1' (u8):
+    /// 		- Placeholder for further extra params.
+    ///
+    /// 	* 'placeholder2' (u8):
+    /// 		- Placeholder for further extra params.
+    ///
+    /// # Event:
+    /// 	* AxonServed;
+    /// 		- On successfully serving the axon info.
+    ///
+    /// # Raises:
+    /// 	* 'NetworkDoesNotExist':
+    /// 		- Attempting to set weights on a non-existent network.
+    ///
+    /// 	* 'NotRegistered':
+    /// 		- Attempting to set weights from a non registered account.
+    ///
+    /// 	* 'InvalidIpType':
+    /// 		- The ip type is not 4 or 6.
+    ///
+    /// 	* 'InvalidIpAddress':
+    /// 		- The numerically encoded ip address does not resolve to a proper ip.
+    ///
+    /// 	* 'ServingRateLimitExceeded':
+    /// 		- Attempting to set prometheus information withing the rate limit min.
+    ///
     pub fn do_serve_axon( 
         origin: T::Origin, 
         netuid: u16, 
         version: u32, 
         ip: u128, 
         port: u16, 
-        ip_type: u8
+        ip_type: u8,
+        protocol: u8, 
+		placeholder1: u8, 
+		placeholder2: u8,
     ) -> dispatch::DispatchResult {
         // --- 1. We check the callers (hotkey) signature.
         let hotkey_id = ensure_signed(origin)?;
@@ -46,24 +78,112 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
   
         // --- 4. We get the uid associated with this hotkey account.
-        let neuron_uid ;
-        match Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id) {
-            Ok(k) => neuron_uid = k,
-            Err(e) => panic!("Error: {:?}", e),
-        } 
-        // --- 5. We get the neuron assoicated with this hotkey.
-        let mut neuron = Self::get_neuron_metadata(netuid, neuron_uid);
+        let neuron_uid = Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id).unwrap();
 
-        // --- 6. We insert the neuron metadata.
-        neuron.version = version;
-        neuron.ip = ip;
-        neuron.port = port;
-        neuron.ip_type = ip_type;
-        AxonsMetaData::<T>::insert(netuid, neuron_uid, neuron);
+        // --- 5. We get the previous axon info assoicated with this (n etuid, uid )
+        let mut prev_axon = Self::get_axon_info(netuid, neuron_uid);
+        let current_block:u64 = Self::get_current_block_as_u64();
+        ensure!( Self::axon_passes_rate_limit( &prev_axon, current_block ), Error::<T>::ServingRateLimitExceeded );  
 
-        // --- 7. We deposit the neuron updated event.
-        Self::deposit_event(Event::AxonServed(neuron_uid));
-        
+        // --- 6. We insert the axon meta.
+        prev_axon.block = Self::get_current_block_as_u64();
+        prev_axon.version = version;
+        prev_axon.ip = ip;
+        prev_axon.port = port;
+        prev_axon.ip_type = ip_type;
+        prev_axon.protocol = protocol;
+        prev_axon.placeholder1 = placeholder1;
+        prev_axon.placeholder2 = placeholder2;
+        Axons::<T>::insert( netuid, neuron_uid, prev_axon );
+
+        // --- 7. We deposit axon served event.
+        Self::deposit_event(Event::AxonServed( netuid, neuron_uid ));
+        log::info!("AxonServed( netuid: {:?} neuron_uid:{:?} ) ", netuid, neuron_uid );
+
+        // --- 8. Return is successful dispatch. 
+        Ok(())
+    }
+
+    /// ---- The implementation for the extrinsic serve_prometheus.
+    ///
+    /// # Args:
+    /// 	* 'origin': (<T as frame_system::Config>Origin):
+    /// 		- The signature of the caller.
+    ///
+    /// 	* 'netuid' (u16):
+    /// 		- The u16 network identifier.
+    ///
+    /// 	* 'version' (u64):
+    /// 		- The bittensor version identifier.
+    ///
+    /// 	* 'ip' (u64):
+    /// 		- The prometheus ip information as a u128 encoded integer.
+    ///
+    /// 	* 'port' (u16):
+    /// 		- The prometheus port information as a u16 encoded integer.
+    /// 
+    /// 	* 'ip_type' (u8):
+    /// 		- The prometheus ip version as a u8, 4 or 6.
+    ///
+    /// # Event:
+    /// 	* PrometheusServed;
+    /// 		- On successfully serving the axon info.
+    ///
+    /// # Raises:
+    /// 	* 'NetworkDoesNotExist':
+    /// 		- Attempting to set weights on a non-existent network.
+    ///
+    /// 	* 'NotRegistered':
+    /// 		- Attempting to set weights from a non registered account.
+    ///
+    /// 	* 'InvalidIpType':
+    /// 		- The ip type is not 4 or 6.
+    ///
+    /// 	* 'InvalidIpAddress':
+    /// 		- The numerically encoded ip address does not resolve to a proper ip.
+    ///
+    /// 	* 'ServingRateLimitExceeded':
+    /// 		- Attempting to set prometheus information withing the rate limit min.
+    ///
+    pub fn do_serve_prometheus( 
+        origin: T::Origin, 
+        netuid: u16, 
+        version: u32, 
+        ip: u128, 
+        port: u16, 
+        ip_type: u8,
+    ) -> dispatch::DispatchResult {
+        // --- 1. We check the callers (hotkey) signature.
+        let hotkey_id = ensure_signed(origin)?;
+
+        // --- 2. We check if the network exist.
+        ensure!(Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist);
+
+        // --- 3. We make validy checks on the passed data.
+        ensure!( Self::is_hotkey_registered_on_network(netuid, &hotkey_id), Error::<T>::NotRegistered );        
+        ensure!( Self::is_valid_ip_type(ip_type), Error::<T>::InvalidIpType );
+        ensure!( Self::is_valid_ip_address(ip_type, ip), Error::<T>::InvalidIpAddress );
+  
+        // --- 4. We get the uid associated with this hotkey account.
+        let neuron_uid = Self::get_uid_for_net_and_hotkey(netuid, &hotkey_id).unwrap();
+
+        // --- 5. We get the previous axon info assoicated with this ( netuid, uid )
+        let mut prev_prometheus = Self::get_prometheus_info( netuid, neuron_uid );
+        let current_block:u64 = Self::get_current_block_as_u64();
+        ensure!( Self::prometheus_passes_rate_limit( &prev_prometheus, current_block ), Error::<T>::ServingRateLimitExceeded );  
+
+        // --- 6. We insert the prometheus meta.
+        prev_prometheus.block = Self::get_current_block_as_u64();
+        prev_prometheus.version = version;
+        prev_prometheus.ip = ip;
+        prev_prometheus.port = port;
+        prev_prometheus.ip_type = ip_type;
+        Prometheus::<T>::insert( netuid, neuron_uid, prev_prometheus );
+
+        // --- 7. We deposit prometheus served event.
+        Self::deposit_event(Event::PrometheusServed( netuid, neuron_uid ));
+        log::info!("PrometheusServed( netuid: {:?} neuron_uid:{:?} ) ", netuid, neuron_uid );
+
         // --- 8. Return is successful dispatch. 
         Ok(())
     }
@@ -72,8 +192,25 @@ impl<T: Config> Pallet<T> {
      --==[[  Helper functions   ]]==--
     *********************************/
 
-    pub fn get_neuron_metadata(netuid: u16, neuron_id: u16) -> AxonMetadataOf {
-        return AxonsMetaData::<T>::get(netuid, neuron_id).unwrap();
+    pub fn axon_passes_rate_limit( prev_axon_info: &AxonInfoOf, current_block: u64 ) -> bool {
+        let rate_limit: u64 = Self::get_serving_rate_limit();
+        let last_serve = prev_axon_info.block;
+        return rate_limit == 0 || current_block - last_serve >= rate_limit;
+    }
+
+    pub fn prometheus_passes_rate_limit( prev_prometheus_info: &PrometheusInfoOf, current_block: u64 ) -> bool {
+        let rate_limit: u64 = Self::get_serving_rate_limit();
+        let last_serve = prev_prometheus_info.block;
+        return rate_limit == 0 || current_block - last_serve >= rate_limit;
+    }
+
+
+    pub fn get_axon_info( netuid: u16, neuron_id: u16 ) -> AxonInfoOf {
+        return Axons::<T>::get(netuid, neuron_id).unwrap();
+    }
+
+    pub fn get_prometheus_info( netuid: u16, neuron_id: u16 ) -> PrometheusInfoOf {
+        return Prometheus::<T>::get( netuid, neuron_id ).unwrap();
     }
 
     pub fn is_valid_ip_type(ip_type: u8) -> bool {
@@ -86,23 +223,19 @@ impl<T: Config> Pallet<T> {
         if !Self::is_valid_ip_type(ip_type) {
             return false;
         }
-
         if addr == 0 {
             return false;
         }
-
         if ip_type == 4 {
             if addr == 0 { return false; }
             if addr >= u32::MAX as u128 { return false; }
             if addr == 0x7f000001 { return false; } // Localhost
         }
-
         if ip_type == 6 {
             if addr == 0x0 { return false; }
             if addr == u128::MAX { return false; }
             if addr == 1 { return false; } // IPv6 localhost
         }
-
         return true;
     }
 

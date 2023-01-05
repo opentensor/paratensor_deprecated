@@ -1,4 +1,4 @@
-use pallet_paratensor::{Error, AxonMetadataOf};
+use pallet_paratensor::{Error, AxonInfoOf};
 use frame_support::{assert_ok};
 use frame_system::Config;
 use crate::{mock::*};
@@ -307,7 +307,7 @@ fn test_registration_get_neuron_metadata() {
 		//
 		//let neuron_id = ParatensorModule::get_uid_for_net_and_hotkey(netuid, &hotkey_account_id);
 		let neuron_uid = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).unwrap();
-		let neuron: AxonMetadataOf = ParatensorModule::get_neuron_metadata(netuid, neuron_uid);
+		let neuron: AxonInfoOf = ParatensorModule::get_axon_info(netuid, neuron_uid );
 		assert_eq!(neuron.ip, 0);
 		assert_eq!(neuron.version, 0);
 		assert_eq!(neuron.port, 0);
@@ -570,7 +570,7 @@ fn test_network_connection_requirement() {
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[0] ), netuid_a, 0, nonce, work, hotkeys[0], coldkeys[0]) );
 
 		// Lets attempt the key registration on A. Fails because we are not in B.
-		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 6942084);
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 634242084);
 		assert_eq!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[1] ), netuid_a, 0, nonce, work, hotkeys[1], coldkeys[1]), Err(Error::<Test>::DidNotPassConnectedNetworkRequirement.into()) );
 
 		// Lets register the next key on B. Passes, np.
@@ -587,14 +587,14 @@ fn test_network_connection_requirement() {
 		// Lets register key 3 with lower prunning score.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 9942084);
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[2] ), netuid_b, 0, nonce, work, hotkeys[2], coldkeys[2]) );
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 0); // Set prunning score to 0.
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[1] ).unwrap(), 0); // Set prunning score to 0.
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[0] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning_score( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning_score( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[1] ).unwrap(), 0); // Set prunning score to 0.
+		ParatensorModule::set_pruning_score( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[0] ).unwrap(), 0); // Set prunning score to 0.
 
 		// Lets register key 4 with higher prunining score.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_b, 0, 10142084);
 		assert_ok!( ParatensorModule::register(<<Test as Config>::Origin>::signed( hotkeys[3] ), netuid_b, 0, nonce, work, hotkeys[3], coldkeys[3]) );
-		ParatensorModule::set_pruning( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 1); // Set prunning score to 1.
+		ParatensorModule::set_pruning_score( netuid_b, ParatensorModule::get_uid_for_net_and_hotkey( netuid_b, &hotkeys[2] ).unwrap(), 1); // Set prunning score to 1.
 
 		// Attempted register of key 3 fails because of bad prunning score on B.
 		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid_a, 0, 11142084);

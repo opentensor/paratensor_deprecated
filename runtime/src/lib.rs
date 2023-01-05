@@ -66,7 +66,7 @@ pub type Signature = MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 /// Balance of an account.
-pub type Balance = u128;
+pub type Balance = u64;
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -199,16 +199,16 @@ pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
 // Unit = the base number of indivisible units for balances
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
+pub const UNIT: Balance = 1_000_000_000;
+pub const MILLIUNIT: Balance = 1_000_000;
+pub const MICROUNIT: Balance = 1_000;
 
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
-const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
+const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(50);
 
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
 /// `Operational` extrinsics.
@@ -250,7 +250,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u16 = 42;
+	pub const SS58Prefix: u16 = 13116;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -473,6 +473,7 @@ parameter_types! {
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
+	pub const ParatensorInitialMaxAllowedValidators: u16 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
 	pub const ParatensorInitialAdjustmentInterval: u16 = 100;
@@ -480,11 +481,15 @@ parameter_types! {
 	pub const ParatensorInitialImmunityPeriod: u16 = 200;
 	pub const ParatensorInitialActivityCutoff: u16 = 5000;
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
-	pub const ParatensorInitialStakePruningMin: u16 = 0;
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
-	pub const InitialValidatorExcludeQuantile: u8 = 10; // 0.1
-	
+	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
+	pub const ParatensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
+	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
+	pub const ParatensorInitialMinDifficulty: u64 = 1;
+	pub const ParatensorInitialMaxDifficulty: u64 = u64::MAX;
+	pub const ParatensorInitialServingRateLimit: u64 = 1000; // Can reserve information on network every 1000 blocks.
+
 }
 impl pallet_paratensor::Config for Runtime {
 	type Event = Event;
@@ -508,9 +513,14 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialImmunityPeriod = ParatensorInitialImmunityPeriod;
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
-	type InitialStakePruningMin = ParatensorInitialStakePruningMin;
 	type InitialPruningScore = ParatensorInitialPruningScore;
-	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
+	type InitialMaxAllowedValidators = ParatensorInitialMaxAllowedValidators;
+	type InitialDefaultTake = ParatensorInitialDefaultTake;
+	type InitialWeightsVersionKey = ParatensorInitialWeightsVersionKey;
+	type InitialMaxDifficulty = ParatensorInitialMaxDifficulty;
+	type InitialMinDifficulty = ParatensorInitialMinDifficulty;
+	type InitialServingRateLimit = ParatensorInitialServingRateLimit;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -111,12 +111,16 @@ parameter_types! {
 	pub const InitialBondsMovingAverage: u64 = 500_000;
 	pub const InitialStakePruningMin: u16 = 0;
 	pub const InitialFoundationDistribution: u64 = 0;
+	pub const InitialDefaultTake: u16 = 11_796; // 18% honest number.
+	pub const InitialWeightsVersionKey: u16 = 0; 
+	pub const InitialServingRateLimit: u64 = 0; // No limit.
 
 	pub const InitialValidatorBatchSize: u16 = 10;
 	pub const InitialValidatorSequenceLen: u16 = 10;
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
 	pub const InitialValidatorExcludeQuantile: u16 = 10;
+	pub const InitialMaxAllowedValidators: u16 = 100;
 
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
@@ -128,6 +132,9 @@ parameter_types! {
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;
 	pub const InitialPruningScore : u16 = u16::MAX;
 	pub const InitialRegistrationRequirement: u16 = u16::MAX; // Top 100%
+	pub const InitialMinDifficulty: u64 = 1;
+	pub const InitialMaxDifficulty: u64 = u64::MAX;
+
 }
 impl pallet_paratensor::Config for Test {
 	type Event = Event;
@@ -148,13 +155,18 @@ impl pallet_paratensor::Config for Test {
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
-	type InitialStakePruningMin = InitialStakePruningMin;
 	type InitialImmunityPeriod = InitialImmunityPeriod;
 	type InitialActivityCutoff = InitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = InitialPruningScore;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
 	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialMaxAllowedValidators = InitialMaxAllowedValidators;
+	type InitialDefaultTake = InitialDefaultTake;
+	type InitialWeightsVersionKey = InitialWeightsVersionKey;
+	type InitialMaxDifficulty = InitialMaxDifficulty;
+	type InitialMinDifficulty = InitialMinDifficulty;
+	type InitialServingRateLimit = InitialServingRateLimit;
 }
 
 // Build genesis storage according to the mock runtime.

@@ -1,6 +1,4 @@
 use super::*;
-use substrate_fixed::types::I64F64;
-use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> { 
 
@@ -35,7 +33,8 @@ impl<T: Config> Pallet<T> {
     ) -> dispatch::DispatchResult {
         // --- 1. We check the coldkey signuture.
         let coldkey = ensure_signed( origin )?;
- 
+        log::info!("do_become_delegate( origin:{:?} hotkey:{:?}, take:{:?} )", coldkey, hotkey, take );
+
         // --- 2. Ensure we are delegating an known key.
         ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    
   
@@ -49,8 +48,9 @@ impl<T: Config> Pallet<T> {
         Self::delegate_hotkey( &hotkey, take );
       
         // --- 5. Emit the staking event.
+        log::info!("DelegateAdded( coldkey:{:?}, hotkey:{:?}, take:{:?} )", coldkey, hotkey, take );
         Self::deposit_event( Event::DelegateAdded( coldkey, hotkey, take ) );
-   
+
         // --- 9. Ok and return.
         Ok(())
     }
@@ -92,7 +92,8 @@ impl<T: Config> Pallet<T> {
     ) -> dispatch::DispatchResult {
         // --- 1. We check that the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
         let coldkey = ensure_signed( origin )?;
- 
+        log::info!("do_add_stake( origin:{:?} hotkey:{:?}, stake_to_be_added:{:?} )", coldkey, hotkey, stake_to_be_added );
+
         // --- 2. We convert the stake u64 into a balancer.
         let stake_as_balance = Self::u64_to_balance( stake_to_be_added );
         ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
@@ -113,8 +114,9 @@ impl<T: Config> Pallet<T> {
         Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &hotkey, stake_to_be_added );
  
         // --- 8. Emit the staking event.
+        log::info!("StakeAdded( hotkey:{:?}, stake_to_be_added:{:?} )", hotkey, stake_to_be_added );
         Self::deposit_event( Event::StakeAdded( hotkey, stake_to_be_added ) );
- 
+
         // --- 9. Ok and return.
         Ok(())
     }
@@ -157,6 +159,7 @@ impl<T: Config> Pallet<T> {
 
         // --- 1. We check the transaction is signed by the caller and retrieve the T::AccountId coldkey information.
         let coldkey = ensure_signed( origin )?;
+        log::info!("do_remove_stake( origin:{:?} hotkey:{:?}, stake_to_be_removed:{:?} )", coldkey, hotkey, stake_to_be_removed );
 
         // --- 2. Ensure that the hotkey account exists this is only possible through registration.
         ensure!( Self::hotkey_account_exists( &hotkey ), Error::<T>::NotRegistered );    
@@ -178,60 +181,11 @@ impl<T: Config> Pallet<T> {
         Self::add_balance_to_coldkey_account( &coldkey, stake_to_be_added_as_currency.unwrap() );
 
         // --- 8. Emit the unstaking event.
+        log::info!("StakeRemoved( hotkey:{:?}, stake_to_be_removed:{:?} )", hotkey, stake_to_be_removed );
         Self::deposit_event( Event::StakeRemoved( hotkey, stake_to_be_removed ) );
 
         // --- 9. Done and ok.
         Ok(())
-    }
-
-    /// Distributes token inflation through the hotkey based on emission. The call ensures that the inflation
-    /// is distributed onto the accounts in proportion of the stake delegated minus the take. This function
-    /// is called after an epoch to distribute the newly minted stake according to delegation.
-    ///
-    pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64 ) {
-        
-        // --- 1. Check if the hotkey is a delegate. If not we simply pass the stake through to the 
-        // coldkye - hotkey account as normal.
-        if !Self::hotkey_is_delegate( hotkey ) { 
-            Self::increase_stake_on_hotkey_account( &hotkey, emission ); 
-            return; 
-        }
-
-        // --- 2. The hotkey is a delegate. We first distribute a proportion of the emission to the hotkey
-        // directly as a function of its 'take'
-        let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
-        let remaining_emission: u64 = emission - delegate_take;
-        Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
-
-        // 3. -- The remaining emission does to the owners in proportion to the stake delegated.
-        let total_hotkey_stake: u64 = Self::get_total_stake_for_hotkey( hotkey );
-        for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
-            
-            // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
-            let stake_proportion: u64 = Self::calculate_stake_proportional_emission( stake_i, total_hotkey_stake, remaining_emission );
-            Self::increase_stake_on_coldkey_hotkey_account( &owning_coldkey_i, &hotkey, stake_proportion );
-        }
-
-    }
-
-    /// Returns emission awarded to a hotkey as a function of its proportion of the total stake.
-    ///
-    pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
-        let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
-        let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
-        return proportional_emission.to_num::<u64>();
-    }
-
-    /// Returns the delegated stake 'take' assigend to this key. (If exists, otherwise 0)
-    ///
-    pub fn calculate_delegate_proportional_take( hotkey: &T::AccountId, emission: u64 ) -> u64 {
-        if Self::hotkey_is_delegate( hotkey ) {
-            let take_proportion: I64F64 = I64F64::from_num( Delegates::<T>::get( hotkey ) ) / I64F64::from_num( u16::MAX );
-            let take_emission: I64F64 = take_proportion * I64F64::from_num( emission );
-            return take_emission.to_num::<u64>();
-        } else {
-            return 0;
-        }
     }
 
     /// Returns true if the passed hotkey allow delegative staking. 
