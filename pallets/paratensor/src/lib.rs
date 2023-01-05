@@ -28,6 +28,7 @@ mod weights;
 mod networks;
 mod serving; 
 mod block_step;
+pub mod neuron_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -41,6 +42,8 @@ pub mod pallet {
 	use frame_support::traits::{Currency, Get};
 	use frame_support::inherent::Vec;
 	use frame_support::sp_std::vec;
+	use serde::{Serialize, Deserialize};
+	use serde_with::{serde_as, DisplayFromStr};
 
 	/// ================
 	/// ==== Config ====
@@ -244,10 +247,13 @@ pub mod pallet {
 	
 	// --- Struct for Axon.
 	pub type AxonInfoOf = AxonInfo;
-	#[derive(Encode, Decode, Default, TypeInfo)]
+	
+	#[serde_as]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
     pub struct AxonInfo {
 		pub block: u64, // --- Axon serving block.
         pub version: u32, // --- Axon version
+		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
         pub ip: u128, // --- Axon u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Axon u16 encoded port.
         pub ip_type: u8, // --- Axon ip type, 4 for ipv4 and 6 for ipv6.
@@ -258,10 +264,13 @@ pub mod pallet {
 
 	// --- Struct for Prometheus.
 	pub type PrometheusInfoOf = PrometheusInfo;
-	#[derive(Encode, Decode, Default, TypeInfo)]
-	pub struct PrometheusInfo{
+
+	#[serde_as]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+	pub struct PrometheusInfo {
 		pub block: u64, // --- Prometheus serving block.
         pub version: u32, // --- Prometheus version.
+		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
         pub ip: u128, // --- Prometheus u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Prometheus u16 encoded port.
         pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
