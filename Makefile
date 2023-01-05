@@ -22,4 +22,4 @@ build-collator:
 		.
 
 up-and-scale-testnet:
-	docker compose up -d --scale validator=2 --scale collator=1
+	docker compose up -d --scale validator=4 --scale collator=2
