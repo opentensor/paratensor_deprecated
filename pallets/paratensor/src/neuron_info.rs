@@ -55,7 +55,9 @@ impl<T: Config> Pallet<T> {
             let uid = uid;
             let netuid = netuid;
 
-            let axon_ = Axons::<T>::get( netuid, uid as u16 );
+            let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
+
+            let axon_ = Axons::<T>::get( hotkey.clone() );
             let axon_info;
             if axon_.is_some() {
                 axon_info = axon_.unwrap();
@@ -63,7 +65,7 @@ impl<T: Config> Pallet<T> {
                 axon_info = AxonInfo::default();
             }
 
-            let promo_ = Prometheus::<T>::get( netuid, uid as u16 );
+            let promo_ = Prometheus::<T>::get( hotkey.clone() );
             let prometheus_info;
             if promo_.is_some() {
                 prometheus_info = promo_.unwrap();
@@ -71,7 +73,7 @@ impl<T: Config> Pallet<T> {
                 prometheus_info = PrometheusInfo::default();
             }
 
-            let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
+            
             let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
             let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
@@ -128,7 +130,10 @@ impl<T: Config> Pallet<T> {
             return None;
         }
 
-        let axon_ = Axons::<T>::get( netuid, uid as u16 );
+
+        let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
+
+        let axon_ = Axons::<T>::get( hotkey.clone() );
         let axon_info;
         if axon_.is_some() {
             axon_info = axon_.unwrap();
@@ -136,7 +141,7 @@ impl<T: Config> Pallet<T> {
             axon_info = AxonInfo::default();
         }
 
-        let promo_ = Prometheus::<T>::get( netuid, uid as u16 );
+        let promo_ = Prometheus::<T>::get( hotkey.clone() );
         let prometheus_info;
         if promo_.is_some() {
             prometheus_info = promo_.unwrap();
@@ -144,7 +149,6 @@ impl<T: Config> Pallet<T> {
             prometheus_info = PrometheusInfo::default();
         }
 
-        let hotkey = Keys::<T>::get( netuid, uid as u16 ).clone();
         let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
         let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
