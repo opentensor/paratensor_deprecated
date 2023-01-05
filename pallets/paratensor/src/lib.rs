@@ -117,25 +117,6 @@ pub mod pallet {
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-	/// =========================
-	/// ==== Endpoint Struct ====
-	/// =========================
-	pub type AxonMetadataOf = AxonMetadata;
-
-	#[serde_as]
-	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
-    pub struct AxonMetadata {
-		/// ---- The endpoint's code version.
-        pub version: u32,
-        /// ---- The endpoint's u128 encoded ip address of type v6 or v4.
-		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
-        pub ip: u128,
-        /// ---- The endpoint's u16 encoded port.
-        pub port: u16,
-        /// ---- The endpoint's ip type, 4 for ipv4 and 6 for ipv6.
-        pub ip_type: u8,
-	}
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -261,10 +242,13 @@ pub mod pallet {
 	
 	// --- Struct for Axon.
 	pub type AxonInfoOf = AxonInfo;
-	#[derive(Encode, Decode, Default, TypeInfo)]
+	
+	#[serde_as]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
     pub struct AxonInfo {
 		pub block: u64, // --- Axon serving block.
         pub version: u32, // --- Axon version
+		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
         pub ip: u128, // --- Axon u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Axon u16 encoded port.
         pub ip_type: u8, // --- Axon ip type, 4 for ipv4 and 6 for ipv6.
@@ -275,10 +259,13 @@ pub mod pallet {
 
 	// --- Struct for Prometheus.
 	pub type PrometheusInfoOf = PrometheusInfo;
-	#[derive(Encode, Decode, Default, TypeInfo)]
-	pub struct PrometheusInfo{
+
+	#[serde_as]
+	#[derive(Encode, Decode, Default, TypeInfo, Clone, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct PrometheusInfo {
 		pub block: u64, // --- Prometheus serving block.
         pub version: u32, // --- Prometheus version.
+		#[serde_as(as = "DisplayFromStr")] // serialize as string, deserialize from string
         pub ip: u128, // --- Prometheus u128 encoded ip address of type v6 or v4.
         pub port: u16, // --- Prometheus u16 encoded port.
         pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.

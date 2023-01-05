@@ -13,7 +13,7 @@ pub struct NeuronInfo {
     uid: u16,
     netuid: u16,
     active: bool,
-    axon_metadata: AxonMetadata,
+    axon_info: AxonInfo,
     stake: Vec<(DeAccountId, u64)>, // map of coldkey to stake on this neuron/hotkey (includes delegations)
     rank: u16,
     emission: u64,
@@ -45,7 +45,7 @@ impl From<Vec<u8>> for DeAccountId {
 impl<T: Config> Pallet<T> {
 	pub fn get_neurons(netuid: u16) -> Vec<NeuronInfo> {
         if !Self::if_subnet_exist(netuid) {
-            Vec::new();
+            return Vec::new();
         }
 
         let mut neurons = Vec::new();
@@ -54,12 +54,12 @@ impl<T: Config> Pallet<T> {
             let uid = uid_i;
             let netuid = netuid;
 
-            let axons_metadata = AxonsMetaData::<T>::get( netuid, uid_i as u16 );
-            let axon_metadata;
-            if axons_metadata.is_some() {
-                axon_metadata = axons_metadata.unwrap();
+            let axon_ = Axons::<T>::get( netuid, uid_i as u16 );
+            let mut axon_info;
+            if axon_.is_some() {
+                axon_info = axon_.unwrap();
             } else {
-                axon_metadata = AxonMetadata::default();
+                axon_info = AxonInfo::default();
             }
 
             let hotkey = Keys::<T>::get( netuid, uid_i as u16 ).clone();
@@ -94,7 +94,7 @@ impl<T: Config> Pallet<T> {
                 uid,
                 netuid,
                 active,
-                axon_metadata,
+                axon_info,
                 stake,
                 rank,
                 emission,
