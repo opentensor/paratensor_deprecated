@@ -52,6 +52,16 @@ impl<T: Config> Pallet<T> {
         Ok(()) 
     }
 
+    pub fn get_serving_rate_limit() -> u64 { ServingRateLimit::<T>::get() }
+    pub fn set_serving_rate_limit( serving_rate_limit: u64 ) { ServingRateLimit::<T>::put( serving_rate_limit ) }
+    pub fn do_sudo_set_serving_rate_limit( origin: T::Origin, serving_rate_limit: u64 ) -> DispatchResult { 
+        ensure_root( origin )?;
+        Self::set_serving_rate_limit( serving_rate_limit );
+        log::info!("ServingRateLimitSet( serving_rate_limit: {:?} ) ", serving_rate_limit );
+        Self::deposit_event( Event::ServingRateLimitSet( serving_rate_limit ) );
+        Ok(()) 
+    }
+
     pub fn get_min_difficulty( netuid: u16) -> u64 { MinDifficulty::<T>::get( netuid ) }
     pub fn set_min_difficulty( netuid: u16, min_difficulty: u64 ) { MinDifficulty::<T>::insert( netuid, min_difficulty ); }
     pub fn do_sudo_set_min_difficulty( origin: T::Origin, netuid: u16, min_difficulty: u64 ) -> DispatchResult { 

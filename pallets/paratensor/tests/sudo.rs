@@ -55,6 +55,18 @@ fn test_sudo_set_default_take() {
 }
 
 #[test]
+fn test_sudo_set_serving_rate_limit() {
+	new_test_ext().execute_with(|| {
+        let to_be_set: u64 = 10;
+        let init_value: u64 = ParatensorModule::get_serving_rate_limit();
+		assert_eq!( ParatensorModule::sudo_set_serving_rate_limit(<<Test as Config>::Origin>::signed(0), to_be_set), Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::get_serving_rate_limit(), init_value);
+        assert_ok!( ParatensorModule::sudo_set_serving_rate_limit(<<Test as Config>::Origin>::root(), to_be_set) );
+        assert_eq!( ParatensorModule::get_serving_rate_limit(), to_be_set);
+    });
+}
+
+#[test]
 fn test_sudo_set_min_difficulty() {
 	new_test_ext().execute_with(|| {
         let netuid: u16 = 1;

@@ -127,7 +127,7 @@ impl<T: Config> Pallet<T> {
     ///
     pub fn emit_inflation_through_hotkey_account( hotkey: &T::AccountId, emission: u64) {
         
-        // --- 1. Check if the hotkey is a delegate. If not we simply pass the stake through to the 
+        // --- 1. Check if the hotkey is a delegate. If not, we simply pass the stake through to the 
         // coldkye - hotkey account as normal.
         if !Self::hotkey_is_delegate( hotkey ) { 
             Self::increase_stake_on_hotkey_account( &hotkey, emission ); 
@@ -140,7 +140,7 @@ impl<T: Config> Pallet<T> {
         let delegate_take: u64 = Self::calculate_delegate_proportional_take( hotkey, emission );
         let remaining_emission: u64 = emission - delegate_take;
 
-        // 3. -- The remaining emission does to the owners in proportion to the stake delegated.
+        // 3. -- The remaining emission goes to the owners in proportion to the stake delegated.
         for ( owning_coldkey_i, stake_i ) in < Stake<T> as IterableStorageDoubleMap<T::AccountId, T::AccountId, u64 >>::iter_prefix( hotkey ) {
             
             // --- 4. The emission proportion is remaining_emission * ( stake / total_stake ).
@@ -149,6 +149,9 @@ impl<T: Config> Pallet<T> {
             log::debug!("owning_coldkey_i: {:?} hotkey: {:?} emission: +{:?} ", owning_coldkey_i, hotkey, stake_proportion );
 
         }
+
+        // --- 5. Last increase final account balance of delegate after 4, since 5 will change the stake proportion of 
+        // the delegate and effect calculation in 4.
         Self::increase_stake_on_hotkey_account( &hotkey, delegate_take );
         log::debug!("delkey: {:?} delegate_take: +{:?} ", hotkey,delegate_take );
     }
@@ -176,7 +179,11 @@ impl<T: Config> Pallet<T> {
     /// Adjusts the network difficulty of every active network. Reseting state parameters.
     ///
     pub fn adjust_registration_difficulties( ) {
+        
+        // --- 1. Iterate through each network.
         for ( netuid, _ )  in <NetworksAdded<T> as IterableStorageMap<u16, bool>>::iter(){
+
+            // --- 2. Pull counters for network difficulty.
             let last_adjustment_block: u64 = Self::get_last_adjustment_block( netuid );
             let adjustment_interval: u16 = Self::get_adjustment_interval( netuid );
             let current_block: u64 = Self::get_current_block_as_u64( ); 
@@ -186,10 +193,16 @@ impl<T: Config> Pallet<T> {
                 adjustment_interval,
                 current_block
             );
+
+            // --- 3. Check if we are at the adjustment interval for this network.
+            // If so, we need to adjust the registration difficulty based on target and actual registrations.
             if ( current_block - last_adjustment_block ) >= adjustment_interval as u64 {
                 let current_difficulty: u64 = Self::get_difficulty_as_u64( netuid );
                 let registrations_this_interval: u16 = Self::get_registrations_this_interval( netuid );
                 let target_registrations_this_interval: u16 = Self::get_target_registrations_per_interval( netuid );
+
+                // --- 4. Adjust network registration interval. 
+                // next_dif = next_dif * ( reg_actual + reg_target / reg_target * reg_target )
                 let adjusted_difficulty: u64 = Self::get_next_difficulty( 
                     netuid,
                     current_difficulty,
@@ -207,12 +220,14 @@ impl<T: Config> Pallet<T> {
                     adjusted_difficulty
                 );
             }
+
+            // --- 5. Drain block registrations for each network. Needed for registration rate limits.
             Self::set_registrations_this_block( netuid, 0 );
         }
     }
 
-    /// Performs the difficutly adjustment by multiplying the current difficulty by the ratio ( registrations_this_interval + target_registrations_per_interval / target_registrations_per_interval * target_registrations_per_interval )
-    /// We use I110F18 to avoid any overflows on u64.
+    /// Performs the difficutly adjustment by multiplying the current difficulty by the ratio ( reg_actual + reg_target / reg_target * reg_target )
+    /// We use I110F18 to avoid any overflows on u64. Also min_difficulty and max_difficutly bound the range.
     ///
     pub fn get_next_difficulty( 
         netuid: u16,

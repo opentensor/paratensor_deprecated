@@ -148,9 +148,9 @@ fn finney_genesis(
 pub fn kusama_testnet_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
+	properties.insert("tokenSymbol".into(), "TAO".into());
+	properties.insert("tokenDecimals".into(), 9.into());
+	properties.insert("ss58Format".into(), 13116.into());
 
 	ChainSpec::from_genesis(
 		// Name
@@ -232,9 +232,9 @@ pub fn kusama_testnet_config() -> ChainSpec {
 pub fn rococo_testnet_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
+	properties.insert("tokenSymbol".into(), "TAO".into());
+	properties.insert("tokenDecimals".into(), 9.into());
+	properties.insert("ss58Format".into(), 13116.into());
 
 	ChainSpec::from_genesis(
 		// Name
@@ -311,13 +311,13 @@ pub fn rococo_testnet_config() -> ChainSpec {
 pub fn polkadot_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
+	properties.insert("tokenSymbol".into(), "TAO".into());
+	properties.insert("tokenDecimals".into(), 9.into());
+	properties.insert("ss58Format".into(), 13116.into());
 
 	ChainSpec::from_genesis(
 		// Name
-		"Bittensor Mainnet",
+		"Bittensor",
 		// ID
 		"bittensor",
 		ChainType::Live,

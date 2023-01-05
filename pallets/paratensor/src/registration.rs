@@ -88,27 +88,27 @@ impl<T: Config> Pallet<T> {
         // --- 4. Ensure that the key is not already registered.
         ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
 
-        // --- 5. Ensure that the key passes the registration requirement
-        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
-
-        // --- 6. Ensure the passed block number is valid, not in the future or too old.
+        // --- 5. Ensure the passed block number is valid, not in the future or too old.
         // Work must have been done within 3 blocks (stops long range attacks).
         let current_block_number: u64 = Self::get_current_block_as_u64();
         ensure! (block_number <= current_block_number, Error::<T>::InvalidWorkBlock);
         ensure! (current_block_number - block_number < 3, Error::<T>::InvalidWorkBlock ); 
 
-        // --- 7. Ensure the passed work has not already been used.
+        // --- 6. Ensure the passed work has not already been used.
         ensure!( !UsedWork::<T>::contains_key( &work.clone() ), Error::<T>::WorkRepeated ); 
 
-        // --- 8. Ensure the supplied work passes the difficulty.
+        // --- 7. Ensure the supplied work passes the difficulty.
         let difficulty: U256 = Self::get_difficulty( netuid );
         let work_hash: H256 = Self::vec_to_hash( work.clone() );
         ensure! ( Self::hash_meets_difficulty( &work_hash, difficulty ), Error::<T>::InvalidDifficulty ); // Check that the work meets difficulty.
         
-        // --- 9. Check Work is the product of the nonce and the block number. Add this as used work.
+        // --- 8. Check Work is the product of the nonce and the block number. Add this as used work.
         let seal: H256 = Self::create_seal_hash( block_number, nonce );
         ensure! ( seal == work_hash, Error::<T>::InvalidSeal );
         UsedWork::<T>::insert( &work.clone(), current_block_number );
+
+        // --- 9. Ensure that the key passes the registration requirement
+        ensure!( Self::passes_network_connection_requirement( netuid, &hotkey ), Error::<T>::DidNotPassConnectedNetworkRequirement );
 
         // --- 10. If the network account does not exist we will create it here.
         Self::create_account_if_non_existent( &coldkey, &hotkey);         
@@ -265,8 +265,10 @@ impl<T: Config> Pallet<T> {
             Consensus::<T>::remove( netuid, uid_i as u16 );
             Incentive::<T>::remove( netuid, uid_i as u16 );
             PruningScores::<T>::remove( netuid, uid_i as u16 );
-            AxonsMetaData::<T>::remove( netuid, uid_i as u16 );
-            AxonsMetaData::<T>::insert( netuid, uid_i as u16, AxonMetadata{ version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null Axon info.
+            Axons::<T>::remove( netuid, uid_i as u16 );
+            Axons::<T>::insert( netuid, uid_i as u16, AxonInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0, protocol: 0, placeholder1: 0, placeholder2: 0} ); // Fill null Axon info.
+            Prometheus::<T>::remove( netuid, uid_i as u16 );
+            Prometheus::<T>::insert( netuid, uid_i as u16, PrometheusInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null Prometheus info.
             Active::<T>::insert( netuid, uid_i as u16, true ); // Set to active by default.
             Keys::<T>::insert( netuid, uid_i as u16, h.clone() ); // Make hotkey - uid association.
             Uids::<T>::insert( netuid, h.clone(), uid_i as u16 ); // Make uid - hotkey association.
@@ -300,7 +302,8 @@ impl<T: Config> Pallet<T> {
     /// The function ensures the the global account is created if not already existent.
     ///
     pub fn fill_new_neuron_account_in_subnetwork( netuid: u16, uid: u16, hotkey: &T::AccountId, current_block_number: u64 ) {
-        AxonsMetaData::<T>::insert( netuid, uid, AxonMetadata{ version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null Axon info.
+        Axons::<T>::insert( netuid, uid, AxonInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0, protocol: 0, placeholder1: 0, placeholder2: 0} ); // Fill null Axon info.
+        Prometheus::<T>::insert( netuid, uid, PrometheusInfo{ block: current_block_number, version: 0, ip: 0, port: 0, ip_type: 0 } ); // Fill null prometheus info.
         Active::<T>::insert( netuid, uid, true ); // Set to active by default.
         Keys::<T>::insert( netuid, uid, hotkey.clone() ); // Make hotkey - uid association.
         Uids::<T>::insert( netuid, hotkey.clone(), uid ); // Make uid - hotkey association.
@@ -325,7 +328,8 @@ impl<T: Config> Pallet<T> {
         Incentive::<T>::remove( netuid, uid_to_prune );
         ValidatorPermit::<T>::remove( netuid, uid_to_prune );
         PruningScores::<T>::remove( netuid, uid_to_prune );
-        AxonsMetaData::<T>::remove( netuid, uid_to_prune );
+        Axons::<T>::remove( netuid, uid_to_prune );
+        Prometheus::<T>::remove( netuid, uid_to_prune );
     }
 
     pub fn vec_to_hash( vec_hash: Vec<u8> ) -> H256 {
