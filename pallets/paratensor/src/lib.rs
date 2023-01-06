@@ -395,11 +395,15 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultTrust<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
+	pub fn DefaultValidatorTrust<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
 	pub fn DefaultEmission<T:Config>() -> u64 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultIncentive<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultConsensus<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultWeightConsensus<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
 	#[pallet::type_value] 
@@ -423,6 +427,8 @@ pub mod pallet {
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> validator_trust
+	pub(super) type ValidatorTrust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultValidatorTrust<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> active
 	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> hotkey
@@ -433,6 +439,8 @@ pub mod pallet {
 	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> consensus
 	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> weight_consensus
+	pub(super) type WeightConsensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultWeightConsensus<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> dividends
 	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> last_update

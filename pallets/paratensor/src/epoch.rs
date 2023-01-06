@@ -102,12 +102,12 @@ impl<T: Config> Pallet<T> {
         inplace_row_normalize( &mut weights );
         log::trace!( "W (mask+norm):\n{:?}\n", weights.clone() );
 
-        // =====================
-        // == Weight clipping ==
-        // =====================
+        // ==========================================
+        // == Weight consensus and Validator trust ==
+        // ==========================================
 
         let eta: u16 = 3; // number of weight clipping steps.
-        let mut weight_consensus: Vec<I32F32>; // weight consensus.
+        let mut weight_consensus: Vec<I32F32> = vec![ I32F32::from_num(0); n as usize ]; // weight consensus.
         for i in 0..eta+1 {
             // Calculate specific vote share per weight assigned: [validator] -> [server] -> vote_share.
             let mut vote_share: Vec<Vec<I32F32>> = row_hadamard( &weights, &active_stake ); // ΔB = W◦S
@@ -122,7 +122,7 @@ impl<T: Config> Pallet<T> {
                 inplace_col_clip( &mut weights, &weight_consensus );
             } // else do not clip in last iteration, which is only to get final weight_consensus.
         }
-        let _validator_trust: Vec<I32F32> = row_sum( &weights );
+        let validator_trust: Vec<I32F32> = row_sum( &weights );
 
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
@@ -215,7 +215,9 @@ impl<T: Config> Pallet<T> {
         for i in 0..n {
             Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_validator_trust( netuid, i, fixed_proportion_to_u16( validator_trust[i as usize] ) );
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_weight_consensus( netuid, i, fixed_proportion_to_u16( weight_consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
@@ -338,12 +340,12 @@ impl<T: Config> Pallet<T> {
         inplace_row_normalize_sparse( &mut weights );
         log::trace!( "W (mask+norm): {:?}", weights.clone() );
 
-        // =====================
-        // == Weight clipping ==
-        // =====================
+        // ==========================================
+        // == Weight consensus and Validator trust ==
+        // ==========================================
 
         let eta: u16 = 3; // number of weight clipping steps.
-        let mut weight_consensus: Vec<I32F32>; // weight consensus.
+        let mut weight_consensus: Vec<I32F32> = vec![ I32F32::from_num(0); n as usize ]; // weight consensus.
         for i in 0..eta+1 {
             // Calculate specific vote share per weight assigned: [validator] -> [server] -> vote_share.
             let mut vote_share: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &active_stake ); // ΔB = W◦S
@@ -358,7 +360,7 @@ impl<T: Config> Pallet<T> {
                 weights = col_clip_sparse( &weights, &weight_consensus );
             } // else do not clip in last iteration, which is only to get final weight_consensus.
         }
-        let _validator_trust: Vec<I32F32> = row_sum_sparse( &weights );
+        let validator_trust: Vec<I32F32> = row_sum_sparse( &weights );
 
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
@@ -463,7 +465,9 @@ impl<T: Config> Pallet<T> {
             // TODO(taco): set is active.
             Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_validator_trust( netuid, i, fixed_proportion_to_u16( validator_trust[i as usize] ) );
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_weight_consensus( netuid, i, fixed_proportion_to_u16( weight_consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
@@ -486,7 +490,9 @@ impl<T: Config> Pallet<T> {
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
     pub fn set_trust( netuid:u16, neuron_uid:u16, trust:u16) { Trust::<T>::insert( netuid, neuron_uid, trust ) }
+    pub fn set_validator_trust( netuid:u16, neuron_uid:u16, validator_trust:u16) { ValidatorTrust::<T>::insert( netuid, neuron_uid, validator_trust ) }
     pub fn set_consensus( netuid:u16, neuron_uid:u16, consensus:u16) { Consensus::<T>::insert( netuid, neuron_uid, consensus ) }
+    pub fn set_weight_consensus( netuid:u16, neuron_uid:u16, weight_consensus:u16) { WeightConsensus::<T>::insert( netuid, neuron_uid, weight_consensus ) }
     pub fn set_incentive( netuid:u16, neuron_uid:u16, incentive:u16) { Incentive::<T>::insert( netuid, neuron_uid, incentive ) }
     pub fn set_dividend( netuid:u16, neuron_uid:u16, dividend:u16) { Dividends::<T>::insert( netuid, neuron_uid, dividend ) }
     pub fn set_pruning_score( netuid:u16, neuron_uid: u16, pruning_score: u16 ) { PruningScores::<T>::insert(netuid, neuron_uid, pruning_score); }
@@ -498,7 +504,9 @@ impl<T: Config> Pallet<T> {
     pub fn get_float_kappa( netuid:u16 ) -> I32F32 { I32F32::from_num( Self::get_kappa( netuid )  ) / I32F32::from_num( u16::MAX ) }
     pub fn get_rank( netuid:u16, neuron_uid: u16) -> u16 {  Rank::<T>::get( netuid,  neuron_uid) }
     pub fn get_trust( netuid:u16, neuron_uid: u16 ) -> u16 { Trust::<T>::get( netuid, neuron_uid )  }
+    pub fn get_validator_trust( netuid:u16, neuron_uid: u16 ) -> u16 { ValidatorTrust::<T>::get( netuid, neuron_uid ) }
     pub fn get_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { Consensus::<T>::get( netuid, neuron_uid )  }
+    pub fn get_weight_consensus( netuid:u16, neuron_uid: u16 ) -> u16 { WeightConsensus::<T>::get( netuid, neuron_uid ) }
     pub fn get_incentive( netuid:u16, neuron_uid: u16 ) -> u16 { Incentive::<T>::get( netuid, neuron_uid )   }
     pub fn get_dividend( netuid:u16, neuron_uid: u16 ) -> u16 { Dividends::<T>::get( netuid, neuron_uid )  }
     pub fn get_emission( netuid:u16, neuron_uid: u16 ) -> u64 { Emission::<T>::get( netuid, neuron_uid )  }
