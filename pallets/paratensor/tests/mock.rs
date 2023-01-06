@@ -120,6 +120,8 @@ parameter_types! {
 	pub const InitialValidatorEpochLen: u16 = 10;
 	pub const InitialValidatorEpochsPerReset: u16 = 10;
 	pub const InitialValidatorExcludeQuantile: u16 = 10;
+	pub const InitialScalingLawPower: u16 = 50;
+	pub const InitialSynergyScalingLawPower: u16 = 50;
 	pub const InitialMaxAllowedValidators: u16 = 100;
 
 	pub const InitialIssuance: u64 = 548833985028256;
@@ -155,12 +157,14 @@ impl pallet_paratensor::Config for Test {
 	type InitialValidatorSequenceLen = InitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = InitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = InitialValidatorEpochsPerReset;
+	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
+	type InitialScalingLawPower = InitialScalingLawPower;
+	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
 	type InitialImmunityPeriod = InitialImmunityPeriod;
 	type InitialActivityCutoff = InitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = InitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = InitialPruningScore;
 	type InitialBondsMovingAverage = InitialBondsMovingAverage;
-	type InitialValidatorExcludeQuantile = InitialValidatorExcludeQuantile;
 	type InitialMaxAllowedValidators = InitialMaxAllowedValidators;
 	type InitialDefaultTake = InitialDefaultTake;
 	type InitialWeightsVersionKey = InitialWeightsVersionKey;
