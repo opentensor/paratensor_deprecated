@@ -36,8 +36,10 @@ fn test_defaults() {
         assert_eq!( ParatensorModule::get_validator_epochs_per_reset( netuid ), 10 );
         assert_eq!( ParatensorModule::get_validator_sequence_length( netuid ), 10 );
         assert_eq!( ParatensorModule::get_validator_exclude_quantile( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_scaling_law_power( netuid ), 50 );
+        assert_eq!( ParatensorModule::get_synergy_scaling_law_power( netuid ), 50 );
         assert_eq!( ParatensorModule::get_registrations_this_interval( netuid ), 0 );
-        assert_eq!( ParatensorModule::get_max_registratations_per_block( netuid ), 3 );
+        assert_eq!( ParatensorModule::get_max_registrations_per_block( netuid ), 3 );
         assert_eq!( ParatensorModule::get_target_registrations_per_interval( netuid ), 2 );
     });
 }
@@ -156,6 +158,36 @@ fn test_sudo_set_validator_exclude_quantile() {
         assert_eq!( ParatensorModule::get_validator_exclude_quantile(netuid), init_value);
         assert_ok!( ParatensorModule::sudo_set_validator_exclude_quantile(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
         assert_eq!( ParatensorModule::get_validator_exclude_quantile(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_scaling_law_power() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 50;
+        let init_value: u16 = ParatensorModule::get_scaling_law_power( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_scaling_law_power(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_scaling_law_power(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_scaling_law_power(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_scaling_law_power(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_scaling_law_power(netuid), to_be_set);
+    });
+}
+
+#[test]
+fn test_sudo_set_synergy_scaling_law_power() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 50;
+        let init_value: u16 = ParatensorModule::get_synergy_scaling_law_power( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_synergy_scaling_law_power(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_synergy_scaling_law_power(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_synergy_scaling_law_power(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_synergy_scaling_law_power(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_synergy_scaling_law_power(netuid), to_be_set);
     });
 }
 
