@@ -223,12 +223,14 @@ impl<T: Config> Pallet<T> {
         Keys::<T>::remove( netuid, uid_to_prune ); 
         Rank::<T>::remove( netuid, uid_to_prune );
         Trust::<T>::remove( netuid, uid_to_prune );
+        ValidatorTrust::<T>::remove( netuid, uid_to_prune );
         Bonds::<T>::remove( netuid, uid_to_prune );
         Active::<T>::remove( netuid, uid_to_prune );
         Weights::<T>::remove( netuid, uid_to_prune );
         Emission::<T>::remove( netuid, uid_to_prune );
         Dividends::<T>::remove( netuid, uid_to_prune );
         Consensus::<T>::remove( netuid, uid_to_prune );
+        WeightConsensus::<T>::remove( netuid, uid_to_prune );
         Incentive::<T>::remove( netuid, uid_to_prune );
         ValidatorPermit::<T>::remove( netuid, uid_to_prune );
         PruningScores::<T>::remove( netuid, uid_to_prune );
@@ -437,12 +439,14 @@ impl<T: Config> Pallet<T> {
             Keys::<T>::remove( netuid, uid_i as u16 ); 
             Rank::<T>::remove( netuid, uid_i as u16 );
             Trust::<T>::remove( netuid, uid_i as u16 );
+            ValidatorTrust::<T>::remove( netuid, uid_i as u16 );
             Bonds::<T>::remove( netuid, uid_i as u16 );
             Active::<T>::remove( netuid, uid_i as u16 );
             Weights::<T>::remove( netuid, uid_i as u16 );
             Emission::<T>::remove( netuid, uid_i as u16 );
             Dividends::<T>::remove( netuid, uid_i as u16 );
             Consensus::<T>::remove( netuid, uid_i as u16 );
+            WeightConsensus::<T>::remove( netuid, uid_i as u16 );
             Incentive::<T>::remove( netuid, uid_i as u16 );
             PruningScores::<T>::remove( netuid, uid_i as u16 );
             Active::<T>::insert( netuid, uid_i as u16, true ); // Set to active by default.
