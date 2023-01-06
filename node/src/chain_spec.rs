@@ -5,7 +5,7 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_core::crypto::Ss58Codec;
+use sp_core::crypto::{Ss58Codec,Ss58AddressFormatRegistry};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -153,7 +153,7 @@ pub fn kusama_testnet_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
 		// Name
@@ -210,8 +210,8 @@ pub fn kusama_testnet_config() -> ChainSpec {
 				vec![
 					Ss58Codec::from_ss58check("5DRijXqKWJBR4wLdT9vAJaXHMbATnECnYX4HG48UV9pL9m8z").unwrap(),
 				],
-				2001.into(),
-				Ss58Codec::from_ss58check("5EqeLybpo51F5tdn4JrDEG9sWacgZ4ZgHaHUGU86sNvPQjE9").unwrap()
+				2245.into(),
+				Ss58Codec::from_ss58check("5HfwmrEq1iUPWmTtfbm1XSsPiSrw9dMraosh7sQcNmb6frsJ").unwrap()
 			)
 		},
 		// Bootnodes
@@ -227,7 +227,7 @@ pub fn kusama_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: 2244,
+			para_id: 2245,
 		},
 	)
 }
@@ -237,7 +237,7 @@ pub fn rococo_testnet_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
 		// Name
@@ -316,7 +316,7 @@ pub fn polkadot_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
 		// Name
