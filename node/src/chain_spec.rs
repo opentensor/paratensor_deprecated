@@ -237,7 +237,7 @@ pub fn rococo_testnet_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	//properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 13116.into());
 
 	ChainSpec::from_genesis(
 		// Name

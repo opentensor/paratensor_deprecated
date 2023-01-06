@@ -32,7 +32,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 }
 
 fn set_default_ss58_version() {
-	let bitternsor_prefix = sp_core::crypto::Ss58AddressFormat::custom(13116);
+	let bitternsor_prefix = sp_core::crypto::Ss58AddressFormat::custom(42);
 	sp_core::crypto::set_default_ss58_version(bitternsor_prefix);
 }
 
