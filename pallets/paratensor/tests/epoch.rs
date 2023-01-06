@@ -523,9 +523,10 @@ fn test_active_stake() {
 	});
 }
 
-#[test]
 /// Test that epoch masks out outdated weights and bonds of validators on deregistered servers.
-fn test_outdated_weights() {
+#[allow(dead_code)]
+// #[test]
+fn test_yuma_outdated_weights() {
 	new_test_ext().execute_with(|| {
 		let sparse: bool = true;
 		let n: u16 = 4;
@@ -623,6 +624,119 @@ fn test_outdated_weights() {
 		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 33328 ); // Note D = floor(0.5085649828 * 65_535)
 		assert_eq!( ParatensorModule::get_emission( netuid, 0 ), 254282491 ); // Note E = 0.5 * 0.5085649828 * 1_000_000_000 = 272_500_000 (discrepancy)
 		assert_eq!( bonds[0][2], I32F32::from_num(32112) / I32F32::from_num(65_535) ); // floor(0.49*(2^16-1))/(2^16-1)
+		assert_eq!( bonds[0][3], I32F32::from_num(1) ); // only uid0 has updated weights for new reg
+	});
+}
+
+#[test]
+/// Test that epoch masks out outdated weights and bonds of validators on deregistered servers.
+fn test_outdated_weights() {
+	new_test_ext().execute_with(|| {
+		let sparse: bool = true;
+		let n: u16 = 4;
+		let netuid: u16 = 0;
+		let tempo: u16 = u16::MAX - 1;  // high tempo to skip automatic epochs in on_initialize, use manual epochs instead
+		let mut block_number: u64 = 0;
+		let stake: u64 = 1;
+		add_network(netuid, tempo, 0);
+		ParatensorModule::set_max_allowed_uids( netuid, n );
+		ParatensorModule::set_max_registrations_per_block( netuid, n+1 ); // should be n, but RegistrationsThisBlock is not reset (TODO: Saeideh)
+
+		// === Register [validator1, validator2, server1, server2]
+		for key in 0..n as u64 {
+			ParatensorModule::add_balance_to_coldkey_account( &key, stake as u128 );
+			let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000);
+			assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(key), netuid, block_number, nonce, work, key, key));
+			ParatensorModule::increase_stake_on_coldkey_hotkey_account( &key, &key, stake );
+		}
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), n);
+
+		// === Issue validator permits
+		assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, n) );
+		assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), n);
+		ParatensorModule::epoch( netuid, 1_000_000_000 ); // run first epoch to set allowed validators
+		run_to_block( 1 ); block_number += 1; // run to next block to ensure weights are set on nodes after their registration block
+
+		// === Set weights [val1->srv1: 2/3, val1->srv2: 1/3, val2->srv1: 2/3, val2->srv2: 1/3, srv1->srv1: 1, srv2->srv2: 1]
+		for uid in 0..(n/2) as u64 {
+			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, ((n/2)..n).collect(), vec![ 2 * (u16::MAX / 3), u16::MAX / 3 ], 0));
+		}
+		for uid in ((n/2) as u64)..n as u64 {
+			assert_ok!(ParatensorModule::set_weights(Origin::signed(uid), netuid, vec![ uid as u16 ], vec![ u16::MAX ], 0)); // server self-weight
+		}
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
+		/*	current_block: 1; activity_cutoff: 5000
+			Last update: [1, 1, 1, 1]; Inactive: [false, false, false, false]
+			S: [1, 1, 1, 1]; S (mask): [1, 1, 1, 1]; S (mask+norm): [0.25, 0.25, 0.25, 0.25]
+			Block at registration: [0, 0, 0, 0]
+			W: [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], [(3, 1)]]
+			W (diagmask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (diag+outdatemask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (mask+norm): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			R: [0, 0, 0.6666666665, 0.3333333333]
+			W (threshold): [[(2, 1), (3, 1)], [(2, 1), (3, 1)], [], []]
+			T: [0, 0, 0.5, 0.5]
+			C: [0.006693358, 0.006693358, 0.500019074, 0.500019074]
+			I: [0, 0, 0.6666666667, 0.333333333]
+			B: [[], [], [], []]
+			B (outdatedmask): [[], [], [], []]
+			B (mask+norm): [[], [], [], []]
+			ΔB: [[(2, 0.1666666665), (3, 0.0833333333)], [(2, 0.1666666665), (3, 0.0833333333)], [], []]
+			ΔB (norm): [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
+			emaB: [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
+			D: [0.4999999998, 0.4999999998, 0, 0]
+			E: [249999999.7671693563, 249999999.7671693563, 333333333.4885537624, 166666666.5114462376]
+			P: [0.2499999998, 0.2499999998, 0.3333333335, 0.1666666665] */
+
+		// === Dereg server2 at uid3 (least emission) + register new key over uid3
+		let new_key: u64 = n as u64; // register a new key while at max capacity, which means the least incentive uid will be deregistered
+		let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 0);
+		assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(new_key), netuid, block_number, nonce, work, new_key, new_key));
+		let deregistered_uid: u16 = n-1; // since uid=n-1 only recieved 1/3 of weight, it will get pruned first
+		assert_eq!(new_key, ParatensorModule::get_hotkey_for_net_and_uid(netuid, deregistered_uid).expect("Not registered"));
+		run_to_block( 2 ); // run to next block to outdate weights and bonds set on deregistered uid
+
+		// === Update weights from only uid=0
+		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ 2 * (u16::MAX / 3), u16::MAX / 3 ], 0));
+		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
+		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
+		/* 	current_block: 2; activity_cutoff: 5000
+			Last update: [2, 1, 1, 1]; Inactive: [false, false, false, false]
+			Block at registration: [0, 0, 0, 1]
+			S: [1, 1, 1, 0]; S (mask): [1, 1, 1, 0]
+			S (mask+norm): [0.3333333333, 0.3333333333, 0.3333333333, 0]
+			W: [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], []]
+			W (diagmask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (diag+outdatemask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665)], [], []]
+			W (mask+norm): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], [], []]
+			W (consensus 0): [0, 0, 0.8666666665, 0.3333333333]
+			W (clipped 0): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.8666666665)], [], []]
+			W (consensus 1): [0, 0, 0.7797101443, 0.3333333333]
+			W (clipped 1): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.7797101443)], [], []]
+			W (consensus 2): [0, 0, 0.727605936, 0.3333333333]
+			W (clipped 2): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.727605936)], [], []]
+			W (consensus 3): [0, 0, 0.6984680328, 0.3333333333]
+			W (clipped 3): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.727605936)], [], []]
+			vT: [0.9999999998, 0.727605936, 0, 0]
+			R: [0, 0, 0.8070547648, 0.192945235]
+			W (threshold): [[(2, 1), (3, 1)], [(2, 1)], [], []]
+			T: [0, 0, 0.6666666665, 0.3333333333]
+			C: [0.006693358, 0.006693358, 0.84114109, 0.1588793003]
+			I: [0, 0, 0.9567936284, 0.0432063714]
+			B: [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			B (outdatedmask): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704)], [], []]
+			B (mask+norm): [[(2, 0.5), (3, 1)], [(2, 0.5)], [], []]
+			ΔB: [[(2, 0.222222222), (3, 0.111111111)], [(2, 0.2425353117)], [], []]
+			ΔB (norm): [[(2, 0.4781465728), (3, 1)], [(2, 0.521853427)], [], []]
+			emaB: [[(2, 0.4978146572), (3, 1)], [(2, 0.5021853426)], [], []]
+			D: [0.5195122634, 0.480487736, 0, 0]
+			E: [259756131.7961663008, 240243867.9710030556, 478396814.3165111542, 21603185.6834888458]
+			P: [0.2597561318, 0.240243868, 0.4783968143, 0.0216031857] */
+		let bonds = ParatensorModule::get_bonds( netuid );
+		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 34046 ); // Note D = floor(0.5195122634 * 65_535)
+		assert_eq!( ParatensorModule::get_emission( netuid, 0 ), 259_756_131 ); // Note E = 0.5 * 0.5195122634 * 1_000_000_000 = 259_756_131
+		assert_eq!( bonds[0][2], I32F32::from_num(32624) / I32F32::from_num(65_535) ); // floor(0.4978146572*(2^16-1))/(2^16-1)
 		assert_eq!( bonds[0][3], I32F32::from_num(1) ); // only uid0 has updated weights for new reg
 	});
 }
