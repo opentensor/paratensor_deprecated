@@ -22,6 +22,7 @@ mod benchmarking;
 /// =========================
 mod registration;
 mod epoch;
+mod math;
 mod utils;
 mod staking;
 mod weights;
