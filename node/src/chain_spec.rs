@@ -153,7 +153,7 @@ pub fn kusama_testnet_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
 		// Name
@@ -316,7 +316,7 @@ pub fn polkadot_config() -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "TAO".into());
 	properties.insert("tokenDecimals".into(), 9.into());
-	properties.insert("ss58Format".into(), 13116.into());
+	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
 		// Name
