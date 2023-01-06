@@ -23,7 +23,6 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use scale_info::Type;
 
 use frame_support::{
 	construct_runtime, parameter_types,
@@ -474,6 +473,9 @@ parameter_types! {
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
+	pub const ParatensorInitialValidatorExcludeQuantile: u16 = 10; // 0.1
+	pub const ParatensorInitialScalingLawPower: u16 = 50; // 0.5
+	pub const ParatensorInitialSynergyScalingLawPower: u16 = 50; // 0.5
 	pub const ParatensorInitialMaxAllowedValidators: u16 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
@@ -484,10 +486,7 @@ parameter_types! {
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
-	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
 	pub const ParatensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
-	pub const InitialScalingLawPower: u8 = 50; // 0.5
-	pub const InitialSynergyScalingLawPower: u8 = 60; // 0.6
 	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
 	pub const ParatensorInitialMinDifficulty: u64 = 1;
 	pub const ParatensorInitialMaxDifficulty: u64 = u64::MAX;
@@ -509,6 +508,9 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialValidatorSequenceLen = ParatensorInitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = ParatensorInitialValidatorEpochsPerReset;
+	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
+	type InitialScalingLawPower = ParatensorInitialScalingLawPower;
+	type InitialSynergyScalingLawPower = ParatensorInitialSynergyScalingLawPower;
 	type InitialTempo = ParatensorInitialTempo;
 	type InitialDifficulty = ParatensorInitialDifficulty;
 	type InitialAdjustmentInterval = ParatensorInitialAdjustmentInterval;
@@ -517,15 +519,12 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = ParatensorInitialPruningScore;
-	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
 	type InitialMaxAllowedValidators = ParatensorInitialMaxAllowedValidators;
 	type InitialDefaultTake = ParatensorInitialDefaultTake;
 	type InitialWeightsVersionKey = ParatensorInitialWeightsVersionKey;
 	type InitialMaxDifficulty = ParatensorInitialMaxDifficulty;
 	type InitialMinDifficulty = ParatensorInitialMinDifficulty;
 	type InitialServingRateLimit = ParatensorInitialServingRateLimit;
-	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
-	type InitialScalingLawPower = InitialScalingLawPower;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -750,6 +749,16 @@ impl_runtime_apis! {
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
+		}
+	}
+
+	impl paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
+		fn get_neurons(netuid: u16) -> Vec<pallet_paratensor::neuron_info::NeuronInfo> {
+			Paratensor::get_neurons(netuid)
+		}
+
+		fn get_neuron(netuid: u16, uid: u16) -> Option<pallet_paratensor::neuron_info::NeuronInfo> {
+			Paratensor::get_neuron(netuid, uid)
 		}
 	}
 }
