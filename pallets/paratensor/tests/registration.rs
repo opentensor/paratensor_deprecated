@@ -101,7 +101,7 @@ fn test_registration_too_many_registrations_per_block() {
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		ParatensorModule::set_max_registrations_per_block( netuid, 10 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid), 10 );
+		assert_eq!( ParatensorModule::get_max_registrations_per_block(netuid), 10 );
 
 		let block_number: u64 = 0;
 		let (nonce0, work0): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, 3942084);
@@ -398,9 +398,9 @@ fn test_full_pass_through() {
 		ParatensorModule::set_max_registrations_per_block( netuid0, 3 );
 		ParatensorModule::set_max_registrations_per_block( netuid1, 3 );
 		ParatensorModule::set_max_registrations_per_block( netuid2, 3 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid0), 3 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid1), 3 );
-		assert_eq!( ParatensorModule::get_max_registratations_per_block(netuid2), 3 );
+		assert_eq!( ParatensorModule::get_max_registrations_per_block(netuid0), 3 );
+		assert_eq!( ParatensorModule::get_max_registrations_per_block(netuid1), 3 );
+		assert_eq!( ParatensorModule::get_max_registrations_per_block(netuid2), 3 );
 
 		// Check that no one has registered yet.
 		assert_eq!(ParatensorModule::get_subnetwork_n(netuid0), 0);

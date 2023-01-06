@@ -39,7 +39,7 @@ fn test_defaults() {
         assert_eq!( ParatensorModule::get_scaling_law_power( netuid ), 50 );
         assert_eq!( ParatensorModule::get_synergy_scaling_law_power( netuid ), 50 );
         assert_eq!( ParatensorModule::get_registrations_this_interval( netuid ), 0 );
-        assert_eq!( ParatensorModule::get_max_registratations_per_block( netuid ), 3 );
+        assert_eq!( ParatensorModule::get_max_registrations_per_block( netuid ), 3 );
         assert_eq!( ParatensorModule::get_target_registrations_per_interval( netuid ), 2 );
     });
 }
