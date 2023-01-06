@@ -95,6 +95,12 @@ pub mod pallet {
 		type InitialValidatorEpochLen: Get<u16>;
 		#[pallet::constant] /// Default Reset length.
 		type InitialValidatorEpochsPerReset: Get<u16>;
+		#[pallet::constant] /// Initial validator exclude quantile.
+		type InitialValidatorExcludeQuantile: Get<u16>;
+		#[pallet::constant] /// Initial scaling law power.
+		type InitialScalingLawPower: Get<u16>;
+		#[pallet::constant] /// Initial synergy scaling law power.
+		type InitialSynergyScalingLawPower: Get<u16>;
 		#[pallet::constant] /// Immunity Period Constant.
 		type InitialImmunityPeriod: Get<u16>;
 		#[pallet::constant] /// Activity constant
@@ -103,8 +109,6 @@ pub mod pallet {
 		type InitialMaxRegistrationsPerBlock: Get<u16>;
 		#[pallet::constant] /// Initial pruning score for each neuron
 		type InitialPruningScore: Get<u16>;	
-		#[pallet::constant] /// Initial validator exclude quantile.
-		type InitialValidatorExcludeQuantile: Get<u16>;
 		#[pallet::constant] /// Initial allowed validators per network.
 		type InitialMaxAllowedValidators: Get<u16>;
 		#[pallet::constant] /// Initial default delegation take.
@@ -325,6 +329,10 @@ pub mod pallet {
 	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
 	#[pallet::type_value]
 	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
+	#[pallet::type_value]
+	pub fn DefaultScalingLawPower<T: Config>() -> u16 {T::InitialScalingLawPower::get()}
+	#[pallet::type_value]
+	pub fn DefaultSynergyScalingLawPower<T: Config>() -> u16 {T::InitialSynergyScalingLawPower::get()}
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
@@ -367,6 +375,10 @@ pub mod pallet {
 	pub type ValidatorEpochsPerReset<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorEpochsPerReset<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_exclude_quantile
 	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> scaling_law_power
+	pub type ScalingLawPower<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultScalingLawPower<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> synergy_scaling_law_power
+	pub type SynergyScalingLawPower<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultSynergyScalingLawPower<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> target_registrations_this_interval
 	pub type TargetRegistrationsPerInterval<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultTargetRegistrationsPerInterval<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> block_at_registration
@@ -459,11 +471,13 @@ pub mod pallet {
 		ValidatorBatchSizeSet( u16, u16 ), // --- Event created when validator batch size is set for a subnet.
 		ValidatorSequenceLengthSet( u16, u16 ), // --- Event created when validator sequence length i set for a subnet.
 		ValidatorEpochPerResetSet( u16, u16 ), // --- Event created when validator epoch per reset is set for a subnet.
+		ValidatorExcludeQuantileSet( u16, u16 ), // --- Event created when the validator exclude quantile has been set for a subnet.
+		ScalingLawPowerSet( u16, u16 ), // --- Event created when the scaling law power has been set for a subnet.
+		SynergyScalingLawPowerSet( u16, u16 ), // --- Event created when the synergy scaling law has been set for a subnet.
 		WeightsSetRateLimitSet( u16, u64 ), // --- Event create when weights set rate limit has been set for a subnet.
 		ImmunityPeriodSet( u16, u16), // --- Event created when immunity period is set for a subnet.
 		BondsMovingAverageSet( u16, u64), // --- Event created when bonds moving average is set for a subnet.
 		MaxAllowedValidatorsSet( u16, u16), // --- Event created when setting the max number of allowed validators on a subnet.
-		ValidatorExcludeQuantileSet( u16, u16 ), // --- Event created when the validator exclude quantile has been set for a subnet.
 		AxonServed( T::AccountId ), // --- Event created when the axon server information is added to the network.
 		PrometheusServed( T::AccountId ), // --- Event created when the axon server information is added to the network.
 		EmissionValuesSet(), // --- Event created when emission ratios fr all networks is set.
@@ -1112,16 +1126,24 @@ pub mod pallet {
 			Self::do_sudo_set_validator_epochs_per_reset( origin, netuid, validator_epochs_per_reset )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_validator_exclude_quantile( origin:OriginFor<T>, netuid: u16, validator_exclude_quantile: u16 ) -> DispatchResult {
+			Self::do_sudo_set_validator_exclude_quantile( origin, netuid, validator_exclude_quantile )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_scaling_law_power( origin:OriginFor<T>, netuid: u16, scaling_law_power: u16 ) -> DispatchResult {
+			Self::do_sudo_set_scaling_law_power( origin, netuid, scaling_law_power )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_synergy_scaling_law_power( origin:OriginFor<T>, netuid: u16, synergy_scaling_law_power: u16 ) -> DispatchResult {
+			Self::do_sudo_set_synergy_scaling_law_power( origin, netuid, synergy_scaling_law_power )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_immunity_period( origin:OriginFor<T>, netuid: u16, immunity_period: u16 ) -> DispatchResult {
 			Self::do_sudo_set_immunity_period( origin, netuid, immunity_period )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_weight_limit( origin:OriginFor<T>, netuid: u16, max_weight_limit: u16 ) -> DispatchResult {
 			Self::do_sudo_set_max_weight_limit( origin, netuid, max_weight_limit )
-		}
-		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
-		pub fn sudo_set_validator_exclude_quantile( origin:OriginFor<T>, netuid: u16, validator_exclude_quantile: u16 ) -> DispatchResult {
-			Self::do_sudo_set_validator_exclude_quantile( origin, netuid, validator_exclude_quantile )
 		}
 
 	}	

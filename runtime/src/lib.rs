@@ -473,6 +473,9 @@ parameter_types! {
 	pub const ParatensorInitialValidatorSequenceLen: u16 = 10;
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
+	pub const ParatensorInitialValidatorExcludeQuantile: u16 = 10; // 0.1
+	pub const ParatensorInitialScalingLawPower: u16 = 50; // 0.5
+	pub const ParatensorInitialSynergyScalingLawPower: u16 = 50; // 0.5
 	pub const ParatensorInitialMaxAllowedValidators: u16 = 100;
 	pub const ParatensorInitialTempo: u16 = 0;
 	pub const ParatensorInitialDifficulty: u64 = 10000000;
@@ -483,7 +486,6 @@ parameter_types! {
 	pub const ParatensorInitialMaxRegistrationsPerBlock: u16 = 2;
 	pub const ParatensorInitialPruningScore : u16 = u16::MAX;
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
-	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
 	pub const ParatensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
 	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
 	pub const ParatensorInitialMinDifficulty: u64 = 1;
@@ -506,6 +508,9 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialValidatorSequenceLen = ParatensorInitialValidatorSequenceLen;
 	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = ParatensorInitialValidatorEpochsPerReset;
+	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
+	type InitialScalingLawPower = ParatensorInitialScalingLawPower;
+	type InitialSynergyScalingLawPower = ParatensorInitialSynergyScalingLawPower;
 	type InitialTempo = ParatensorInitialTempo;
 	type InitialDifficulty = ParatensorInitialDifficulty;
 	type InitialAdjustmentInterval = ParatensorInitialAdjustmentInterval;
@@ -514,7 +519,6 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialActivityCutoff = ParatensorInitialActivityCutoff;
 	type InitialMaxRegistrationsPerBlock = ParatensorInitialMaxRegistrationsPerBlock;
 	type InitialPruningScore = ParatensorInitialPruningScore;
-	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
 	type InitialMaxAllowedValidators = ParatensorInitialMaxAllowedValidators;
 	type InitialDefaultTake = ParatensorInitialDefaultTake;
 	type InitialWeightsVersionKey = ParatensorInitialWeightsVersionKey;

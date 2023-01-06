@@ -36,7 +36,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_registrations_this_block( netuid:u16 ) -> u16 { RegistrationsThisBlock::<T>::get( netuid ) }
     pub fn get_last_mechanism_step_block( netuid: u16 ) -> u64 { LastMechansimStepBlock::<T>::get( netuid ) }
     pub fn get_registrations_this_interval( netuid: u16 ) -> u16 { RegistrationsThisInterval::<T>::get( netuid ) } 
-    pub fn get_max_registratations_per_block( netuid: u16 ) -> u16 { MaxRegistrationsPerBlock::<T>::get( netuid ) } 
+    pub fn get_max_registrations_per_block( netuid: u16 ) -> u16 { MaxRegistrationsPerBlock::<T>::get( netuid ) } 
     pub fn get_neuron_block_at_registration( netuid: u16, neuron_uid: u16 ) -> u64 { BlockAtRegistration::<T>::get( netuid, neuron_uid )}
 
     /// ========================
@@ -126,6 +126,30 @@ impl<T: Config> Pallet<T> {
         Self::set_validator_exclude_quantile( netuid, validator_exclude_quantile );
         log::info!("ValidatorExcludeQuantileSet( netuid: {:?} validator_exclude_quantile: {:?} ) ", netuid, validator_exclude_quantile);
         Self::deposit_event( Event::ValidatorExcludeQuantileSet( netuid, validator_exclude_quantile ));
+        Ok(())
+    }
+
+    pub fn get_scaling_law_power( netuid: u16 ) -> u16 { ScalingLawPower::<T>::get( netuid ) }
+    pub fn set_scaling_law_power( netuid: u16, scaling_law_power: u16 ) { ScalingLawPower::<T>::insert( netuid, scaling_law_power ); }
+    pub fn do_sudo_set_scaling_law_power( origin:T::Origin, netuid: u16, scaling_law_power: u16 ) -> DispatchResult {
+        ensure_root( origin )?;
+        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
+        ensure!( scaling_law_power <= 100, Error::<T>::StorageValueOutOfRange ); // The scaling law power must be between 0 and 100 => 0% and 100%
+        Self::set_scaling_law_power( netuid, scaling_law_power );
+        log::info!("ScalingLawPowerSet( netuid: {:?} scaling_law_power: {:?} ) ", netuid, scaling_law_power);
+        Self::deposit_event( Event::ScalingLawPowerSet( netuid, scaling_law_power ));
+        Ok(())
+    }
+
+    pub fn get_synergy_scaling_law_power( netuid: u16 ) -> u16 { SynergyScalingLawPower::<T>::get( netuid ) }
+    pub fn set_synergy_scaling_law_power( netuid: u16, synergy_scaling_law_power: u16 ) { SynergyScalingLawPower::<T>::insert( netuid, synergy_scaling_law_power ); }
+    pub fn do_sudo_set_synergy_scaling_law_power( origin:T::Origin, netuid: u16, synergy_scaling_law_power: u16 ) -> DispatchResult {
+        ensure_root( origin )?;
+        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
+        ensure!( synergy_scaling_law_power <= 100, Error::<T>::StorageValueOutOfRange ); // The synergy scaling law power must be between 0 and 100 => 0% and 100%
+        Self::set_synergy_scaling_law_power( netuid, synergy_scaling_law_power );
+        log::info!("SynergyScalingLawPowerSet( netuid: {:?} synergy_scaling_law_power: {:?} ) ", netuid, synergy_scaling_law_power);
+        Self::deposit_event( Event::SynergyScalingLawPowerSet( netuid, synergy_scaling_law_power ));
         Ok(())
     }
 
