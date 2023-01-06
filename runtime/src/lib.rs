@@ -23,6 +23,7 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use scale_info::Type;
 
 use frame_support::{
 	construct_runtime, parameter_types,
@@ -485,6 +486,8 @@ parameter_types! {
 	pub const ParatensorInitialBondsMovingAverage: u64 = 900000;
 	pub const ParatensorInitialValidatorExcludeQuantile: u8 = 10; // 0.1
 	pub const ParatensorInitialDefaultTake: u16 = 11_796; // 18% honest number.
+	pub const InitialScalingLawPower: u8 = 50; // 0.5
+	pub const InitialSynergyScalingLawPower: u8 = 60; // 0.6
 	pub const ParatensorInitialWeightsVersionKey: u64 = 0;
 	pub const ParatensorInitialMinDifficulty: u64 = 1;
 	pub const ParatensorInitialMaxDifficulty: u64 = u64::MAX;
@@ -521,6 +524,8 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialMaxDifficulty = ParatensorInitialMaxDifficulty;
 	type InitialMinDifficulty = ParatensorInitialMinDifficulty;
 	type InitialServingRateLimit = ParatensorInitialServingRateLimit;
+	type InitialSynergyScalingLawPower = InitialSynergyScalingLawPower;
+	type InitialScalingLawPower = InitialScalingLawPower;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
