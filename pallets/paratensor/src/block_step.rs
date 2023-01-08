@@ -159,6 +159,7 @@ impl<T: Config> Pallet<T> {
     /// Returns emission awarded to a hotkey as a function of its proportion of the total stake.
     ///
     pub fn calculate_stake_proportional_emission( stake: u64, total_stake:u64, emission: u64 ) -> u64 {
+        if total_stake == 0 { return 0 };
         let stake_proportion: I64F64 = I64F64::from_num( stake ) / I64F64::from_num( total_stake );
         let proportional_emission: I64F64 = I64F64::from_num( emission ) * stake_proportion;
         return proportional_emission.to_num::<u64>();

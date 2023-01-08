@@ -572,6 +572,21 @@ fn test_has_enough_stake_no() {
 /************************************************************
 	staking::delegating
 ************************************************************/
+
+#[test]
+fn test_delegate_stake_division_by_zero_check(){
+    new_test_ext().execute_with(|| { 
+        let netuid: u16 = 0;
+        let tempo: u16 = 1;
+		let hotkey = 1;
+		let coldkey = 3;
+        add_network( netuid, tempo, 0 );
+		register_ok_neuron( netuid, hotkey, coldkey, 2341312 );
+        assert_ok!(ParatensorModule::become_delegate(<<Test as Config>::Origin>::signed(coldkey), hotkey) );
+        ParatensorModule::emit_inflation_through_hotkey_account( &hotkey, 1000 );
+    });
+}
+
 #[test]
 fn test_full_with_delegating() {
 	new_test_ext().execute_with(|| {

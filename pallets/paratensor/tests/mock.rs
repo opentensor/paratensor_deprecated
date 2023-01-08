@@ -126,9 +126,7 @@ parameter_types! {
 
 	pub const InitialIssuance: u64 = 548833985028256;
 	pub const InitialDifficulty: u64 = 10000;
-	pub const MinimumDifficulty: u64 = 10000;
 	pub const InitialActivityCutoff: u16 = 5000;
-	pub const MaximumDifficulty: u64 = u64::MAX/4;
 	pub const InitialAdjustmentInterval: u16 = 100;
 	pub const InitialMaxRegistrationsPerBlock: u16 = 3;
 	pub const InitialTargetRegistrationsPerInterval: u16 = 2;

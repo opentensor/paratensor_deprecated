@@ -23,4 +23,4 @@ parathreads [here](https://wiki.polkadot.network/docs/learn-parathreads).
 
 
 # Test individual with logs
-SKIP_WASM_BUILD=1 RUST_LOG=runtime=debug cargo test your_test_name -- --nocapture 
+SKIP_WASM_BUILD=1 RUST_LOG=debug cargo test your_test_name -- --nocapture 
