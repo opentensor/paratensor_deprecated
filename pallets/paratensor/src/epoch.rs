@@ -156,7 +156,8 @@ impl<T: Config> Pallet<T> {
         log::trace!( "emaB:\n{:?}\n", ema_bonds.clone() );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j
-        let dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
+        let mut dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
+        inplace_normalize( &mut dividends );
         log::trace!( "D:\n{:?}\n", dividends.clone() );
 
         // =================================
@@ -164,7 +165,7 @@ impl<T: Config> Pallet<T> {
         // =================================
 
         // Compute emission scores.
-        let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
+        let float_rao_emission: I64F64 = I64F64::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
         
@@ -177,7 +178,7 @@ impl<T: Config> Pallet<T> {
                 normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
             }
         }
-        let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
+        let emission: Vec<I64F64> = normalized_emission.iter().map( |e| I64F64::from_num( *e ) * float_rao_emission ).collect();
         log::trace!( "E: {:?}", emission.clone() );
 
         // Set pruning scores.
@@ -196,7 +197,7 @@ impl<T: Config> Pallet<T> {
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
-            Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
+            Self::set_emission( netuid, i, fixed64_to_u64( emission[i as usize] ) );
             Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
             
             // Set bonds only if uid retains validator permit, otherwise clear bonds.
@@ -210,7 +211,7 @@ impl<T: Config> Pallet<T> {
 
         // Returning the tao emission here which will be distributed at a higher level.
         // Translate the emission into u64 values to be returned.
-        emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
+        emission.iter().map( |e| fixed64_to_u64( *e ) ).collect()
     }
 
     /// Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning_score, emission and bonds, and 
@@ -381,7 +382,8 @@ impl<T: Config> Pallet<T> {
         log::trace!( "emaB: {:?}", ema_bonds.clone() );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
-        let dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
+        let mut dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
+        inplace_normalize( &mut dividends );
         log::trace!( "D: {:?}", dividends.clone() );
 
         // =================================
@@ -389,7 +391,7 @@ impl<T: Config> Pallet<T> {
         // =================================
 
         // Compute emission scores.
-        let float_rao_emission: I32F32 = I32F32::from_num( rao_emission );
+        let float_rao_emission: I64F64 = I64F64::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
 
@@ -402,7 +404,8 @@ impl<T: Config> Pallet<T> {
                 normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
             }
         }
-        let emission: Vec<I32F32> = normalized_emission.iter().map( |e| e * float_rao_emission ).collect();
+        
+        let emission: Vec<I64F64> = normalized_emission.iter().map( |e| I64F64::from_num( *e ) * float_rao_emission ).collect();
         log::trace!( "E: {:?}", emission.clone() );
 
         // Set pruning scores.
@@ -422,7 +425,7 @@ impl<T: Config> Pallet<T> {
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
-            Self::set_emission( netuid, i, fixed_to_u64( emission[i as usize] ) );
+            Self::set_emission( netuid, i, fixed64_to_u64( emission[i as usize] ) );
             Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
 
             // Set bonds only if uid retains validator permit, otherwise clear bonds.
@@ -436,7 +439,7 @@ impl<T: Config> Pallet<T> {
 
         // Returning the tao emission here which will be distributed at a higher level.
         // Translate the emission into u64 values to be returned.
-        emission.iter().map( |e| fixed_to_u64( *e ) ).collect()
+        emission.iter().map( |e| fixed64_to_u64( *e ) ).collect()
     }
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
@@ -552,6 +555,9 @@ pub fn fixed_to_u16( x: I32F32 ) -> u16 { x.to_num::<u16>() }
 
 #[allow(dead_code)]
 pub fn fixed_to_u64( x: I32F32 ) -> u64 { x.to_num::<u64>() }
+
+#[allow(dead_code)]
+pub fn fixed64_to_u64( x: I64F64 ) -> u64 { x.to_num::<u64>() }
 
 #[allow(dead_code)]
 pub fn fixed64_to_fixed32( x: I64F64 ) -> I32F32 { I32F32::from_num( x ) }

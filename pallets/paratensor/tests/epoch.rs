@@ -141,7 +141,7 @@ fn test_512_graph() {
 			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 1023 ); // Note D = floor(1 / 64 * 65_535) = 1023
-			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 7812485 ); // Note E = 0.5 / 200 * 1_000_000_000 = 7_812_500 (discrepancy)
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 7812500 ); // Note E = 0.5 / 200 * 1_000_000_000 = 7_812_500 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
 			assert_eq!( bonds[uid as usize][server], I32F32::from_num(1023) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 64 * 65_535) / 65_535 = 1023 / 65_535
 		}
@@ -152,7 +152,7 @@ fn test_512_graph() {
 			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 65096 ); // Note C = 1/(1+exp(-10*(1-0.5))) = 0.9932 => (0.9932*65_535) = floor( 65089.362 )
 			assert_eq!( ParatensorModule::get_incentive( netuid, uid ), 146 ); // Note I = floor(1 / (512 - 64) * 65_535) = 146
 			assert_eq!( ParatensorModule::get_dividend( netuid, uid ), 0 );
-			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1116073 ); // Note E = floor(0.5 / (512 - 64) * 1_000_000_000) = 1_116_071 (discrepancy)
+			assert_eq!( ParatensorModule::get_emission( netuid, uid ), 1116071 ); // Note E = floor(0.5 / (512 - 64) * 1_000_000_000) = 1_116_071 (discrepancy)
 			assert_eq!( bonds[uid as usize][0], 0.0 );
 			assert_eq!( bonds[uid as usize][server], 0.0 );
 		}
@@ -198,7 +198,7 @@ fn test_4096_graph() {
 				assert_eq!( ParatensorModule::get_consensus( netuid, *uid ), 438 ); // Note C = 0.0066928507 = (0.0066928507*65_535) = floor( 438.6159706245 )
 				assert_eq!( ParatensorModule::get_incentive( netuid, *uid ), 0 );
 				assert_eq!( ParatensorModule::get_dividend( netuid, *uid ), 255 ); // Note D = floor(1 / 256 * 65_535)
-				assert_eq!( ParatensorModule::get_emission( netuid, *uid ), 1953110 ); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125 (discrepancy)
+				assert_eq!( ParatensorModule::get_emission( netuid, *uid ), 1953125 ); // Note E = 0.5 / 256 * 1_000_000_000 = 1953125 (discrepancy)
 				assert_eq!( bonds[*uid as usize][validator], 0.0 );
 				assert_eq!( bonds[*uid as usize][server], I32F32::from_num(255) / I32F32::from_num(65_535) ); // Note B_ij = floor(1 / 256 * 65_535) / 65_535
 			}
@@ -209,7 +209,7 @@ fn test_4096_graph() {
 				assert_eq!( ParatensorModule::get_consensus( netuid, *uid ), 65096 ); // Note C = 1/(1+exp(-10*(1-0.5))) = 0.9932 => (0.9932*65_535) = floor( 65089.362 )
 				assert_eq!( ParatensorModule::get_incentive( netuid, *uid ), 17 ); // Note I = floor(1 / (4096 - 256) * 65_535) = 16
 				assert_eq!( ParatensorModule::get_dividend( netuid, *uid ), 0 );
-				assert_eq!( ParatensorModule::get_emission( netuid, *uid ), 130209 ); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208 (discrepancy)
+				assert_eq!( ParatensorModule::get_emission( netuid, *uid ), 130208 ); // Note E = floor(0.5 / (4096 - 256) * 1_000_000_000) = 130208 (discrepancy)
 				assert_eq!( bonds[*uid as usize][validator], 0.0 );
 				assert_eq!( bonds[*uid as usize][server], 0.0 );
 			}
