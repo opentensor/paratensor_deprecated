@@ -14,6 +14,44 @@ const LOG_TARGET: &'static str = "runtime::paratensor::registration";
 
 impl<T: Config> Pallet<T> {
 
+    pub fn do_sudo_registration( 
+        origin: T::Origin,
+        netuid: u16, 
+        hotkey: T::AccountId, 
+        coldkey: T::AccountId,
+        stake: u64,
+        balance: u64,
+    ) -> DispatchResult {
+        ensure_root( origin )?;        
+        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
+        ensure!( !Uids::<T>::contains_key( netuid, &hotkey ), Error::<T>::AlreadyRegistered );
+
+        Self::create_account_if_non_existent( &coldkey, &hotkey);         
+        ensure!( Self::coldkey_owns_hotkey( &coldkey, &hotkey ), Error::<T>::NonAssociatedColdKey );
+        Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &hotkey, stake );
+
+        let balance_to_be_added_as_balance = Self::u64_to_balance( balance );
+        ensure!( balance_to_be_added_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
+        Self::add_balance_to_coldkey_account( &coldkey, balance_to_be_added_as_balance.unwrap() );
+
+        let subnetwork_uid: u16;
+        let current_block_number: u64 = Self::get_current_block_as_u64();
+        let current_subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        if current_subnetwork_n < Self::get_max_allowed_uids( netuid ) {
+            subnetwork_uid = current_subnetwork_n;
+            Self::increment_subnetwork_n( netuid );
+
+        } else {
+            subnetwork_uid = Self::get_neuron_to_prune( netuid );
+            Self::prune_uid_from_subnetwork( netuid, subnetwork_uid );
+        }
+    
+        Self::fill_new_neuron_account_in_subnetwork( netuid, subnetwork_uid, &hotkey, current_block_number );
+        log::info!("NeuronRegistered( netuid:{:?} uid:{:?} hotkey:{:?}  ) ", netuid, subnetwork_uid, hotkey );
+        Self::deposit_event( Event::NeuronRegistered( netuid, subnetwork_uid, hotkey ) );
+        Ok(())
+    }
+
     /// ---- The implementation for the extrinsic do_registration.
     ///
     /// # Args:

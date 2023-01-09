@@ -875,6 +875,17 @@ pub mod pallet {
 		) -> DispatchResult { 
 			Self::do_registration(origin, netuid, block_number, nonce, work, hotkey, coldkey)
 		}
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_register( 
+				origin:OriginFor<T>, 
+				netuid: u16,
+				hotkey: T::AccountId, 
+				coldkey: T::AccountId,
+				stake: u64,
+				balance: u64,
+			) -> DispatchResult { 
+			Self::do_sudo_registration(origin, netuid, hotkey, coldkey, stake, balance)
+		}
 
 		/// ---- SUDO ONLY FUNCTIONS ------------------------------------------------------------
 

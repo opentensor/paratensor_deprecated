@@ -45,6 +45,45 @@ fn test_defaults() {
 }
 
 #[test]
+fn test_sudo_registration() {
+	new_test_ext().execute_with(|| {
+        add_network( 0, 0, 0 );
+        ParatensorModule::set_max_allowed_uids( 0, 10 );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 0, 0, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 1, 1, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 2, 2, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 3, 3, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 4, 4, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 5, 5, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 6, 6, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 7, 7, 10, 11) );
+        assert_ok!( ParatensorModule::sudo_register(<<Test as Config>::Origin>::root(), 0, 8, 8, 10, 11) );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &0 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &1 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &2 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &3 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &4 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &5 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &6 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &7 ), 11 );
+        assert_eq!( ParatensorModule::get_coldkey_balance( &8 ), 11 );
+        assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 0).unwrap(), 0 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 1).unwrap(), 1 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 2).unwrap(), 2 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 3).unwrap(), 3 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 4).unwrap(), 4 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 5).unwrap(), 5 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 6).unwrap(), 6 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 7).unwrap(), 7 );
+		assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 0, 8).unwrap(), 8 );
+        assert_eq!( ParatensorModule::get_total_stake(), 90 );
+        assert!( ParatensorModule::coldkey_owns_hotkey( &0, &0 ) );
+        assert_eq!( ParatensorModule::get_owning_coldkey_for_hotkey( &0 ), 0 );
+        assert_eq!( ParatensorModule::get_stake_for_coldkey_and_hotkey( &0, &0 ), 10 );
+    });
+}
+
+#[test]
 fn test_sudo_set_default_take() {
 	new_test_ext().execute_with(|| {
         let to_be_set: u16 = 10;
