@@ -102,7 +102,7 @@ parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
 	pub const TransactionByteFee: Balance = 100;
 	pub const SDebug:u64 = 1;
-	pub const InitialRho: u16 = 22;
+	pub const InitialRho: u16 = 30;
 	pub const InitialKappa: u16 = 32_767;
 	pub const InitialTempo: u16 = 0;
 	pub const SelfOwnership: u64 = 2;
