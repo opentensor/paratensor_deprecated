@@ -462,7 +462,7 @@ impl pallet_collator_selection::Config for Runtime {
 
 // Configure the pallet paratensor.
 parameter_types! {
-	pub const ParatensorInitialRho: u16 = 10;
+	pub const ParatensorInitialRho: u16 = 30;
 	pub const ParatensorInitialKappa: u16 = 32_767; // 0.5 = 65535/2 
 	pub const ParatensorInitialWeightCuts: u16 = 3;
 	pub const ParatensorInitialMaxAllowedUids: u16 = 2000;
