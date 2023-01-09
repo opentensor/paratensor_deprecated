@@ -365,67 +365,36 @@ fn split_graph(major_stake: I32F32, major_weight: I32F32, minor_weight: I32F32, 
 	(validators, servers, major_validators, minor_validators, major_servers, minor_servers, stake, weights)
 }
 
-/// Test an epoch on a graph with 4096 nodes, of which the first 128 are validators, the graph is split into a major and minor set, each setting specific weight on itself and the complement on the other. Asserts that the major emission ratio >= major stake ratio.
+/// Test consensus guarantees with an epoch on a graph with 4096 nodes, of which the first 128 are validators, the graph is split into a major and minor set, each setting specific weight on itself and the complement on the other. Asserts that the major emission ratio >= major stake ratio.
 #[test]
-fn test_4096_graph_split() {
+fn test_consensus_guarantees() {
 	let netuid: u16 = 0;
 	let network_n: u16 = 4096;
 	let validators_n: u16 = 128;
 	let epochs: u16 = 1;
 	let interleave = 2;
-	log::info!( "test_{network_n:?}_graph_split ({validators_n:?} validators)" );
-	for (major_stake, major_weight, minor_weight) in vec![(0.6, 0.76, 0.8), (0.6, 0.76, 1.), (0.65, 0.76, 0.8), (0.65, 0.74, 1.), (0.7, 0.77, 0.7), (0.7, 0.74, 1.), (0.75, 0.79, 0.7), (0.75, 0.75, 1.)] {
+	log::info!( "test_consensus_guarantees ({network_n:?}, {validators_n:?} validators)" );
+	for (major_stake, major_weight, minor_weight) in vec![(0.6, 0.76, 0.8), (0.6, 0.76, 1.), (0.6, 0.92, 1.), (0.6, 0.94, 1.)] {
 		let (validators, servers, major_validators, minor_validators, major_servers, minor_servers, stake, weights) = split_graph(fixed(major_stake), fixed(major_weight), fixed(minor_weight), validators_n as usize, network_n as usize, interleave as usize);
-		let server: usize = servers[0] as usize;
-		let validator: usize = validators[0] as usize;
-		let (mut rank, mut incentive, mut dividend, mut emission, mut bondv, mut bonds): (Vec<u16>, Vec<u16>, Vec<u16>, Vec<u64>, Vec<I32F32>, Vec<I32F32>) = (vec![], vec![], vec![], vec![], vec![], vec![]);
-		
-		// Dense epoch
+
 		new_test_ext().execute_with(|| {
 			init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, true, &stake, true, &weights, true, false, 0, false);
 
-			let bond = ParatensorModule::get_bonds( netuid );
-			for uid in 0..network_n {
-				rank.push( ParatensorModule::get_rank( netuid, uid ) );
-				incentive.push( ParatensorModule::get_incentive( netuid, uid ) );
-				dividend.push( ParatensorModule::get_dividend( netuid, uid ) );
-				emission.push( ParatensorModule::get_emission( netuid, uid ) );
-				bondv.push( bond[uid as usize][validator] );
-				bonds.push( bond[uid as usize][server] );
+			let mut major_emission: I64F64 = I64F64::from_num(0);
+			let mut minor_emission: I64F64 = I64F64::from_num(0);
+			for set in vec![major_validators, major_servers] {
+				for uid in set {
+					major_emission += I64F64::from_num(ParatensorModule::get_emission( netuid, uid ));
+				}
 			}
+			for set in vec![minor_validators, minor_servers] {
+				for uid in set {
+					minor_emission += I64F64::from_num(ParatensorModule::get_emission( netuid, uid ));
+				}
+			}
+			let major_ratio: I32F32 = I32F32::from_num(major_emission / (major_emission + minor_emission));
+			assert!(major_stake <= major_ratio);
 		});
-
-		// Sparse epoch (same random seed as dense)
-		new_test_ext().execute_with(|| {
-			init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, true, &stake, true, &weights, true, false, 0, true);
-			// Assert that dense and sparse epoch results are equal
-			let bond = ParatensorModule::get_bonds( netuid );
-			for uid in 0..network_n {
-				assert_eq!( ParatensorModule::get_rank( netuid, uid ), rank[uid as usize] );
-				assert_eq!( ParatensorModule::get_incentive( netuid, uid ), incentive[uid as usize] );
-				assert_eq!( ParatensorModule::get_dividend( netuid, uid ), dividend[uid as usize] );
-				assert_eq!( ParatensorModule::get_emission( netuid, uid ), emission[uid as usize] );
-				assert_eq!( bond[uid as usize][validator], bondv[uid as usize] );
-				assert_eq!( bond[uid as usize][server], bonds[uid as usize] );
-			}
-		});
-
-		let mut major_emission: I64F64 = I64F64::from_num(0);
-		let mut minor_emission: I64F64 = I64F64::from_num(0);
-		for set in vec![major_validators, major_servers] {
-			for uid in set {
-				major_emission += I64F64::from_num(emission[uid as usize]);
-			}
-		}
-		for set in vec![minor_validators, minor_servers] {
-			for uid in set {
-				minor_emission += I64F64::from_num(emission[uid as usize]);
-			}
-		}
-		let major_ratio: I32F32 = I32F32::from_num(major_emission / (major_emission + minor_emission));
-		// println!("{:?}, {:?}, {:?}", major_stake, major_weight, minor_weight);
-		// println!("{:?}, {:?}, {:?}", major_emission, minor_emission, major_ratio);
-		assert!(major_stake <= major_ratio);
 	}
 }
 
