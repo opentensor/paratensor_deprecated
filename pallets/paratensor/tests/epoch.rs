@@ -17,6 +17,31 @@ fn test_nill_epoch_paratensor() {
 	});
 }
 
+
+#[test]
+// Test an epoch on an empty graph.
+fn test_overflow() {
+	new_test_ext().execute_with(|| {
+        log::info!( "test_overflow:" );
+		let netuid: u16 = 0;
+		add_network(netuid, 0, 0); 
+		ParatensorModule::set_max_allowed_uids( netuid, 3 ); 
+		ParatensorModule::increase_stake_on_coldkey_hotkey_account( &0, &0, 10 );
+		ParatensorModule::increase_stake_on_coldkey_hotkey_account( &1, &1, 10 );
+		ParatensorModule::increase_stake_on_coldkey_hotkey_account( &2, &2, 10 );
+		ParatensorModule::add_subnetwork_account( netuid, 0, &0 );
+		ParatensorModule::add_subnetwork_account( netuid, 1, &1 );
+		ParatensorModule::add_subnetwork_account( netuid, 2, &2);
+		ParatensorModule::set_validator_permit(0, 0, true);
+		ParatensorModule::set_validator_permit(0, 1, true);
+		ParatensorModule::set_validator_permit(0, 2, true);
+		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, vec![ 0, 1, 2 ], vec![ u16::MAX/3, u16::MAX/3, u16::MAX ], 0));
+		assert_ok!(ParatensorModule::set_weights(Origin::signed(1), netuid, vec![ 1, 2 ], vec![ u16::MAX/2, u16::MAX/2 ], 0));
+		assert_ok!(ParatensorModule::set_weights(Origin::signed(2), netuid, vec![ 2 ], vec![ u16::MAX ], 0));
+		ParatensorModule::epoch( 0, u64::MAX );
+	});
+}
+
 #[test]
 // Test an epoch on a graph with a single item.
 fn test_1_graph() {
