@@ -16,6 +16,7 @@ fn test_defaults() {
         assert_eq!( ParatensorModule::get_rho( netuid ), 30 );
         assert_eq!( ParatensorModule::get_tempo( netuid ), 10 );
         assert_eq!( ParatensorModule::get_kappa( netuid ), 32_767 );
+        assert_eq!( ParatensorModule::get_weight_cuts( netuid ), 3 );
         assert_eq!( ParatensorModule::get_min_difficulty( netuid ), 1 );
         assert_eq!( ParatensorModule::get_max_difficulty( netuid ), u64::MAX );
         assert_eq!( ParatensorModule::get_difficulty_as_u64( netuid ), 10000 );
@@ -327,6 +328,22 @@ fn test_sudo_set_rho() {
         assert_eq!( ParatensorModule::get_rho(netuid), init_value);
         assert_ok!( ParatensorModule::sudo_set_rho(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
         assert_eq!( ParatensorModule::get_rho(netuid), to_be_set);
+    });
+}
+        
+
+#[test]
+fn test_sudo_set_weight_cuts() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 3;
+        let init_value: u16 = ParatensorModule::get_weight_cuts( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_weight_cuts(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_weight_cuts(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_weight_cuts(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_weight_cuts(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::get_weight_cuts(netuid), to_be_set);
     });
 }
 

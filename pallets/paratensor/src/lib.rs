@@ -82,6 +82,8 @@ pub mod pallet {
 		type InitialBondsMovingAverage: Get<u64>;
 		#[pallet::constant] /// Initial target registrations per interval.
 		type InitialTargetRegistrationsPerInterval: Get<u16>;
+		#[pallet::constant] /// Initial number of weight cuts in epoch.
+		type InitialWeightCuts: Get<u16>;
 		#[pallet::constant] /// Rho constant
 		type InitialRho: Get<u16>;
 		#[pallet::constant] /// Kappa constant
@@ -299,6 +301,8 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
+	pub fn DefaultWeightCuts<T: Config>() -> u16 { T::InitialWeightCuts::get() }
+	#[pallet::type_value]
 	pub fn DefaultRho<T: Config>() -> u16 { T::InitialRho::get() }
 	#[pallet::type_value]
 	pub fn DefaultKappa<T: Config>() -> u16 { T::InitialKappa::get() }
@@ -338,6 +342,8 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 
+	#[pallet::storage] /// --- MAP ( netuid ) --> WeightCuts
+	pub type WeightCuts<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultWeightCuts<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> Rho
 	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> Kappa
@@ -473,6 +479,7 @@ pub mod pallet {
 		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
 		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a subnet.
 		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
+		WeightCutsSet( u16, u16 ), // --- Event created when WeightCuts value is set.
 		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
 		KappaSet( u16, u16 ), // --- Event created when kappa is set for a subnet.
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
@@ -1112,6 +1119,10 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_kappa( origin:OriginFor<T>, netuid: u16, kappa: u16 ) -> DispatchResult {
 			Self::do_sudo_set_kappa( origin, netuid, kappa )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_weight_cuts( origin:OriginFor<T>, netuid: u16, weight_cuts: u16 ) -> DispatchResult {
+			Self::do_sudo_set_weight_cuts( origin, netuid, weight_cuts )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>, netuid: u16, max_allowed_uids: u16 ) -> DispatchResult {
