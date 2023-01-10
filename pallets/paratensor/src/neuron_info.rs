@@ -23,6 +23,7 @@ pub struct NeuronInfo {
     trust: u16,
     dividends: u16,
     last_update: u64,
+    validator_permit: bool,
     weights: Vec<(u16, u16)>, // map of uid to weight
     bonds: Vec<(u16, u16)>, // map of uid to bond
     pruning_score: u16
@@ -77,6 +78,7 @@ impl<T: Config> Pallet<T> {
             let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
             let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
+            let validator_permit = ValidatorPermit::<T>::get( netuid, uid as u16 );
             
             // TODO: replace with last_update check if we remove Active storage
             let active = Active::<T>::get( netuid, uid as u16 );
@@ -115,6 +117,7 @@ impl<T: Config> Pallet<T> {
                 trust,
                 dividends,
                 last_update,
+                validator_permit,
                 weights,
                 bonds,
                 pruning_score
@@ -152,6 +155,7 @@ impl<T: Config> Pallet<T> {
         let coldkey = Owner::<T>::get( hotkey.clone() ).clone();
 
         let last_update = LastUpdate::<T>::get( netuid, uid as u16 );
+        let validator_permit = ValidatorPermit::<T>::get( netuid, uid as u16 );
         
         // TODO: replace with last_update check if we remove Active storage
         let active = Active::<T>::get( netuid, uid as u16 );
@@ -190,6 +194,7 @@ impl<T: Config> Pallet<T> {
             trust,
             dividends,
             last_update,
+            validator_permit,
             weights,
             bonds,
             pruning_score
