@@ -122,11 +122,9 @@ impl<T: Config> Pallet<T> {
         log::debug!( "T:\n{:?}\n", trust.clone() );
 
         // Compute consensus.
-        let one: I32F32 = I32F32::from_num(1.0); 
         let rho: I32F32 = Self::get_float_rho( netuid );
         let kappa: I32F32 = Self::get_float_kappa( netuid );
-        let exp_trust: Vec<I32F32> = trust.iter().map( |t|  exp( -rho * (t - kappa) ).expect("") ).collect();
-        let consensus: Vec<I32F32> = exp_trust.iter().map( |t|  one /(one + t) ).collect();
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| sigmoid_safe(*t, rho, kappa)).collect();
         log::debug!( "C:\n{:?}\n", consensus.clone() );
 
         // Compute incentive.
@@ -342,11 +340,9 @@ impl<T: Config> Pallet<T> {
 
         // Compute consensus.
         // range: I32F32(0, 1)
-        let one: I32F32 = I32F32::from_num(1.0); 
         let rho: I32F32 = Self::get_float_rho( netuid );
         let kappa: I32F32 = Self::get_float_kappa( netuid );
-        let exp_trust: Vec<I32F32> = trust.iter().map( |t|  exp( -rho * (t - kappa) ).expect("") ).collect();
-        let consensus: Vec<I32F32> = exp_trust.iter().map( |t|  one /(one + t) ).collect();
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| sigmoid_safe(*t, rho, kappa)).collect();
         log::debug!( "C: {:?}", consensus.clone() );
 
         // Compute incentive.
@@ -597,6 +593,48 @@ pub fn sum( x: &Vec<I32F32> ) -> I32F32 { x.iter().sum() }
 pub fn is_zero( vector: &Vec<I32F32> ) -> bool {
     let vector_sum: I32F32 = sum( &vector );
     vector_sum == I32F32::from_num( 0 )
+}
+
+/// Exp safe function with I32F32 output of I32F32 input.
+#[allow(dead_code)]
+pub fn exp_safe(input: I32F32) -> I32F32 {
+    let min_input: I32F32 = I32F32::from_num(-20); // <= 1/exp(-20) = 485 165 195,4097903
+    let max_input: I32F32 = I32F32::from_num(20); // <= exp(20) = 485 165 195,4097903
+    let mut safe_input: I32F32 = input;
+    if input < min_input {
+        safe_input = min_input;
+    }
+    else if max_input < input {
+        safe_input = max_input;
+    }
+    let output: I32F32;
+    match exp(safe_input) {
+        Ok(val) => {
+            output = val;
+        },
+        Err(_err) => {
+            if safe_input <= 0 {
+                output = I32F32::from_num(0);
+            }
+            else {
+                output = I32F32::max_value();
+            }
+        }
+    }
+    output
+}
+
+/// Sigmoid safe function with I32F32 output of I32F32 input with offset kappa and (recommended) scaling 0 < rho <= 40.
+#[allow(dead_code)]
+pub fn sigmoid_safe(input: I32F32, rho: I32F32, kappa: I32F32) -> I32F32 {
+    let one: I32F32 = I32F32::from_num(1);
+    let offset: I32F32 = input.saturating_sub(kappa); // (input - kappa)
+    let neg_rho: I32F32 = rho.saturating_mul(-one); // -rho
+    let exp_input: I32F32 = neg_rho.saturating_mul(offset); // -rho*(input-kappa)
+    let exp_output: I32F32 = exp_safe(exp_input); // exp(-rho*(input-kappa))
+    let denominator: I32F32 = exp_output.saturating_add(one); // 1 + exp(-rho*(input-kappa))
+    let sigmoid_output: I32F32 = one.saturating_div(denominator); // 1 / (1 + exp(-rho*(input-kappa)))
+    sigmoid_output
 }
 
 /// Returns a bool vector where an item is true if the vector item is in topk values.
@@ -1009,6 +1047,7 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 
 #[cfg(test)]
 mod tests {
+    use substrate_fixed::transcendental::exp;
     use substrate_fixed::types::{I32F32, I64F64};
     use crate::epoch;
 
@@ -1184,6 +1223,46 @@ mod tests {
         let target: Vec<Vec<(u16, I32F32)>> = vec![ vec![] ];
         let mat = vec_to_sparse_mat_fixed(&vector, 2, true);
         assert_sparse_mat_compare(&mat, &target, I32F32::from_num(0));
+    }
+
+    #[test]
+    fn test_exp_safe() {
+        let zero: I32F32 = I32F32::from_num(0);
+        let one: I32F32 = I32F32::from_num(1);
+        let target: I32F32 = exp(zero).unwrap();
+        assert_eq!(epoch::exp_safe(zero), target);
+        let target: I32F32 = exp(one).unwrap();
+        assert_eq!(epoch::exp_safe(one), target);
+        let min_input: I32F32 = I32F32::from_num(-20); // <= 1/exp(-20) = 485 165 195,4097903
+        let max_input: I32F32 = I32F32::from_num(20); // <= exp(20) = 485 165 195,4097903
+        let target: I32F32 = exp(min_input).unwrap();
+        assert_eq!(epoch::exp_safe(min_input), target);
+        assert_eq!(epoch::exp_safe(min_input - one), target);
+        assert_eq!(epoch::exp_safe(I32F32::min_value()), target);
+        let target: I32F32 = exp(max_input).unwrap();
+        assert_eq!(epoch::exp_safe(max_input), target);
+        assert_eq!(epoch::exp_safe(max_input + one), target);
+        assert_eq!(epoch::exp_safe(I32F32::max_value()), target);
+    }
+
+    #[test]
+    fn test_sigmoid_safe() {
+        let trust: Vec<I32F32> = vec![I32F32::min_value(), I32F32::from_num(0), I32F32::from_num(0.4), I32F32::from_num(0.5), I32F32::from_num(0.6), I32F32::from_num(1), I32F32::max_value()];
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| epoch::sigmoid_safe(*t, I32F32::max_value(), I32F32::max_value())).collect();
+        let target: Vec<I32F32> = vec_to_fixed(&vec![0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019, 0.5]);
+        assert_eq!(&consensus, &target);
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| epoch::sigmoid_safe(*t, I32F32::min_value(), I32F32::min_value())).collect();
+        let target: Vec<I32F32> = vec_to_fixed(&vec![0.5, 0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019, 0.0000000019]);
+        assert_eq!(&consensus, &target);
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| epoch::sigmoid_safe(*t, I32F32::from_num(30), I32F32::from_num(0.5))).collect();
+        let target: Vec<f64> = vec![0.0000000019, 0.0000003057, 0.0474258729, 0.5, 0.952574127, 0.9999996943, 0.9999999981];
+        let target: Vec<I32F32> = target.iter().map(|c: &f64| I32F32::from_num(*c)).collect();
+        assert_eq!(&consensus, &target);
+        let trust: Vec<I32F32> = vec_to_fixed(&vec![0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.]);
+        let consensus: Vec<I32F32> = trust.iter().map(|t: &I32F32| epoch::sigmoid_safe(*t, I32F32::from_num(40), I32F32::from_num(0.5))).collect();
+        let target: Vec<f64> = vec![0.0000000019, 0.0000001125, 0.0000061442, 0.0003353502, 0.017986214, 0.5, 0.9820138067, 0.9996646498, 0.9999938558, 0.9999998875, 0.9999999981];
+        let target: Vec<I32F32> = target.iter().map(|c: &f64| I32F32::from_num(*c)).collect();
+        assert_eq!(&consensus, &target);
     }
 
     #[test]
