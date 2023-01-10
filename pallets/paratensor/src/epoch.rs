@@ -1157,6 +1157,14 @@ mod tests {
         assert_eq!(output, target);
         let output: Vec<u64> = vector.iter().map( |e: &I32F32| (*e).to_num::<u64>() ).collect();
         assert_eq!(output, target);
+        let val: I32F32 = I32F32::from_num(0);
+        let res: u64 = val.to_num::<u64>();
+        let vector: Vec<I32F32> = vec![val; 1000];
+        let target: Vec<u64> = vec![res; 1000];
+        let output: Vec<u64> = vector.iter().map( |e: &I32F32| e.to_num::<u64>() ).collect();
+        assert_eq!(output, target);
+        let output: Vec<u64> = vector.iter().map( |e: &I32F32| (*e).to_num::<u64>() ).collect();
+        assert_eq!(output, target);
         let val: I96F32 = I96F32::from_num(u64::MAX);
         let res: u64 = val.to_num::<u64>();
         assert_eq!(res, u64::MAX);
