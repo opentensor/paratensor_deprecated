@@ -366,7 +366,7 @@ impl<T: Config> Pallet<T> {
         // log::debug!( "B (outdatedmask): {:?}", bonds.clone() );
 
         // Normalize remaining bonds: sum_i b_ij = 1.
-        inplace_col_normalize_sparse( &mut bonds );
+        inplace_col_normalize_sparse( &mut bonds, n );
         // log::debug!( "B (mask+norm): {:?}", bonds.clone() );        
 
         // Compute bonds delta column normalized.
@@ -374,7 +374,7 @@ impl<T: Config> Pallet<T> {
         // log::debug!( "ΔB: {:?}", bonds_delta.clone() );
 
         // Normalize bonds delta.
-        inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
+        inplace_col_normalize_sparse( &mut bonds_delta, n ); // sum_i b_ij = 1
         // log::debug!( "ΔB (norm): {:?}", bonds_delta.clone() );
     
         // Compute bonds moving average.
@@ -382,7 +382,7 @@ impl<T: Config> Pallet<T> {
         let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = sparse_mat_ema( &bonds_delta, &bonds, alpha );
 
         // Normalize EMA bonds.
-        inplace_col_normalize_sparse( &mut ema_bonds ); // sum_i b_ij = 1
+        inplace_col_normalize_sparse( &mut ema_bonds, n ); // sum_i b_ij = 1
         // log::debug!( "emaB: {:?}", ema_bonds.clone() );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
@@ -690,7 +690,7 @@ pub fn inplace_row_normalize( x: &mut Vec<Vec<I32F32>> ) {
     for i in 0..x.len() {
         let row_sum: I32F32 = x[i].iter().sum();
         if row_sum > I32F32::from_num( 0.0 as f32 ) {
-            x[i].iter_mut().for_each(|x_ij| *x_ij /= row_sum);
+            x[i].iter_mut().for_each(|x_ij: &mut I32F32| *x_ij /= row_sum);
         }
     }
 }
@@ -708,9 +708,8 @@ pub fn inplace_row_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>>
 
 /// Normalizes (sum to 1 except 0) each column (dim=1) of a sparse matrix in-place.
 #[allow(dead_code)]
-pub fn inplace_col_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>> ) {
-    let n = sparse_matrix.len();
-    let mut col_sum: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); n ]; // assume square matrix, rows=cols
+pub fn inplace_col_normalize_sparse( sparse_matrix: &mut Vec<Vec<(u16, I32F32)>>, columns: u16 ) {
+    let mut col_sum: Vec<I32F32> = vec![ I32F32::from_num( 0.0 ); columns as usize]; // assume square matrix, rows=cols
     for sparse_row in sparse_matrix.iter() {
         for (j, value) in sparse_row.iter() {
             col_sum[*j as usize] += value;
@@ -1459,7 +1458,7 @@ mod tests {
                                     0., 0., 0., 0., 0., 0., 0., 
                                     1., 1., 1., 1., 1., 1., 1.];
         let mut mat = vec_to_sparse_mat_fixed(&vector, 6, true);
-        epoch::inplace_col_normalize_sparse(&mut mat);
+        epoch::inplace_col_normalize_sparse(&mut mat, 6);
         let target:Vec<f32> = vec![ 0., 0.1, 0., 0.2, 0., 0.3, 0.4, 
                                     0., 0.166666, 0., 0.333333, 0., 0.5, 0., 
                                     0.1, 0., 0., 0.2, 0., 0.3, 0.4, 
@@ -1474,8 +1473,12 @@ mod tests {
                                     0., 0., 0., 0.,
                                     0., 0., 0., 0.];
         let mut mat = vec_to_sparse_mat_fixed(&vector, 3, false);
-        epoch::inplace_col_normalize_sparse(&mut mat);
+        epoch::inplace_col_normalize_sparse(&mut mat, 6);
         assert_sparse_mat_compare(&mat, &vec_to_sparse_mat_fixed(&target, 3, false), I32F32::from_num( 0 ));
+        let mut mat: Vec<Vec<(u16, I32F32)>> = vec![];
+        let target: Vec<Vec<(u16, I32F32)>> = vec![];
+        epoch::inplace_col_normalize_sparse(&mut mat, 0);
+        assert_sparse_mat_compare(&mat, &target, epsilon);
     }
 
     #[test]
