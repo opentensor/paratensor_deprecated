@@ -12,19 +12,19 @@ pub use paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
 use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
 #[rpc]
-pub trait NeuronInfoApi<BlockHash> {
+pub trait ParatensorCustomApi<BlockHash> {
 	#[rpc(name = "neuronInfo_getNeurons")]
 	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
 	#[rpc(name = "neuronInfo_getNeuron")]
 	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> Result<Option<NeuronInfoStruct>>;
 }
 
-pub struct NeuronInfo<C, M> {
+pub struct ParatensorCustom<C, M> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<M>,
 }
 
-impl<C, M> NeuronInfo<C, M> {
+impl<C, M> ParatensorCustom<C, M> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -47,7 +47,7 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block> NeuronInfoApi<<Block as BlockT>::Hash> for NeuronInfo<C, Block>
+impl<C, Block> ParatensorCustomApi<<Block as BlockT>::Hash> for ParatensorCustom<C, Block>
 where
 	Block: BlockT,
 	C: 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
