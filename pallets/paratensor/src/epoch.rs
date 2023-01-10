@@ -2,7 +2,7 @@ use super::*;
 use frame_support::sp_std::vec;
 use frame_support::inherent::Vec;
 use substrate_fixed::transcendental::exp;
-use substrate_fixed::types::{I32F32, I64F64, I110F18};
+use substrate_fixed::types::{I32F32, I64F64, I96F32};
 use frame_support::storage::IterableStorageDoubleMap;
 
 impl<T: Config> Pallet<T> {
@@ -176,10 +176,10 @@ impl<T: Config> Pallet<T> {
             }
         }
 
-        // Compute rao based emission scores. range: I110F18(0, rao_emission)
-        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
-        let emission: Vec<I110F18> = normalized_emission.iter().map( |e: &I32F32| I110F18::from_num( *e ) * float_rao_emission ).collect();
-        let emission: Vec<u64> = emission.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
+        // Compute rao based emission scores. range: I96F32(0, rao_emission)
+        let float_rao_emission: I96F32 = I96F32::from_num( rao_emission );
+        let emission: Vec<I96F32> = normalized_emission.iter().map( |e: &I32F32| I96F32::from_num( *e ) * float_rao_emission ).collect();
+        let emission: Vec<u64> = emission.iter().map( |e: &I96F32| e.to_num::<u64>() ).collect();
         log::debug!( "E: {:?}", emission.clone() );
 
         // Set pruning scores.
@@ -409,10 +409,10 @@ impl<T: Config> Pallet<T> {
             }
         }
         
-        // Compute rao based emission scores. range: I110F18(0, rao_emission)
-        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
-        let emission: Vec<I110F18> = normalized_emission.iter().map( |e: &I32F32| I110F18::from_num( *e ) * float_rao_emission ).collect();
-        let emission: Vec<u64> = emission.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
+        // Compute rao based emission scores. range: I96F32(0, rao_emission)
+        let float_rao_emission: I96F32 = I96F32::from_num( rao_emission );
+        let emission: Vec<I96F32> = normalized_emission.iter().map( |e: &I32F32| I96F32::from_num( *e ) * float_rao_emission ).collect();
+        let emission: Vec<u64> = emission.iter().map( |e: &I96F32| e.to_num::<u64>() ).collect();
         log::debug!( "nE: {:?}", normalized_emission.clone() );
         log::debug!( "E: {:?}", emission.clone() );
 
@@ -1050,7 +1050,7 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 #[cfg(test)]
 mod tests {
     use substrate_fixed::transcendental::exp;
-    use substrate_fixed::types::{I32F32, I64F64, I110F18};
+    use substrate_fixed::types::{I32F32, I64F64, I96F32, I110F18};
     use crate::epoch;
 
     fn assert_float_compare(a: I32F32, b: I32F32, epsilon: I32F32 ) {
@@ -1101,6 +1101,16 @@ mod tests {
     }
 
     #[test]
+    fn test_fixed_overflow() {
+        let max_32: I32F32 = I32F32::max_value();
+        let max_u64: u64 = u64::MAX;
+        let _prod_96: I96F32 = I96F32::from_num(max_32) * I96F32::from_num(max_u64);
+        // let one: I96F32 = I96F32::from_num(1);
+        // let prod_96: I96F32 = (I96F32::from_num(max_32) + one) * I96F32::from_num(max_u64); // overflows
+        let _prod_110: I110F18 = I110F18::from_num(max_32) * I110F18::from_num(max_u64);
+    }
+
+    #[test]
     fn test_u64_normalization() {
         let min: u64 = 1;
         let min32: u64 = 4_889_444; // 21_000_000_000_000_000 / 4_294_967_296
@@ -1148,14 +1158,14 @@ mod tests {
         assert_eq!(output, target);
         let output: Vec<u64> = vector.iter().map( |e: &I32F32| (*e).to_num::<u64>() ).collect();
         assert_eq!(output, target);
-        let val: I110F18 = I110F18::from_num(u64::MAX);
+        let val: I96F32 = I96F32::from_num(u64::MAX);
         let res: u64 = val.to_num::<u64>();
         assert_eq!(res, u64::MAX);
-        let vector: Vec<I110F18> = vec![val; 1000];
+        let vector: Vec<I96F32> = vec![val; 1000];
         let target: Vec<u64> = vec![u64::MAX; 1000];
-        let output: Vec<u64> = vector.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
+        let output: Vec<u64> = vector.iter().map( |e: &I96F32| e.to_num::<u64>() ).collect();
         assert_eq!(output, target);
-        let output: Vec<u64> = vector.iter().map( |e: &I110F18| (*e).to_num::<u64>() ).collect();
+        let output: Vec<u64> = vector.iter().map( |e: &I96F32| (*e).to_num::<u64>() ).collect();
         assert_eq!(output, target);
     }
     
