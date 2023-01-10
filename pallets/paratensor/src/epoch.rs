@@ -163,7 +163,6 @@ impl<T: Config> Pallet<T> {
         // =================================
 
         // Compute emission scores.
-        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
         
@@ -176,7 +175,11 @@ impl<T: Config> Pallet<T> {
                 normalized_emission = active_stake.clone(); // emission proportional to inactive-masked normalized stake
             }
         }
-        let emission: Vec<I110F18> = normalized_emission.iter().map( |e| I110F18::from_num( *e ) * float_rao_emission ).collect();
+
+        // Compute rao based emission scores. range: I110F18(0, rao_emission)
+        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
+        let emission: Vec<I110F18> = normalized_emission.iter().map( |e: &I32F32| I110F18::from_num( *e ) * float_rao_emission ).collect();
+        let emission: Vec<u64> = emission.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
         log::debug!( "E: {:?}", emission.clone() );
 
         // Set pruning scores.
@@ -195,7 +198,7 @@ impl<T: Config> Pallet<T> {
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
-            Self::set_emission( netuid, i, emission[i as usize].to_num::<u64>() );
+            Self::set_emission( netuid, i, emission[i as usize] );
             Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
             
             // Set bonds only if uid retains validator permit, otherwise clear bonds.
@@ -208,8 +211,7 @@ impl<T: Config> Pallet<T> {
         }  
 
         // Returning the tao emission here which will be distributed at a higher level.
-        // Translate the emission into u64 values to be returned.
-        emission.iter().map( |e| e.to_num::<u64>() ).collect()
+        emission
     }
 
     /// Calculates reward consensus values, then updates rank, trust, consensus, incentive, dividend, pruning_score, emission and bonds, and 
@@ -394,7 +396,6 @@ impl<T: Config> Pallet<T> {
         // =================================
 
         // Compute normalized emission scores. range: I32F32(0, 1)
-        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
         let mut normalized_emission: Vec<I32F32> = incentive.iter().zip( dividends.clone() ).map( |(ii, di)| ii + di ).collect();
         inplace_normalize( &mut normalized_emission );
 
@@ -409,7 +410,9 @@ impl<T: Config> Pallet<T> {
         }
         
         // Compute rao based emission scores. range: I110F18(0, rao_emission)
-        let emission: Vec<I110F18> = normalized_emission.iter().map( |e| I110F18::from_num( *e ) * float_rao_emission ).collect();
+        let float_rao_emission: I110F18 = I110F18::from_num( rao_emission );
+        let emission: Vec<I110F18> = normalized_emission.iter().map( |e: &I32F32| I110F18::from_num( *e ) * float_rao_emission ).collect();
+        let emission: Vec<u64> = emission.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
         log::debug!( "nE: {:?}", normalized_emission.clone() );
         log::debug!( "E: {:?}", emission.clone() );
 
@@ -430,7 +433,7 @@ impl<T: Config> Pallet<T> {
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
-            Self::set_emission( netuid, i, emission[i as usize].to_num::<u64>() );
+            Self::set_emission( netuid, i, emission[i as usize] );
             Self::set_validator_permit( netuid, i, new_validator_permits[i as usize] );
 
             // Set bonds only if uid retains validator permit, otherwise clear bonds.
@@ -443,8 +446,7 @@ impl<T: Config> Pallet<T> {
         }
 
         // Returning the tao emission here which will be distributed at a higher level.
-        // Translate the emission into u64 values to be returned.
-        emission.iter().map( |e| e.to_num::<u64>() ).collect()
+        emission
     }
 
     pub fn set_rank( netuid:u16, neuron_uid: u16, rank:u16 ) { Rank::<T>::insert( netuid, neuron_uid, rank) }
