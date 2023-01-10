@@ -274,6 +274,22 @@ pub fn rococo_testnet_config() -> ChainSpec {
 						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
 						Ss58Codec::from_ss58check("5F46fcTzcMSm7e6Tu9W6DmEeLcA1wE6rxdN42fniWFZJRdWp").unwrap(),
 					),
+					(
+						Ss58Codec::from_ss58check("Fk3FnurqREFZ7CW7Vc44k6magDAvmn1oNmWEiG9gJPjxZMP").unwrap(),
+						Ss58Codec::from_ss58check("Fk3FnurqREFZ7CW7Vc44k6magDAvmn1oNmWEiG9gJPjxZMP").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("HC4AUuwxHALGCcHo3JAo6XgLKA5nQhy4cjgGjLpFKhbpyzT").unwrap(),
+						Ss58Codec::from_ss58check("HC4AUuwxHALGCcHo3JAo6XgLKA5nQhy4cjgGjLpFKhbpyzT").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("GvUoJw9CVqdmmRTkGcAfPyUbBWU8k7bQXHYUg66dJZLypYA").unwrap(),
+						Ss58Codec::from_ss58check("GvUoJw9CVqdmmRTkGcAfPyUbBWU8k7bQXHYUg66dJZLypYA").unwrap(),
+					),
+					(
+						Ss58Codec::from_ss58check("GXk9MJ2xbcTrtwoLwShET6grTjW961b5ha8bwFSgukdtWLC").unwrap(),
+						Ss58Codec::from_ss58check("GXk9MJ2xbcTrtwoLwShET6grTjW961b5ha8bwFSgukdtWLC").unwrap(),
+					),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
