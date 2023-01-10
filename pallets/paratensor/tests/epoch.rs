@@ -471,13 +471,14 @@ fn test_active_stake() {
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ u16::MAX / (n/2); (n/2) as usize ], 0));
 		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
 		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
-		/*	current_block: 5002; activity_cutoff: 5000
-			Last update: [5002, 1, 0, 0]; Inactive: [false, true, true, true]
-			S: [1, 1, 1, 1]; S (mask): [1, 0, 0, 0]; S (mask+norm): [1, 0, 0, 0]
-			Block at registration: [0, 0, 0, 0]
+		/*  current_block: 5002; activity_cutoff: 5000
+			Last update: [5002, 1, 0, 0]; Inactive: [false, true, true, true]; Block at registration: [0, 0, 0, 0]
+			S: [0.25, 0.25, 0.25, 0.25]; S (mask): [0.25, 0, 0, 0]; S (mask+norm): [1, 0, 0, 0]
+			validator_permits: [true, true, true, true]; max_allowed_validators: 4; new_validator_permits: [true, true, true, true]
 			W: [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
-			W (diagmask): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
-			W (diag+outdatemask): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit+diag): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit+diag+outdate): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
 			W (mask+norm): [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
 			R: [0, 0, 0.5, 0.5]
 			W (threshold): [[(2, 1), (3, 1)], [(2, 1), (3, 1)], [], []]
@@ -490,8 +491,9 @@ fn test_active_stake() {
 			ΔB: [[(2, 0.5), (3, 0.5)], [(2, 0), (3, 0)], [], []]
 			ΔB (norm): [[(2, 1), (3, 1)], [(2, 0), (3, 0)], [], []]
 			emaB: [[(2, 0.55), (3, 0.55)], [(2, 0.45), (3, 0.45)], [], []]
-			D: [0.5499999998, 0.4499999997, 0, 0]
-			E: [274999999.9068677425, 224999999.8603016138, 250000000, 250000000]
+			D: [0.55, 0.4499999997, 0, 0]
+			nE: [0.275, 0.2249999999, 0.25, 0.25]
+			E: [274999999, 224999999, 250000000, 250000000]
 			P: [0.275, 0.2249999999, 0.25, 0.25] */
 		let bonds = ParatensorModule::get_bonds( netuid );
 		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 36044 ); // Note D = floor((0.5 * 0.9 + 0.1) * 65_535)
@@ -512,13 +514,14 @@ fn test_active_stake() {
 		run_to_block( activity_cutoff + 3 ); // run to block where validator (uid 0, 1) weights become outdated
 		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
 		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
-		/*	current_block: 5003; activity_cutoff: 5000
-			Last update: [5002, 5002, 0, 0]; Inactive: [false, false, true, true]
-			S: [1, 1, 1, 1]; S (mask): [1, 1, 0, 0]; S (mask+norm): [0.5, 0.5, 0, 0]
-			Block at registration: [0, 0, 0, 0]
+		/*  current_block: 5003; activity_cutoff: 5000
+			Last update: [5002, 5002, 0, 0]; Inactive: [false, false, true, true]; Block at registration: [0, 0, 0, 0]
+			S: [0.25, 0.25, 0.25, 0.25]; S (mask): [0.25, 0.25, 0, 0]; S (mask+norm): [0.5, 0.5, 0, 0]
+			validator_permits: [true, true, true, true]; max_allowed_validators: 4; new_validator_permits: [true, true, true, true]
 			W: [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
-			W (diagmask): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
-			W (diag+outdatemask): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit+diag): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
+			W (permit+diag+outdate): [[(2, 0.4999923704), (3, 0.4999923704)], [(2, 0.4999923704), (3, 0.4999923704)], [], []]
 			W (mask+norm): [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
 			R: [0, 0, 0.5, 0.5]
 			W (threshold): [[(2, 1), (3, 1)], [(2, 1), (3, 1)], [], []]
@@ -531,8 +534,9 @@ fn test_active_stake() {
 			ΔB: [[(2, 0.25), (3, 0.25)], [(2, 0.25), (3, 0.25)], [], []]
 			ΔB (norm): [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
 			emaB: [[(2, 0.54500412), (3, 0.54500412)], [(2, 0.4549958797), (3, 0.4549958797)], [], []]
-			D: [0.54500412, 0.4549958794, 0, 0]
-			E: [272502060.0482821465, 227497939.71888721, 250000000, 250000000]
+			D: [0.5450041203, 0.4549958794, 0, 0]
+			nE: [0.27250206, 0.2274979397, 0.25, 0.25]
+			E: [272502060, 227497939, 250000000, 250000000]
 			P: [0.27250206, 0.2274979397, 0.25, 0.25] */
 		let bonds = ParatensorModule::get_bonds( netuid );
 		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 35716 ); // Note D = floor((0.55 * 0.9 + 0.5 * 0.1) * 65_535)
@@ -586,13 +590,14 @@ fn test_outdated_weights() {
 		}
 		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
 		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
-		/*	current_block: 1; activity_cutoff: 5000
-			Last update: [1, 1, 1, 1]; Inactive: [false, false, false, false]
-			S: [1, 1, 1, 1]; S (mask): [1, 1, 1, 1]; S (mask+norm): [0.25, 0.25, 0.25, 0.25]
-			Block at registration: [0, 0, 0, 0]
+		/*  current_block: 1; activity_cutoff: 5000
+			Last update: [1, 1, 1, 1]; Inactive: [false, false, false, false]; Block at registration: [0, 0, 0, 0]
+			S: [0.25, 0.25, 0.25, 0.25]; S (mask): [0.25, 0.25, 0.25, 0.25]; S (mask+norm): [0.25, 0.25, 0.25, 0.25]
+			validator_permits: [true, true, true, true]; max_allowed_validators: 4; new_validator_permits: [true, true, true, true]
 			W: [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], [(3, 1)]]
-			W (diagmask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
-			W (diag+outdatemask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (permit): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], [(3, 1)]]
+			W (permit+diag): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (permit+diag+outdate): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
 			W (mask+norm): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
 			R: [0, 0, 0.6666666665, 0.3333333333]
 			W (threshold): [[(2, 1), (3, 1)], [(2, 1), (3, 1)], [], []]
@@ -605,9 +610,11 @@ fn test_outdated_weights() {
 			ΔB: [[(2, 0.1666666665), (3, 0.0833333333)], [(2, 0.1666666665), (3, 0.0833333333)], [], []]
 			ΔB (norm): [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
 			emaB: [[(2, 0.5), (3, 0.5)], [(2, 0.5), (3, 0.5)], [], []]
-			D: [0.4999999998, 0.4999999998, 0, 0]
-			E: [249999999.7671693563, 249999999.7671693563, 333333333.4885537624, 166666666.5114462376]
-			P: [0.2499999998, 0.2499999998, 0.3333333335, 0.1666666665] */
+			D: [0.5, 0.5, 0, 0]
+			nE: [0.25, 0.25, 0.3333333333, 0.1666666665]
+			E: [250000000, 250000000, 333333333, 166666666]
+			P: [0.25, 0.25, 0.3333333333, 0.1666666665]
+			n: 4 */
 
 		// === Dereg server2 at uid3 (least emission) + register new key over uid3
 		let new_key: u64 = n as u64; // register a new key while at max capacity, which means the least incentive uid will be deregistered
@@ -621,14 +628,16 @@ fn test_outdated_weights() {
 		assert_ok!(ParatensorModule::set_weights(Origin::signed(0), netuid, ((n/2)..n).collect(), vec![ 2 * (u16::MAX / 3), u16::MAX / 3 ], 0));
 		if sparse { ParatensorModule::epoch( netuid, 1_000_000_000 ); }
 		else { ParatensorModule::epoch_dense( netuid, 1_000_000_000 ); }
-		/* 	current_block: 2; activity_cutoff: 5000
-			Last update: [2, 1, 1, 1]; Inactive: [false, false, false, false]
-			Block at registration: [0, 0, 0, 1]
-			S: [1, 1, 1, 0]; S (mask): [1, 1, 1, 0]
+		/*  current_block: 2; activity_cutoff: 5000
+			Last update: [2, 1, 1, 1]; Inactive: [false, false, false, false]; Block at registration: [0, 0, 0, 1]
+			S: [0.3333333333, 0.3333333333, 0.3333333333, 0]
+			S (mask): [0.3333333333, 0.3333333333, 0.3333333333, 0]
 			S (mask+norm): [0.3333333333, 0.3333333333, 0.3333333333, 0]
+			validator_permits: [true, true, true, false]; max_allowed_validators: 4; new_validator_permits: [true, true, true, true]
 			W: [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], []]
-			W (diagmask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
-			W (diag+outdatemask): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665)], [], []]
+			W (permit): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], []]
+			W (permit+diag): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665), (3, 0.3333333333)], [], []]
+			W (permit+diag+outdate): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 0.6666666665)], [], []]
 			W (mask+norm): [[(2, 0.6666666665), (3, 0.3333333333)], [(2, 1)], [], []]
 			R: [0, 0, 0.8333333333, 0.1666666665]
 			W (threshold): [[(2, 1), (3, 1)], [(2, 1)], [], []]
@@ -641,12 +650,13 @@ fn test_outdated_weights() {
 			ΔB: [[(2, 0.222222222), (3, 0.111111111)], [(2, 0.3333333333)], [], []]
 			ΔB (norm): [[(2, 0.3999999997), (3, 1)], [(2, 0.6)], [], []]
 			emaB: [[(2, 0.4899999998), (3, 1)], [(2, 0.51)], [], []]
-			D: [0.5085649828, 0.4914350165, 0, 0]
-			E: [254282491.5144592524, 245717508.252710104, 481799036.031588912, 18200963.968411088]
-			P: [0.2542824915, 0.2457175083, 0.481799036, 0.018200964] */
+			D: [0.508564983, 0.4914350167, 0, 0]
+			nE: [0.2542824915, 0.2457175083, 0.4817990358, 0.018200964]
+			E: [254282491, 245717508, 481799035, 18200963]
+			P: [0.2542824915, 0.2457175083, 0.4817990358, 0.018200964] */
 		let bonds = ParatensorModule::get_bonds( netuid );
-		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 33328 ); // Note D = floor(0.5085649828 * 65_535)
-		assert_eq!( ParatensorModule::get_emission( netuid, 0 ), 254282491 ); // Note E = 0.5 * 0.5085649828 * 1_000_000_000 = 272_500_000 (discrepancy)
+		assert_eq!( ParatensorModule::get_dividend( netuid, 0 ), 33328 ); // Note D = floor(0.508564983 * 65_535)
+		assert_eq!( ParatensorModule::get_emission( netuid, 0 ), 254282491 ); // Note E = 0.5 * 0.508564983 * 1_000_000_000 = 254_282_491
 		assert_eq!( bonds[0][2], I32F32::from_num(32112) / I32F32::from_num(65_535) ); // floor(0.49*(2^16-1))/(2^16-1)
 		assert_eq!( bonds[0][3], I32F32::from_num(1) ); // only uid0 has updated weights for new reg
 	});
