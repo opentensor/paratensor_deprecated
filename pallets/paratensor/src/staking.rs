@@ -11,7 +11,7 @@ impl<T: Config> Pallet<T> {
     /// 	* 'hotkey' (T::AccountId):
     /// 		- The hotkey we are delegating (must be owned by the coldkey.)
     ///
-    /// 	* 'take' (u64):
+    /// 	* 'take' (u16):
     /// 		- The stake proportion that this hotkey takes from delegations.
     ///
     /// # Event:
