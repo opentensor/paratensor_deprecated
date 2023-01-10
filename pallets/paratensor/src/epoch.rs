@@ -1050,7 +1050,7 @@ pub fn sparse_threshold( w: &Vec<Vec<(u16, I32F32)>>, threshold: I32F32 ) -> Vec
 #[cfg(test)]
 mod tests {
     use substrate_fixed::transcendental::exp;
-    use substrate_fixed::types::{I32F32, I64F64};
+    use substrate_fixed::types::{I32F32, I64F64, I110F18};
     use crate::epoch;
 
     fn assert_float_compare(a: I32F32, b: I32F32, epsilon: I32F32 ) {
@@ -1129,6 +1129,36 @@ mod tests {
         assert_eq!(one_32, I32F32::from_num(1));
     }
 
+    #[test]
+    fn test_to_num() {
+        let val: I32F32 = I32F32::from_num(u16::MAX);
+        let res: u16 = val.to_num::<u16>();
+        assert_eq!(res, u16::MAX);
+        let vector: Vec<I32F32> = vec![val; 1000];
+        let target: Vec<u16> = vec![u16::MAX; 1000];
+        let output: Vec<u16> = vector.iter().map( |e: &I32F32| e.to_num::<u16>() ).collect();
+        assert_eq!(output, target);
+        let output: Vec<u16> = vector.iter().map( |e: &I32F32| (*e).to_num::<u16>() ).collect();
+        assert_eq!(output, target);
+        let val: I32F32 = I32F32::max_value();
+        let res: u64 = val.to_num::<u64>();
+        let vector: Vec<I32F32> = vec![val; 1000];
+        let target: Vec<u64> = vec![res; 1000];
+        let output: Vec<u64> = vector.iter().map( |e: &I32F32| e.to_num::<u64>() ).collect();
+        assert_eq!(output, target);
+        let output: Vec<u64> = vector.iter().map( |e: &I32F32| (*e).to_num::<u64>() ).collect();
+        assert_eq!(output, target);
+        let val: I110F18 = I110F18::from_num(u64::MAX);
+        let res: u64 = val.to_num::<u64>();
+        assert_eq!(res, u64::MAX);
+        let vector: Vec<I110F18> = vec![val; 1000];
+        let target: Vec<u64> = vec![u64::MAX; 1000];
+        let output: Vec<u64> = vector.iter().map( |e: &I110F18| e.to_num::<u64>() ).collect();
+        assert_eq!(output, target);
+        let output: Vec<u64> = vector.iter().map( |e: &I110F18| (*e).to_num::<u64>() ).collect();
+        assert_eq!(output, target);
+    }
+    
     #[test]
     fn test_vec_to_fixed() {
         let vector: Vec<f32> = vec![ 0., 1., 2., 3.];
