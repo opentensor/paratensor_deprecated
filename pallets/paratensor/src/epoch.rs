@@ -87,19 +87,19 @@ impl<T: Config> Pallet<T> {
 
         // Mask weights that are not from permitted validators.
         inplace_mask_rows( &validator_forbids, &mut weights );
-        log::debug!( "W (permit): {:?}", weights.clone() );
+        // log::debug!( "W (permit): {:?}", weights.clone() );
 
         // Remove self-weight by masking diagonal.
         inplace_mask_diag( &mut weights );
-        log::debug!( "W (permit+diag):\n{:?}\n", weights.clone() );
+        // log::debug!( "W (permit+diag):\n{:?}\n", weights.clone() );
 
         // Mask outdated weights: remove weights referring to deregistered neurons.
         inplace_mask_matrix( &outdated, &mut weights );
-        log::debug!( "W (permit+diag+outdate):\n{:?}\n", weights.clone() );
+        // log::debug!( "W (permit+diag+outdate):\n{:?}\n", weights.clone() );
 
         // Normalize remaining weights.
         inplace_row_normalize( &mut weights );
-        log::debug!( "W (mask+norm):\n{:?}\n", weights.clone() );
+        // log::debug!( "W (mask+norm):\n{:?}\n", weights.clone() );
 
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
@@ -115,7 +115,7 @@ impl<T: Config> Pallet<T> {
         let lower: I32F32 = I32F32::from_num( 0.0 );
         let threshold: I32F32 = I32F32::from_num( 0.1 ) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<I32F32>> = clip( &weights, threshold, upper, lower );
-        log::debug!( "tW:\n{:?}\n", clipped_weights.clone() );
+        // log::debug!( "tW:\n{:?}\n", clipped_weights.clone() );
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
         let trust: Vec<I32F32> = matmul( &clipped_weights, &active_stake );
@@ -140,18 +140,18 @@ impl<T: Config> Pallet<T> {
         let mut bonds: Vec<Vec<I32F32>> = Self::get_bonds( netuid );
         inplace_mask_matrix( &outdated, &mut bonds );  // mask outdated bonds
         inplace_col_normalize( &mut bonds ); // sum_i b_ij = 1
-        log::debug!( "B:\n{:?}\n", bonds.clone() );        
+        // log::debug!( "B:\n{:?}\n", bonds.clone() );        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &active_stake ); // ΔB = W◦S
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
-        log::debug!( "ΔB:\n{:?}\n", bonds_delta.clone() );
+        // log::debug!( "ΔB:\n{:?}\n", bonds_delta.clone() );
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
         let mut ema_bonds: Vec<Vec<I32F32>> = mat_ema( &bonds_delta, &bonds, alpha );
         inplace_col_normalize( &mut ema_bonds ); // sum_i b_ij = 1
-        log::debug!( "emaB:\n{:?}\n", ema_bonds.clone() );
+        // log::debug!( "emaB:\n{:?}\n", ema_bonds.clone() );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j
         let mut dividends: Vec<I32F32> = matmul_transpose( &ema_bonds, &incentive );
@@ -299,23 +299,23 @@ impl<T: Config> Pallet<T> {
 
         // Access network weights row normalized.
         let mut weights: Vec<Vec<(u16, I32F32)>> = Self::get_weights_sparse( netuid );
-        log::debug!( "W: {:?}", weights.clone() );
+        // log::debug!( "W: {:?}", weights.clone() );
 
         // Mask weights that are not from permitted validators.
         weights = mask_rows_sparse( &validator_forbids, &weights );
-        log::debug!( "W (permit): {:?}", weights.clone() );
+        // log::debug!( "W (permit): {:?}", weights.clone() );
 
         // Remove self-weight by masking diagonal.
         weights = mask_diag_sparse( &weights );
-        log::debug!( "W (permit+diag): {:?}", weights.clone() );
+        // log::debug!( "W (permit+diag): {:?}", weights.clone() );
 
         // Remove weights referring to deregistered neurons.
         weights = vec_mask_sparse_matrix( &weights, &last_update, &block_at_registration, &| updated, registered | updated <= registered );
-        log::debug!( "W (permit+diag+outdate): {:?}", weights.clone() );
+        // log::debug!( "W (permit+diag+outdate): {:?}", weights.clone() );
 
         // Normalize remaining weights.
         inplace_row_normalize_sparse( &mut weights );
-        log::debug!( "W (mask+norm): {:?}", weights.clone() );
+        // log::debug!( "W (mask+norm): {:?}", weights.clone() );
 
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
@@ -333,7 +333,7 @@ impl<T: Config> Pallet<T> {
         let lower: I32F32 = I32F32::from_num( 0.0 );
         let threshold: I32F32 = I32F32::from_num( 0.1 ) / I32F32::from_num( n + 1 );
         let clipped_weights: Vec<Vec<(u16, I32F32)>> = sparse_clip( &weights, threshold, upper, lower );
-        log::debug!( "W (threshold): {:?}", clipped_weights.clone() );
+        // log::debug!( "W (threshold): {:?}", clipped_weights.clone() );
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
         // range: I32F32(0, 1)
@@ -359,23 +359,23 @@ impl<T: Config> Pallet<T> {
 
         // Access network bonds column normalized.
         let mut bonds: Vec<Vec<(u16, I32F32)>> = Self::get_bonds_sparse( netuid );
-        log::debug!( "B: {:?}", bonds.clone() );
+        // log::debug!( "B: {:?}", bonds.clone() );
         
         // Remove bonds referring to deregistered neurons.
         bonds = vec_mask_sparse_matrix( &bonds, &last_update, &block_at_registration, &| updated, registered | updated <= registered );
-        log::debug!( "B (outdatedmask): {:?}", bonds.clone() );
+        // log::debug!( "B (outdatedmask): {:?}", bonds.clone() );
 
         // Normalize remaining bonds: sum_i b_ij = 1.
         inplace_col_normalize_sparse( &mut bonds );
-        log::debug!( "B (mask+norm): {:?}", bonds.clone() );        
+        // log::debug!( "B (mask+norm): {:?}", bonds.clone() );        
 
         // Compute bonds delta column normalized.
         let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
-        log::debug!( "ΔB: {:?}", bonds_delta.clone() );
+        // log::debug!( "ΔB: {:?}", bonds_delta.clone() );
 
         // Normalize bonds delta.
         inplace_col_normalize_sparse( &mut bonds_delta ); // sum_i b_ij = 1
-        log::debug!( "ΔB (norm): {:?}", bonds_delta.clone() );
+        // log::debug!( "ΔB (norm): {:?}", bonds_delta.clone() );
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
@@ -383,7 +383,7 @@ impl<T: Config> Pallet<T> {
 
         // Normalize EMA bonds.
         inplace_col_normalize_sparse( &mut ema_bonds ); // sum_i b_ij = 1
-        log::debug!( "emaB: {:?}", ema_bonds.clone() );
+        // log::debug!( "emaB: {:?}", ema_bonds.clone() );
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
         // range: I32F32(0, 1)
