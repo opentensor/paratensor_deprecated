@@ -102,6 +102,7 @@ parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
 	pub const TransactionByteFee: Balance = 100;
 	pub const SDebug:u64 = 1;
+	pub const InitialWeightCuts: u16 = 3;
 	pub const InitialRho: u16 = 10;
 	pub const InitialKappa: u16 = 32_767;
 	pub const InitialTempo: u16 = 0;
@@ -148,6 +149,7 @@ impl pallet_paratensor::Config for Test {
 	type InitialDifficulty = InitialDifficulty;
 	type InitialAdjustmentInterval = InitialAdjustmentInterval;
 	type InitialTargetRegistrationsPerInterval = InitialTargetRegistrationsPerInterval;
+	type InitialWeightCuts = InitialWeightCuts;
 	type InitialRho = InitialRho;
 	type InitialKappa = InitialKappa;
 	type InitialMaxAllowedUids = InitialMaxAllowedUids;
