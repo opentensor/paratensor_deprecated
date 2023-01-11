@@ -14,7 +14,7 @@ fn test_defaults() {
         assert_eq!( ParatensorModule::get_number_of_subnets(), 1 ); // There is a single network.
         assert_eq!( ParatensorModule::get_subnetwork_n( netuid ), 0 ); // Network size is zero.
         assert_eq!( ParatensorModule::get_weight_cuts( netuid ), 3 );
-        assert_eq!( ParatensorModule::get_rho( netuid ), 10 );
+        assert_eq!( ParatensorModule::get_rho( netuid ), 30 );
         assert_eq!( ParatensorModule::get_tempo( netuid ), 10 );
         assert_eq!( ParatensorModule::get_kappa( netuid ), 32_767 );
         assert_eq!( ParatensorModule::get_min_difficulty( netuid ), 1 );
