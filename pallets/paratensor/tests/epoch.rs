@@ -916,6 +916,11 @@ fn test_zero_weights() {
 /// Map the retention graph for consensus guarantees with an epoch on a graph with 4096 nodes, of which the first 128 are validators, the graph is split into a major and minor set, each setting specific weight on itself and the complement on the other.
 /// 
 /// ```python
+/// import torch
+/// import matplotlib.pyplot as plt
+/// from matplotlib.pyplot import cm
+/// %matplotlib inline
+/// 
 /// with open('finney_consensus.txt') as f:  # test output saved to finney_consensus.txt
 ///     retention_map = eval(f.read())
 /// 
