@@ -946,7 +946,7 @@ fn test_zero_weights() {
 ///         contours.collections[1].set_linewidth(3)
 ///     plt.clabel(contours, inline=True, fontsize=10)
 ///
-/// plt.title(f'Major emission [$s_H=e_H$ retention lines]')
+/// plt.title(f'Major emission [$stake_{{maj}}=emission_{{maj}}$ retention lines]')
 /// plt.ylabel('Minor self-weight'); plt.xlabel('Major self-weight'); plt.show()
 /// ```
 // #[test]
