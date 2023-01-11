@@ -918,7 +918,7 @@ fn test_zero_weights() {
 /// 
 /// ```python
 /// with open('finney_consensus.txt') as f:  # test output saved to finney_consensus.txt
-/// retention_map = eval(f.read())
+///     retention_map = eval(f.read())
 /// 
 /// grid = {}
 /// for major_stake, major_weight, minor_weight, major_ratio in retention_map:
