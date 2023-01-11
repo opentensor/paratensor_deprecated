@@ -101,6 +101,29 @@ impl<T: Config> Pallet<T> {
         inplace_row_normalize( &mut weights );
         // log::debug!( "W (mask+norm):\n{:?}\n", weights.clone() );
 
+        // ==========================================
+        // == Weight consensus and Validator trust ==
+        // ==========================================
+
+        let mut weight_cuts: u16 = Self::get_weight_cuts( netuid ); // number of weight cuts.
+        if weight_cuts > 3 { weight_cuts = 3; } // limit weight cuts given computational expense of each cut.
+        let mut weight_consensus: Vec<I32F32> = vec![ I32F32::from_num(0); n as usize ]; // weight consensus.
+        for i in 0..=weight_cuts {
+            // Calculate specific vote share per weight assigned: [validator] -> [server] -> vote_share.
+            let mut vote_share: Vec<Vec<I32F32>> = row_hadamard( &weights, &active_stake ); // ΔB = W◦S
+            inplace_col_normalize( &mut vote_share ); // sum_i b_ij = 1
+
+            // Calculate the weight consensus for each uid.
+            let weight_votes: Vec<Vec<I32F32>> = hadamard( &vote_share, &weights );
+            weight_consensus = col_sum( &weight_votes );
+
+            // Cut the weights above consensus.
+            if i < weight_cuts {
+                inplace_col_clip( &mut weights, &weight_consensus );
+            } // else do not cut in last iteration, which is only to get final weight_consensus.
+        }
+        let validator_trust: Vec<I32F32> = row_sum( &weights );
+
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
         // ========================================
@@ -194,7 +217,9 @@ impl<T: Config> Pallet<T> {
         for i in 0..n {
             Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_validator_trust( netuid, i, fixed_proportion_to_u16( validator_trust[i as usize] ) );
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_weight_consensus( netuid, i, fixed_proportion_to_u16( weight_consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
@@ -317,6 +342,29 @@ impl<T: Config> Pallet<T> {
         inplace_row_normalize_sparse( &mut weights );
         // log::debug!( "W (mask+norm): {:?}", weights.clone() );
 
+        // ==========================================
+        // == Weight consensus and Validator trust ==
+        // ==========================================
+
+        let mut weight_cuts: u16 = Self::get_weight_cuts( netuid ); // number of weight cuts.
+        if weight_cuts > 3 { weight_cuts = 3; } // limit weight cuts given computational expense of each cut.
+        let mut weight_consensus: Vec<I32F32> = vec![ I32F32::from_num(0); n as usize ]; // weight consensus.
+        for i in 0..=weight_cuts {
+            // Calculate specific vote share per weight assigned: [validator] -> [server] -> vote_share.
+            let mut vote_share: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &active_stake ); // ΔB = W◦S
+            inplace_col_normalize_sparse( &mut vote_share, n ); // sum_i b_ij = 1
+
+            // Calculate the weight consensus for each uid.
+            let weight_votes: Vec<Vec<(u16, I32F32)>> = hadamard_sparse( &vote_share, &weights, n );
+            weight_consensus = col_sum_sparse( &weight_votes, n );
+
+            // Cut the weights above consensus.
+            if i < weight_cuts {
+                weights = col_clip_sparse( &weights, &weight_consensus );
+            } // else do not cut in last iteration, which is only to get final weight_consensus.
+        }
+        let validator_trust: Vec<I32F32> = row_sum_sparse( &weights );
+
         // ========================================
         // == Ranks, Trust, Consensus, Incentive ==
         // ========================================
@@ -426,10 +474,11 @@ impl<T: Config> Pallet<T> {
         
         // Sync parameter updates.
         for i in 0..n {
-            // TODO(taco): set is active.
             Self::set_rank( netuid, i, fixed_proportion_to_u16( ranks[i as usize] ) );
             Self::set_trust( netuid, i, fixed_proportion_to_u16( trust[i as usize] ) );
+            Self::set_validator_trust( netuid, i, fixed_proportion_to_u16( validator_trust[i as usize] ) );
             Self::set_consensus( netuid, i, fixed_proportion_to_u16( consensus[i as usize] ) );
+            Self::set_weight_consensus( netuid, i, fixed_proportion_to_u16( weight_consensus[i as usize] ) );
             Self::set_incentive( netuid, i, fixed_proportion_to_u16( incentive[i as usize] ) );
             Self::set_dividend( netuid, i, fixed_proportion_to_u16( dividends[i as usize] ) );
             Self::set_pruning_score( netuid, i, fixed_proportion_to_u16( pruning_scores[i as usize] ) );
