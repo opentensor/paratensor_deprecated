@@ -143,7 +143,7 @@ impl<T: Config> Pallet<T> {
         // log::debug!( "B:\n{:?}\n", bonds.clone() );        
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<I32F32>> = hadamard( &weights, &active_stake ); // ΔB = W◦S
+        let mut bonds_delta: Vec<Vec<I32F32>> = row_hadamard( &weights, &active_stake ); // ΔB = W◦S
         inplace_col_normalize( &mut bonds_delta ); // sum_i b_ij = 1
         // log::debug!( "ΔB:\n{:?}\n", bonds_delta.clone() );
     
@@ -323,7 +323,7 @@ impl<T: Config> Pallet<T> {
 
         // Compute ranks: r_j = SUM(i) w_ij * s_i.
         // range: I32F32(0, 1)
-        let mut ranks: Vec<I32F32> = sparse_matmul( &weights, &active_stake, n );
+        let mut ranks: Vec<I32F32> = matmul_sparse( &weights, &active_stake, n );
         inplace_normalize( &mut ranks );
         log::debug!( "R: {:?}", ranks.clone() );
 
@@ -332,12 +332,12 @@ impl<T: Config> Pallet<T> {
         let upper: I32F32 = I32F32::from_num( 1.0 );
         let lower: I32F32 = I32F32::from_num( 0.0 );
         let threshold: I32F32 = I32F32::from_num( 0.1 ) / I32F32::from_num( n + 1 );
-        let clipped_weights: Vec<Vec<(u16, I32F32)>> = sparse_clip( &weights, threshold, upper, lower );
+        let clipped_weights: Vec<Vec<(u16, I32F32)>> = clip_sparse( &weights, threshold, upper, lower );
         // log::debug!( "W (threshold): {:?}", clipped_weights.clone() );
 
         // Compute trust scores: t_j = SUM(i) w_ij * s_i
         // range: I32F32(0, 1)
-        let trust: Vec<I32F32> = sparse_matmul( &clipped_weights, &active_stake, n );
+        let trust: Vec<I32F32> = matmul_sparse( &clipped_weights, &active_stake, n );
         log::debug!( "T: {:?}", trust.clone() );
 
         // Compute consensus.
@@ -370,7 +370,7 @@ impl<T: Config> Pallet<T> {
         // log::debug!( "B (mask+norm): {:?}", bonds.clone() );        
 
         // Compute bonds delta column normalized.
-        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = sparse_hadamard( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
+        let mut bonds_delta: Vec<Vec<(u16, I32F32)>> = row_hadamard_sparse( &weights, &active_stake ); // ΔB = W◦S (outdated W masked)
         // log::debug!( "ΔB: {:?}", bonds_delta.clone() );
 
         // Normalize bonds delta.
@@ -379,7 +379,7 @@ impl<T: Config> Pallet<T> {
     
         // Compute bonds moving average.
         let alpha: I32F32 = I32F32::from_num( 0.1 );
-        let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = sparse_mat_ema( &bonds_delta, &bonds, alpha );
+        let mut ema_bonds: Vec<Vec<(u16, I32F32)>> = mat_ema_sparse( &bonds_delta, &bonds, alpha );
 
         // Normalize EMA bonds.
         inplace_col_normalize_sparse( &mut ema_bonds, n ); // sum_i b_ij = 1
@@ -387,7 +387,7 @@ impl<T: Config> Pallet<T> {
 
         // Compute dividends: d_i = SUM(j) b_ij * inc_j.
         // range: I32F32(0, 1)
-        let mut dividends: Vec<I32F32> = sparse_matmul_transpose( &ema_bonds, &incentive );
+        let mut dividends: Vec<I32F32> = matmul_transpose_sparse( &ema_bonds, &incentive );
         inplace_normalize( &mut dividends );
         log::debug!( "D: {:?}", dividends.clone() );
 
