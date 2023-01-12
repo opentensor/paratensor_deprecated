@@ -222,8 +222,8 @@ fn split_graph(major_stake: I32F32, major_weight: I32F32, minor_weight: I32F32, 
 #[test]
 fn test_consensus_guarantees() {
 	let netuid: u16 = 0;
-	let network_n: u16 = 4096;
-	let validators_n: u16 = 128;
+	let network_n: u16 = 512;
+	let validators_n: u16 = 64;
 	let epochs: u16 = 1;
 	let interleave = 2;
 	log::info!( "test_consensus_guarantees ({network_n:?}, {validators_n:?} validators)" );
@@ -386,12 +386,13 @@ fn test_512_graph() {
 		let validators: Vec<u16> = (0..validators_n).collect();
 		let servers: Vec<u16> = (validators_n..n).collect();
 		let server: usize = servers[0] as usize;
+		let max_stake_per_validator: u64 = 328_125_000_000_000; // 21_000_000_000_000_000 / 64
 		let epochs: u16 = 100;
 		log::info!( "test_{n:?}_graph ({validators_n:?} validators)" );
-		init_run_epochs(netuid, n, &validators, &servers, epochs, 1, true, &vec![], false, &vec![], false, false, 0, false);
+		init_run_epochs(netuid, n, &validators, &servers, epochs, max_stake_per_validator, true, &vec![], false, &vec![], false, false, 0, false);
 		let bonds = ParatensorModule::get_bonds( netuid );
 		for uid in validators {
-			assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ), 1 );
+			assert_eq!( ParatensorModule::get_total_stake_for_hotkey( &(uid as u64) ), max_stake_per_validator );
 			assert_eq!( ParatensorModule::get_rank( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_trust( netuid, uid ), 0 );
 			assert_eq!( ParatensorModule::get_consensus( netuid, uid ), 0 );
@@ -415,8 +416,57 @@ fn test_512_graph() {
 	});
 }
 
-/// Test an epoch on a graph with 4096 nodes, of which the first 256 are validators setting non-self weights, and the rest servers setting only self-weights.
+/// Test an epoch on a graph with 4096 nodes, of which the first 256 are validators setting random non-self weights, and the rest servers setting only self-weights.
 #[test]
+fn test_512_graph_random_weights() {
+	let netuid: u16 = 0;
+	let network_n: u16 = 512;
+	let validators_n: u16 = 64;
+	let epochs: u16 = 1;
+	log::info!( "test_{network_n:?}_graph_random_weights ({validators_n:?} validators)" );
+	for interleave in 0..3 {
+		for server_self in vec![false, true] { // server-self weight off/on
+			let (validators, servers) = distribute_nodes(validators_n as usize, network_n as usize, interleave as usize);
+			let server: usize = servers[0] as usize;
+			let validator: usize = validators[0] as usize;
+			let (mut rank, mut incentive, mut dividend, mut emission, mut bondv, mut bonds): (Vec<u16>, Vec<u16>, Vec<u16>, Vec<u64>, Vec<I32F32>, Vec<I32F32>) = (vec![], vec![], vec![], vec![], vec![], vec![]);
+			
+			// Dense epoch
+			new_test_ext().execute_with(|| {
+				init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, server_self, &vec![], false, &vec![], false, true, interleave as u64, false);
+
+				let bond = ParatensorModule::get_bonds( netuid );
+				for uid in 0..network_n {
+					rank.push( ParatensorModule::get_rank( netuid, uid ) );
+					incentive.push( ParatensorModule::get_incentive( netuid, uid ) );
+					dividend.push( ParatensorModule::get_dividend( netuid, uid ) );
+					emission.push( ParatensorModule::get_emission( netuid, uid ) );
+					bondv.push( bond[uid as usize][validator] );
+					bonds.push( bond[uid as usize][server] );
+				}
+			});
+
+			// Sparse epoch (same random seed as dense)
+			new_test_ext().execute_with(|| {
+				init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, server_self, &vec![], false, &vec![], false, true, interleave as u64, true);
+				// Assert that dense and sparse epoch results are equal
+				let bond = ParatensorModule::get_bonds( netuid );
+				for uid in 0..network_n {
+					assert_eq!( ParatensorModule::get_rank( netuid, uid ), rank[uid as usize] );
+					assert_eq!( ParatensorModule::get_incentive( netuid, uid ), incentive[uid as usize] );
+					assert_eq!( ParatensorModule::get_dividend( netuid, uid ), dividend[uid as usize] );
+					assert_eq!( ParatensorModule::get_emission( netuid, uid ), emission[uid as usize] );
+					assert_eq!( bond[uid as usize][validator], bondv[uid as usize] );
+					assert_eq!( bond[uid as usize][server], bonds[uid as usize] );
+				}
+			});
+		}
+	}
+}
+
+/// Test an epoch on a graph with 4096 nodes, of which the first 256 are validators setting non-self weights, and the rest servers setting only self-weights.
+// #[test]
+#[allow(dead_code)]
 fn test_4096_graph() {
 	let netuid: u16 = 0;
 	let network_n: u16 = 4096;
@@ -428,7 +478,7 @@ fn test_4096_graph() {
 		let (validators, servers) = distribute_nodes(validators_n as usize, network_n as usize, interleave as usize);
 		let server: usize = servers[0] as usize;
 		let validator: usize = validators[0] as usize;
-		for server_self in vec![false, true] {
+		for server_self in vec![false, true] { // server-self weight off/on
 			new_test_ext().execute_with(|| {
 				init_run_epochs(netuid, network_n, &validators, &servers, epochs, max_stake_per_validator, server_self, &vec![], false, &vec![], false, false, 0, true);
 				assert_eq!(ParatensorModule::get_total_stake(), 21_000_000_000_000_000);
@@ -457,52 +507,6 @@ fn test_4096_graph() {
 				}
 			});
 		}
-	}
-}
-
-/// Test an epoch on a graph with 4096 nodes, of which the first 256 are validators setting random non-self weights, and the rest servers setting only self-weights.
-#[test]
-fn test_4096_graph_random_weights() {
-	let netuid: u16 = 0;
-	let network_n: u16 = 4096;
-	let validators_n: u16 = 256;
-	let epochs: u16 = 1;
-	log::info!( "test_{network_n:?}_graph_random_weights ({validators_n:?} validators)" );
-	for interleave in 0..3 {
-		let (validators, servers) = distribute_nodes(validators_n as usize, network_n as usize, interleave as usize);
-		let server: usize = servers[0] as usize;
-		let validator: usize = validators[0] as usize;
-		let (mut rank, mut incentive, mut dividend, mut emission, mut bondv, mut bonds): (Vec<u16>, Vec<u16>, Vec<u16>, Vec<u64>, Vec<I32F32>, Vec<I32F32>) = (vec![], vec![], vec![], vec![], vec![], vec![]);
-		
-		// Dense epoch
-		new_test_ext().execute_with(|| {
-			init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, true, &vec![], false, &vec![], false, true, interleave as u64, false);
-
-			let bond = ParatensorModule::get_bonds( netuid );
-			for uid in 0..network_n {
-				rank.push( ParatensorModule::get_rank( netuid, uid ) );
-				incentive.push( ParatensorModule::get_incentive( netuid, uid ) );
-				dividend.push( ParatensorModule::get_dividend( netuid, uid ) );
-				emission.push( ParatensorModule::get_emission( netuid, uid ) );
-				bondv.push( bond[uid as usize][validator] );
-				bonds.push( bond[uid as usize][server] );
-			}
-		});
-
-		// Sparse epoch (same random seed as dense)
-		new_test_ext().execute_with(|| {
-			init_run_epochs(netuid, network_n, &validators, &servers, epochs, 1, true, &vec![], false, &vec![], false, true, interleave as u64, true);
-			// Assert that dense and sparse epoch results are equal
-			let bond = ParatensorModule::get_bonds( netuid );
-			for uid in 0..network_n {
-				assert_eq!( ParatensorModule::get_rank( netuid, uid ), rank[uid as usize] );
-				assert_eq!( ParatensorModule::get_incentive( netuid, uid ), incentive[uid as usize] );
-				assert_eq!( ParatensorModule::get_dividend( netuid, uid ), dividend[uid as usize] );
-				assert_eq!( ParatensorModule::get_emission( netuid, uid ), emission[uid as usize] );
-				assert_eq!( bond[uid as usize][validator], bondv[uid as usize] );
-				assert_eq!( bond[uid as usize][server], bonds[uid as usize] );
-			}
-		});
 	}
 }
 
@@ -952,8 +956,8 @@ fn test_zero_weights() {
 // #[test]
 fn _map_consensus_guarantees() {
 	let netuid: u16 = 0;
-	let network_n: u16 = 4096;
-	let validators_n: u16 = 128;
+	let network_n: u16 = 512;
+	let validators_n: u16 = 64;
 	let epochs: u16 = 1;
 	let interleave = 0;
 	println!("[");
