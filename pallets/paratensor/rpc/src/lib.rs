@@ -11,20 +11,28 @@ use std::sync::Arc;
 pub use paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
 use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
+pub use paratensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi;
+use pallet_paratensor::subnet_info::SubnetInfo as SubnetInfoStruct;
+
 #[rpc]
-pub trait NeuronInfoApi<BlockHash> {
+pub trait ParatensorCustomApi<BlockHash> {
 	#[rpc(name = "neuronInfo_getNeurons")]
 	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
 	#[rpc(name = "neuronInfo_getNeuron")]
 	fn get_neuron(&self, netuid: u16, uid: u16, at: Option<BlockHash>) -> Result<Option<NeuronInfoStruct>>;
+
+	#[rpc(name = "subnetInfo_getSubnetInfo")]
+	fn get_subnet_info(&self, netuid: u16, at: Option<BlockHash>) -> Result<Option<SubnetInfoStruct>>;
+	#[rpc(name = "subnetInfo_getSubnetsInfo")]
+	fn get_subnets_info(&self, at: Option<BlockHash>) -> Result<Vec<Option<SubnetInfoStruct>>>;
 }
 
-pub struct NeuronInfo<C, M> {
+pub struct ParatensorCustom<C, M> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<M>,
 }
 
-impl<C, M> NeuronInfo<C, M> {
+impl<C, M> ParatensorCustom<C, M> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -47,11 +55,12 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block> NeuronInfoApi<<Block as BlockT>::Hash> for NeuronInfo<C, Block>
+impl<C, Block> ParatensorCustomApi<<Block as BlockT>::Hash> for ParatensorCustom<C, Block>
 where
 	Block: BlockT,
 	C: 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: NeuronInfoRuntimeApi<Block>,
+	C::Api: SubnetInfoRuntimeApi<Block>,
 	{ 
 	fn get_neurons(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NeuronInfoStruct>> {
 		let api = self.client.runtime_api();
@@ -75,6 +84,32 @@ where
 		api.get_neuron(&at, netuid, uid).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
 			message: "Unable to get neuron info.".into(),
+			data: Some(e.to_string().into()),
+		})
+	}
+	
+	fn get_subnet_info(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Option<SubnetInfoStruct>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_subnet_info(&at, netuid).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get subnet info.".into(),
+			data: Some(e.to_string().into()),
+		})
+	}
+
+	fn get_subnets_info(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<Option<SubnetInfoStruct>>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_subnets_info(&at).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get subnets info.".into(),
 			data: Some(e.to_string().into()),
 		})
 	}
