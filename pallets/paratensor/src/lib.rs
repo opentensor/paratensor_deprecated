@@ -975,19 +975,13 @@ pub mod pallet {
 			)
 		}
 
-		/// ---- Sudo create and load network.
+		/// ---- Sudo bulk register accounts
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
 		/// 	* `netuid` ( u16 ):
 		/// 		- The network we are intending on performing the bulk creation on.
-		///
-		/// 	* `n` ( u16 ):
-		/// 		- Network size.
-		///
-		/// 	* `uids` ( Vec<u16> ):
-		/// 		- List of uids to set keys under.
 		///
 		/// 	* `hotkeys` ( Vec<T::AccountId> ):
 		/// 		- List of hotkeys to register on account.
@@ -1007,6 +1001,39 @@ pub mod pallet {
 				netuid,
 				hotkeys,
 				coldkeys
+			)
+		}
+
+				/// ---- Sudo bulk register accounts
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` ( u16 ):
+		/// 		- The network we are intending on performing the bulk creation on.
+		///
+		/// 	* `hotkeys` ( Vec<T::AccountId> ):
+		/// 		- List of hotkeys to register on account.
+		///
+		/// 	* `coldkeys` ( Vec<T::AccountId> ):
+		/// 		- List of coldkeys related to hotkeys.
+		/// 
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_bulk_migration(
+			origin: OriginFor<T>,
+			netuid: u16,
+			hotkeys: Vec<T::AccountId>,
+			coldkeys: Vec<T::AccountId>,
+			stakes: Vec<u64>,
+			balances: Vec<u64>
+		) -> DispatchResult {
+			Self::do_bulk_migration( 
+				origin,
+				netuid,
+				hotkeys,
+				coldkeys,
+				stakes,
+				balances
 			)
 		}
 
