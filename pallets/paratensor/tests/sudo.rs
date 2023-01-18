@@ -337,6 +337,21 @@ fn test_sudo_set_max_allowed_uids() {
     });
 }
 
+#[test]
+fn test_sudo_set_and_decrease_max_allowed_uids() {
+	new_test_ext().execute_with(|| {
+        let netuid: u16 = 1;
+        let to_be_set: u16 = 10;
+        let init_value: u16 = ParatensorModule::get_max_allowed_uids( netuid );
+        add_network(netuid, 10, 0);
+		assert_eq!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::signed(0), netuid, to_be_set),  Err(DispatchError::BadOrigin.into()) );
+        assert_eq!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid + 1, to_be_set), Err(Error::<Test>::NetworkDoesNotExist.into()) );
+        assert_eq!( ParatensorModule::get_max_allowed_uids(netuid), init_value);
+        assert_ok!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, to_be_set) );
+        assert_eq!( ParatensorModule::sudo_set_max_allowed_uids(<<Test as Config>::Origin>::root(), netuid, to_be_set-1), Err(Error::<Test>::MaxAllowedUIdsNotAllowed.into()));
+    });
+}
+
 
 #[test]
 fn test_sudo_set_kappa() {
