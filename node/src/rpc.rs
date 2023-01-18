@@ -42,6 +42,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: BlockBuilder<Block>,
+	C::Api: paratensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block>,
 	C::Api: paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block>,
 	C::Api: paratensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block>,
 	P: TransactionPool + Sync + Send + 'static,
