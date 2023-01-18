@@ -29,6 +29,7 @@ mod networks;
 mod serving; 
 mod block_step;
 pub mod neuron_info;
+pub mod subnet_info;
 
 #[frame_support::pallet]
 pub mod pallet {

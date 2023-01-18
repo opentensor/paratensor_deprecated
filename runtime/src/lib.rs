@@ -761,6 +761,16 @@ impl_runtime_apis! {
 			Paratensor::get_neuron(netuid, uid)
 		}
 	}
+
+	impl paratensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
+		fn get_subnet_info(netuid: u16) -> Option<pallet_paratensor::subnet_info::SubnetInfo> {
+			Paratensor::get_subnet_info(netuid)
+		}
+
+		fn get_subnets_info() -> Vec<Option<pallet_paratensor::subnet_info::SubnetInfo>> {
+			Paratensor::get_subnets_info()
+		}
+	}
 }
 
 struct CheckInherents;
