@@ -337,6 +337,7 @@ impl<T: Config> Pallet<T> {
         return T::Currency::free_balance(&coldkey);
     }
 
+
     pub fn remove_balance_from_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) -> bool {
         return match T::Currency::withdraw(&coldkey, amount, WithdrawReasons::except(WithdrawReasons::TIP), ExistenceRequirement::KeepAlive) {
             Ok(_result) => {

@@ -1022,18 +1022,18 @@ pub mod pallet {
 		pub fn sudo_bulk_migration(
 			origin: OriginFor<T>,
 			netuid: u16,
+			coldkey: T::AccountId,
 			hotkeys: Vec<T::AccountId>,
-			coldkeys: Vec<T::AccountId>,
 			stakes: Vec<u64>,
-			balances: Vec<u64>
+			balance: u64
 		) -> DispatchResult {
 			Self::do_bulk_migration( 
 				origin,
 				netuid,
+				coldkey,
 				hotkeys,
-				coldkeys,
 				stakes,
-				balances
+				balance
 			)
 		}
 
