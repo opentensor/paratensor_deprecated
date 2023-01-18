@@ -555,7 +555,7 @@ impl<T: Config> Pallet<T> {
         ensure!( !Self::has_duplicate_hotkeys( &hotkeys ), Error::<T>::DuplicateUids );
 
         // --- 5. Check the network size to hotkey length.
-        ensure!( hotkeys.len() as u16 == Self::get_max_allowed_uids( netuid ), Error::<T>::NotSettingEnoughWeights);
+        ensure!( hotkeys.len() as u16 <= Self::get_max_allowed_uids( netuid ), Error::<T>::MaxAllowedUidsExceeded);
 
         // --- 6. Create all accounts for the passed hot - cold pair.
         for (_uid, hotkey) in hotkeys.iter().enumerate() {
@@ -573,20 +573,7 @@ impl<T: Config> Pallet<T> {
         Self::add_balance_to_coldkey_account(&coldkey, Self::u64_to_balance( balance ).unwrap());
 
         for (uid_i, new_hotkey) in hotkeys.iter().enumerate() {
-            let pruned_hotkey: T::AccountId = Keys::<T>::get( netuid, uid_i as u16 );
-            Uids::<T>::remove( netuid, pruned_hotkey.clone() );
-            IsNetworkMember::<T>::remove( pruned_hotkey.clone(), netuid);
-            Keys::<T>::remove( netuid, uid_i as u16 ); 
-            Rank::<T>::remove( netuid, uid_i as u16 );
-            Trust::<T>::remove( netuid, uid_i as u16 );
-            Bonds::<T>::remove( netuid, uid_i as u16 );
-            Active::<T>::remove( netuid, uid_i as u16 );
-            Weights::<T>::remove( netuid, uid_i as u16 );
-            Emission::<T>::remove( netuid, uid_i as u16 );
-            Dividends::<T>::remove( netuid, uid_i as u16 );
-            Consensus::<T>::remove( netuid, uid_i as u16 );
-            Incentive::<T>::remove( netuid, uid_i as u16 );
-            PruningScores::<T>::remove( netuid, uid_i as u16 );
+            
             Active::<T>::insert( netuid, uid_i as u16, true ); // Set to active by default.
             Keys::<T>::insert( netuid, uid_i as u16, new_hotkey.clone() ); // Make hotkey - uid association.
             Uids::<T>::insert( netuid, new_hotkey.clone(), uid_i as u16 ); // Make uid - hotkey association.
@@ -612,14 +599,11 @@ impl<T: Config> Pallet<T> {
 
             // --- 7. If we reach here, add the balance to the hotkey.
             Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &new_hotkey, stakes[uid_i] );
+
+            // --- 8. Increase subnetwork n to amount of hotkeys.
+            SubnetworkN::<T>::mutate(netuid, |val| *val += 1);
         
         }
-
-        // --- 8. Increase subnetwork n to amount of hotkeys.
-        // TODO this is wrong.
-        SubnetworkN::<T>::insert( netuid, hotkeys.len() as u16 );
-
-
         // --- 9. Deposit successful event.
         Self::deposit_event( Event::BulkNeuronsRegistered( netuid, hotkeys.len() as u16 ) );
 
