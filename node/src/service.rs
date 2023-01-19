@@ -214,6 +214,7 @@ where
 		+ sp_block_builder::BlockBuilder<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
+		+ paratensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block>
 		+ paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block>
 		+ paratensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,

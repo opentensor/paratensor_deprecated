@@ -8,6 +8,9 @@ use sp_runtime::{
 };
 use std::sync::Arc;
 
+pub use paratensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi;
+use pallet_paratensor::delegate_info::DelegateInfo as DelegateInfoStruct;
+
 pub use paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi;
 use pallet_paratensor::neuron_info::NeuronInfo as NeuronInfoStruct;
 
@@ -16,6 +19,11 @@ use pallet_paratensor::subnet_info::SubnetInfo as SubnetInfoStruct;
 
 #[rpc]
 pub trait ParatensorCustomApi<BlockHash> {
+	#[rpc(name = "delegateInfo_getDelegates")]
+	fn get_delegates(&self, at: Option<BlockHash>) -> Result<Vec<DelegateInfoStruct>>;
+	#[rpc(name = "delegateInfo_getDelegate")]
+	fn get_delegate(&self, delegate_account_vec: Vec<u8>, at: Option<BlockHash>) -> Result<Option<DelegateInfoStruct>>;
+
 	#[rpc(name = "neuronInfo_getNeurons")]
 	fn get_neurons(&self, netuid: u16, at: Option<BlockHash>) -> Result<Vec<NeuronInfoStruct>>;
 	#[rpc(name = "neuronInfo_getNeuron")]
@@ -59,9 +67,36 @@ impl<C, Block> ParatensorCustomApi<<Block as BlockT>::Hash> for ParatensorCustom
 where
 	Block: BlockT,
 	C: 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+	C::Api: DelegateInfoRuntimeApi<Block>,
 	C::Api: NeuronInfoRuntimeApi<Block>,
 	C::Api: SubnetInfoRuntimeApi<Block>,
 	{ 
+	fn get_delegates(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<DelegateInfoStruct>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_delegates(&at).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get delegates info.".into(),
+			data: Some(e.to_string().into()),
+		})
+	}
+
+	fn get_delegate(&self, delegate_account_vec: Vec<u8>, at: Option<<Block as BlockT>::Hash>) -> Result<Option<DelegateInfoStruct>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(||
+			// If the block hash is not supplied assume the best block.
+			self.client.info().best_hash));
+
+		api.get_delegate(&at, delegate_account_vec).map_err(|e| RpcError {
+			code: ErrorCode::ServerError(Error::RuntimeError.into()),
+			message: "Unable to get delegate info.".into(),
+			data: Some(e.to_string().into()),
+		})
+	}
+
 	fn get_neurons(&self, netuid: u16, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NeuronInfoStruct>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(||

@@ -752,6 +752,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl paratensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block> for Runtime {
+		fn get_delegates() -> Vec<pallet_paratensor::delegate_info::DelegateInfo> {
+			Paratensor::get_delegates()
+		}
+
+		fn get_delegate(delegate_account_vec: Vec<u8>) -> Option<pallet_paratensor::delegate_info::DelegateInfo> {
+			Paratensor::get_delegate(delegate_account_vec)
+		}
+	}
+
 	impl paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
 		fn get_neurons(netuid: u16) -> Vec<pallet_paratensor::neuron_info::NeuronInfo> {
 			Paratensor::get_neurons(netuid)
