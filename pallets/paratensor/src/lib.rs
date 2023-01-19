@@ -124,6 +124,20 @@ pub mod pallet {
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+	#[derive(Decode, Encode, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+	pub struct DeAccountId { // allows us to de/serialize the account id as a u8 vec
+		#[serde(with = "serde_bytes")]
+		id: Vec<u8>
+	}
+
+	impl From<Vec<u8>> for DeAccountId {
+		fn from(v: Vec<u8>) -> Self {
+			DeAccountId {
+				id: v.clone()
+			}
+		}
+	}
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -283,20 +297,6 @@ pub mod pallet {
         pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
 	}
 
-
-	#[derive(Decode, Encode, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-	pub struct DeAccountId { // allows us to de/serialize the account id as a u8 vec
-		#[serde(with = "serde_bytes")]
-		id: Vec<u8>
-	}
-
-	impl From<Vec<u8>> for DeAccountId {
-		fn from(v: Vec<u8>) -> Self {
-			DeAccountId {
-				id: v.clone()
-			}
-		}
-	}
 
 	#[pallet::type_value] 
 	pub fn DefaultServingRateLimit<T: Config>() -> u64 { T::InitialServingRateLimit::get() }
