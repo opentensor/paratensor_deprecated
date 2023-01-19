@@ -716,15 +716,15 @@ fn test_massive_bulk_migration() {
 		
 		add_network(1, 0, 0);
 		// Lets register bulk a huge set.
-		let hkeys: Vec<u64> = (0..10).collect();
-		let ss: Vec<u64> = (0..10).collect();
+		let hkeys: Vec<u64> = (0..200).collect();
+		let ss: Vec<u64> = (0..200).collect();
 		let ckey : u64 = 2;
-		let balance: u64 = 100;
+		let balance: u64 = 30000;
 		ParatensorModule::set_max_allowed_uids( 1, 500 );
 		assert_eq!( ParatensorModule::get_subnetwork_n(1), 0 );
 		assert_ok!( ParatensorModule::sudo_bulk_migration(<<Test as Config>::Origin>::root(), 1, ckey, hkeys.clone(), ss.clone(), balance ) );
-		assert_eq!( ParatensorModule::get_subnetwork_n(1), 10 );
-		for i in 0..10 {
+		assert_eq!( ParatensorModule::get_subnetwork_n(1), 200 );
+		for i in 0..200 {
 			assert_eq!( ParatensorModule::get_hotkey_for_net_and_uid( 1, i as u16 ).unwrap(), i as u64 );
 			assert_eq!( ParatensorModule::get_owning_coldkey_for_hotkey( &(i as u64) ), ckey );
 		} 
