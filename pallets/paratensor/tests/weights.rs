@@ -306,3 +306,32 @@ fn test_set_weight_not_enough_values() {
 		assert_ok!( ParatensorModule::set_weights(Origin::signed(1), 1,  weight_keys, weight_values, 0)) ;
 	});
 }
+
+// Tests that the weights set fails if you pass too many uids for the subnet
+#[test]
+fn test_set_weight_too_many_uids() {
+	new_test_ext().execute_with(|| {
+        
+		let netuid: u16 = 1;
+		let tempo: u16 = 13;
+		add_network(netuid, tempo, 0);
+		
+		register_ok_neuron(1, 1, 2, 100_000);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &1 ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
+
+		register_ok_neuron(1, 3, 4, 300_000);
+		ParatensorModule::set_min_allowed_weights(1, 2);
+
+		// Should fail because we are setting more weights than there are neurons.
+		let weight_keys : Vec<u16> = vec![0, 1, 2, 3, 4]; // more uids than neurons in subnet.
+		let weight_values : Vec<u16> = vec![88, 102, 303, 1212, 11]; // random value.
+		let result = ParatensorModule::set_weights(Origin::signed(1), 1, weight_keys, weight_values, 0);
+		assert_eq!(result, Err(Error::<Test>::TooManyUids.into()));
+
+		// Shouldnt fail because we are setting less weights than there are neurons.
+		let weight_keys : Vec<u16> = vec![0, 1]; // Only on neurons that exist.
+		let weight_values : Vec<u16> = vec![10, 10]; // random value.
+		assert_ok!( ParatensorModule::set_weights(Origin::signed(1), 1 , weight_keys, weight_values, 0)) ;
+	});
+}
