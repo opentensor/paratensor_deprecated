@@ -154,12 +154,32 @@ fn test_weights_err_has_duplicate_ids() {
 		let netuid: u16 = 1;
 		let tempo: u16 = 13;
 		add_network(netuid, tempo, 0);
+
+		ParatensorModule::set_max_allowed_uids(netuid, 100); // Allow many registrations per block.
+		ParatensorModule::set_max_registrations_per_block(netuid, 100); // Allow many registrations per block.
+		
+		// uid 0
 		register_ok_neuron( netuid, hotkey_account_id, 77, 0);
 		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &hotkey_account_id ).expect("Not registered.");
 		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
-		let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 6, 6]; // Contains duplicates
-		let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5, 6, 7, 8];
-		let result = ParatensorModule::set_weights(Origin::signed(666), 1, weights_keys, weight_values, 0);
+
+		// uid 1
+		register_ok_neuron( netuid, 1, 1, 100_000);
+		ParatensorModule::get_uid_for_net_and_hotkey( netuid, &1 ).expect("Not registered.");
+
+		// uid 2
+		register_ok_neuron( netuid, 2, 1, 200_000);
+		ParatensorModule::get_uid_for_net_and_hotkey( netuid, &2 ).expect("Not registered.");
+
+		// uid 3
+		register_ok_neuron( netuid, 3, 1, 300_000);
+		ParatensorModule::get_uid_for_net_and_hotkey( netuid, &3 ).expect("Not registered.");
+		
+		assert_eq!(ParatensorModule::get_subnetwork_n(netuid), 4);
+
+		let weights_keys: Vec<u16> = vec![1, 1, 1]; // Contains duplicates
+		let weight_values: Vec<u16> = vec![1, 2, 3];
+		let result = ParatensorModule::set_weights(Origin::signed(hotkey_account_id), netuid, weights_keys, weight_values, 0);
 		assert_eq!(result, Err(Error::<Test>::DuplicateUids.into()));
 	});
 }
