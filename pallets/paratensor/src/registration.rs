@@ -573,33 +573,34 @@ impl<T: Config> Pallet<T> {
         Self::add_balance_to_coldkey_account(&coldkey, Self::u64_to_balance( balance ).unwrap());
 
         for (uid_i, new_hotkey) in hotkeys.iter().enumerate() {
-            
+
+            // --- 1. Add stakes to hotkeys
+            let stake_as_balance = Self::u64_to_balance( stakes[uid_i] );
+            ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
+    
+            // --- 2. Ensure the callers coldkey has enough stake to perform the transaction.
+            ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
+
+            // --- 3. Ensure that the hotkey account exists this is only possible through registration.
+            ensure!( Self::hotkey_account_exists( &new_hotkey ), Error::<T>::NotRegistered );    
+
+            // --- 4. Ensure that the hotkey allows delegation or that the hotkey is owned by the calling coldkey.
+            ensure!( Self::hotkey_is_delegate( &new_hotkey ) || Self::coldkey_owns_hotkey( &coldkey, &new_hotkey ), Error::<T>::NonAssociatedColdKey );
+        
+            // --- 6. Ensure the remove operation from the coldkey is a success.
+            ensure!( Self::remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
+
+            // --- 6. If we reach here, add the balance to the hotkey.
+            Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &new_hotkey, stakes[uid_i] );
+
+            // --- 7. update all storage
             Active::<T>::insert( netuid, uid_i as u16, true ); // Set to active by default.
             Keys::<T>::insert( netuid, uid_i as u16, new_hotkey.clone() ); // Make hotkey - uid association.
             Uids::<T>::insert( netuid, new_hotkey.clone(), uid_i as u16 ); // Make uid - hotkey association.
             IsNetworkMember::<T>::insert( new_hotkey.clone(), netuid, true ); // Fill network owner.
             PruningScores::<T>::insert( netuid, uid_i as u16, u16::MAX ); // Set to infinite pruning score.
             BlockAtRegistration::<T>::insert( netuid, uid_i as u16, current_block_number ); // Fill block at registration.
-
-            // Add stakes to hotkeys
-            let stake_as_balance = Self::u64_to_balance( stakes[uid_i] );
-            ensure!( stake_as_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
-    
-            // --- 3. Ensure the callers coldkey has enough stake to perform the transaction.
-            ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
-
-            // --- 4. Ensure that the hotkey account exists this is only possible through registration.
-            ensure!( Self::hotkey_account_exists( &new_hotkey ), Error::<T>::NotRegistered );    
-
-            // --- 5. Ensure that the hotkey allows delegation or that the hotkey is owned by the calling coldkey.
-            ensure!( Self::hotkey_is_delegate( &new_hotkey ) || Self::coldkey_owns_hotkey( &coldkey, &new_hotkey ), Error::<T>::NonAssociatedColdKey );
-        
-            // --- 6. Ensure the remove operation from the coldkey is a success.
-            ensure!( Self::remove_balance_from_coldkey_account( &coldkey, stake_as_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
-
-            // --- 7. If we reach here, add the balance to the hotkey.
-            Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &new_hotkey, stakes[uid_i] );
-
+            
             // --- 8. Increase subnetwork n to amount of hotkeys.
             SubnetworkN::<T>::mutate(netuid, |val| *val += 1);
         
