@@ -5,7 +5,7 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_core::crypto::{Ss58Codec,Ss58AddressFormatRegistry};
+use sp_core::crypto::{Ss58Codec};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -57,7 +57,7 @@ pub fn template_session_keys(keys: AuraId) -> bittensor_parachain::SessionKeys {
 
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
-	endowed_accounts: Vec<AccountId>,
+	_endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 	root_key: AccountId,
 ) -> bittensor_parachain::GenesisConfig {
