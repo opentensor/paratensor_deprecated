@@ -234,13 +234,21 @@ fn test_no_signature() {
 	});
 }
 
-/// Tests that weights cannot be set to non registered uids.
+/// Tests that weights cannot be set BY non-registered hotkeys.
 #[test]
 fn test_set_weights_err_not_active() {
 	new_test_ext().execute_with(|| {
-		let weights_keys: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
-		let weight_values: Vec<u16> = vec![1, 2, 3, 4, 5, 6];
-		add_network(1, 13, 0);
+		let netuid: u16 = 1;
+		let tempo: u16 = 13;
+		add_network(netuid, tempo, 0);
+
+		// Register one neuron. Should have uid 0
+		register_ok_neuron(1, 666, 2, 100000);
+		ParatensorModule::get_uid_for_net_and_hotkey( netuid, &666 ).expect("Not registered.");
+
+		let weights_keys: Vec<u16> = vec![0]; // Uid 0 is valid.
+		let weight_values: Vec<u16> = vec![1];
+		// This hotkey is NOT registered.
 		let result = ParatensorModule::set_weights(Origin::signed(1), 1, weights_keys, weight_values, 0);
 		assert_eq!(result, Err(Error::<Test>::NotRegistered.into()));
 	});
