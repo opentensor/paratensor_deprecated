@@ -5,6 +5,7 @@ use frame_system::Config;
 use frame_support::weights::{GetDispatchInfo, DispatchInfo, DispatchClass, Pays};
 use frame_support::{assert_ok};
 use sp_runtime::DispatchError;
+use substrate_fixed::types::I32F32;
 
 /***************************
   pub fn set_weights() tests
@@ -353,5 +354,42 @@ fn test_set_weight_too_many_uids() {
 		let weight_keys : Vec<u16> = vec![0, 1]; // Only on neurons that exist.
 		let weight_values : Vec<u16> = vec![10, 10]; // random value.
 		assert_ok!( ParatensorModule::set_weights(Origin::signed(1), 1 , weight_keys, weight_values, 0)) ;
+	});
+}
+
+// Tests that the weights set doesn't panic if you pass weights that sum to larger than u16 max.
+#[test]
+fn test_set_weights_sum_larger_than_u16_max() {
+	new_test_ext().execute_with(|| {
+        
+		let netuid: u16 = 1;
+		let tempo: u16 = 13;
+		add_network(netuid, tempo, 0);
+		
+		register_ok_neuron(1, 1, 2, 100_000);
+		let neuron_uid: u16 = ParatensorModule::get_uid_for_net_and_hotkey( netuid, &1 ).expect("Not registered.");
+		ParatensorModule::set_validator_permit(netuid, neuron_uid, true);
+
+		register_ok_neuron(1, 3, 4, 300_000);
+		ParatensorModule::set_min_allowed_weights(1, 2);
+	
+
+		// Shouldn't fail because we are setting the right number of weights.
+		let weight_keys : Vec<u16> = vec![0, 1];
+		let weight_values : Vec<u16> = vec![u16::MAX, u16::MAX];
+		// sum of weights is larger than u16 max.
+		assert!( weight_values.iter().map(|x| *x as u64).sum::<u64>() > (u16::MAX as u64) );
+
+		let result = ParatensorModule::set_weights(Origin::signed(1), 1, weight_keys, weight_values, 0);
+		assert_ok!(result);
+
+		let all_weights: Vec<Vec<I32F32>> = ParatensorModule::get_weights(netuid);
+		let weights_set: Vec<u16> = all_weights[neuron_uid as usize].iter().map(|x| x.to_bits() as u16).collect();
+
+		// Should sum less than u16 max.
+		assert!(weights_set.iter().map(|x| *x as u64).sum::<u64>() <= (u16::MAX as u64) );
+
+		// Should be normalized to 50% each.
+		assert_eq!(weights_set, vec![u16::MAX/2, u16::MAX/2]);
 	});
 }
