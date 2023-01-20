@@ -527,6 +527,7 @@ pub mod pallet {
 		NoValidatorPermit, // ---- Thrown when the caller attempts to set non-self weights without being a permitted validator.
 		WeightVecNotEqualSize, // ---- Thrown when the caller attempts to set the weight keys and values but these vectors have different size.
 		DuplicateUids, // ---- Thrown when the caller attempts to set weights with duplicate uids in the weight matrix.
+		TooManyUids, // ---- Thrown when the caller attempts to set weights with more uids than allowed.
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
 		NotSettingEnoughWeights, // ---- Thrown when the dispatch attempts to set weights on chain with fewer elements than are allowed.
 		TooManyRegistrationsThisBlock, // ---- Thrown when registrations this block exceeds allowed number.
@@ -620,6 +621,9 @@ pub mod pallet {
 		///
 		/// 	* 'DuplicateUids':
 		/// 		- Attempting to set weights with duplicate uids.
+		///		
+		///     * 'TooManyUids':
+		/// 		- Attempting to set weights above the max allowed uids.
 		///
 		/// 	* 'InvalidUid':
 		/// 		- Attempting to set weights with invalid uids.
