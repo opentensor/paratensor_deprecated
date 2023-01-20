@@ -48,6 +48,9 @@ impl<T: Config> Pallet<T> {
     ///
     /// 	* 'DuplicateUids':
     /// 		- Attempting to set weights with duplicate uids.
+    /// 
+    ///     * 'TooManyUids':
+    /// 		- Attempting to set weights above the max allowed uids.
     ///
     /// 	* 'InvalidUid':
     /// 		- Attempting to set weights with invalid uids.
@@ -70,6 +73,9 @@ impl<T: Config> Pallet<T> {
         // --- 3. Check to see if this is a valid network.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
         
+        // --- 4. Check to see if the number of uids is within the max allowed uids for this network.
+        ensure!( Self::check_len_uids_within_max( netuid, &uids ), Error::<T>::TooManyUids);
+
         // --- 5. Check to see if the hotkey is registered to the passed network.
         ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
 
@@ -227,6 +233,12 @@ impl<T: Config> Pallet<T> {
         if weights.len() != 1 { return false; }
         if uid != uids[0] { return false; } 
         return true;
+    }
+
+    /// Returns False is the number of uids exceeds the max_allowed_uids for this network.
+    pub fn check_len_uids_within_max( netuid: u16, uids: &Vec<u16> ) -> bool {
+        let max_allowed_uids: u16 = Self::get_max_allowed_uids( netuid );
+        return uids.len() <= max_allowed_uids as usize;
     }
     
 }
