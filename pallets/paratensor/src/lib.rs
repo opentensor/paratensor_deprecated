@@ -29,7 +29,10 @@ mod weights;
 mod networks;
 mod serving; 
 mod block_step;
+// RPC impl imports
+pub mod delegate_info;
 pub mod neuron_info;
+pub mod subnet_info;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -123,6 +126,20 @@ pub mod pallet {
 	}
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+	#[derive(Decode, Encode, Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+	pub struct DeAccountId { // allows us to de/serialize the account id as a u8 vec
+		#[serde(with = "serde_bytes")]
+		id: Vec<u8>
+	}
+
+	impl From<Vec<u8>> for DeAccountId {
+		fn from(v: Vec<u8>) -> Self {
+			DeAccountId {
+				id: v.clone()
+			}
+		}
+	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -282,6 +299,7 @@ pub mod pallet {
         pub port: u16, // --- Prometheus u16 encoded port.
         pub ip_type: u8, // --- Prometheus ip type, 4 for ipv4 and 6 for ipv6.
 	}
+
 
 	#[pallet::type_value] 
 	pub fn DefaultServingRateLimit<T: Config>() -> u64 { T::InitialServingRateLimit::get() }
@@ -525,6 +543,7 @@ pub mod pallet {
 		NoValidatorPermit, // ---- Thrown when the caller attempts to set non-self weights without being a permitted validator.
 		WeightVecNotEqualSize, // ---- Thrown when the caller attempts to set the weight keys and values but these vectors have different size.
 		DuplicateUids, // ---- Thrown when the caller attempts to set weights with duplicate uids in the weight matrix.
+		TooManyUids, // ---- Thrown when the caller attempts to set weights with more uids than allowed.
 		InvalidUid, // ---- Thrown when a caller attempts to set weight to at least one uid that does not exist in the metagraph.
 		NotSettingEnoughWeights, // ---- Thrown when the dispatch attempts to set weights on chain with fewer elements than are allowed.
 		TooManyRegistrationsThisBlock, // ---- Thrown when registrations this block exceeds allowed number.
@@ -534,6 +553,7 @@ pub mod pallet {
 		InvalidDifficulty, // ---- Thrown if the supplied pow hash block does not meet the network difficulty.
 		InvalidSeal, // ---- Thrown if the supplied pow hash seal does not match the supplied work.
 		MaxAllowedUIdsNotAllowed, // ---  Thrown if the vaule is invalid for MaxAllowedUids
+		MaxAllowedUidsExceeded, // --- Thrown when number of accounts going to be registered exceed MaxAllowedUids for the network.
 		CouldNotConvertToBalance, // ---- Thrown when the dispatch attempts to convert between a u64 and T::balance but the call fails.
 		StakeAlreadyAdded, // --- Thrown when the caller requests adding stake for a hotkey to the total stake which already added
 		MaxWeightExceeded, // --- Thrown when the dispatch attempts to set weights on chain with where any normalized weight is more than MaxWeightLimit.
@@ -617,6 +637,9 @@ pub mod pallet {
 		///
 		/// 	* 'DuplicateUids':
 		/// 		- Attempting to set weights with duplicate uids.
+		///		
+		///     * 'TooManyUids':
+		/// 		- Attempting to set weights above the max allowed uids.
 		///
 		/// 	* 'InvalidUid':
 		/// 		- Attempting to set weights with invalid uids.
@@ -991,19 +1014,13 @@ pub mod pallet {
 			)
 		}
 
-		/// ---- Sudo create and load network.
+		/// ---- Sudo bulk register accounts
 		/// Args:
 		/// 	* 'origin': (<T as frame_system::Config>Origin):
 		/// 		- The caller, must be sudo.
 		///
 		/// 	* `netuid` ( u16 ):
 		/// 		- The network we are intending on performing the bulk creation on.
-		///
-		/// 	* `n` ( u16 ):
-		/// 		- Network size.
-		///
-		/// 	* `uids` ( Vec<u16> ):
-		/// 		- List of uids to set keys under.
 		///
 		/// 	* `hotkeys` ( Vec<T::AccountId> ):
 		/// 		- List of hotkeys to register on account.
@@ -1023,6 +1040,39 @@ pub mod pallet {
 				netuid,
 				hotkeys,
 				coldkeys
+			)
+		}
+
+				/// ---- Sudo bulk register accounts
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` ( u16 ):
+		/// 		- The network we are intending on performing the bulk creation on.
+		///
+		/// 	* `hotkeys` ( Vec<T::AccountId> ):
+		/// 		- List of hotkeys to register on account.
+		///
+		/// 	* `coldkeys` ( Vec<T::AccountId> ):
+		/// 		- List of coldkeys related to hotkeys.
+		/// 
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_bulk_migration(
+			origin: OriginFor<T>,
+			netuid: u16,
+			coldkey: T::AccountId,
+			hotkeys: Vec<T::AccountId>,
+			stakes: Vec<u64>,
+			balance: u64
+		) -> DispatchResult {
+			Self::do_bulk_migration( 
+				origin,
+				netuid,
+				coldkey,
+				hotkeys,
+				stakes,
+				balance
 			)
 		}
 

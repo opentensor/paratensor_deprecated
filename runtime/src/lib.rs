@@ -174,7 +174,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bittensor-parachain"),
 	impl_name: create_runtime_str!("bittensor-parachain"),
 	authoring_version: 1,
-	spec_version: 4,
+	spec_version: 5,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -231,7 +231,7 @@ parameter_types! {
 	// `DeletionWeightLimit` and `DeletionQueueDepth` depend on those to parameterize
 	// the lazy contract deletion.
 	pub RuntimeBlockLength: BlockLength =
-		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+		BlockLength::max_with_normal_ratio(10 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 	pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
 		.base_block(BlockExecutionWeight::get())
 		.for_class(DispatchClass::all(), |weights| {
@@ -754,6 +754,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl paratensor_custom_rpc_runtime_api::DelegateInfoRuntimeApi<Block> for Runtime {
+		fn get_delegates() -> Vec<pallet_paratensor::delegate_info::DelegateInfo> {
+			Paratensor::get_delegates()
+		}
+
+		fn get_delegate(delegate_account_vec: Vec<u8>) -> Option<pallet_paratensor::delegate_info::DelegateInfo> {
+			Paratensor::get_delegate(delegate_account_vec)
+		}
+	}
+
 	impl paratensor_custom_rpc_runtime_api::NeuronInfoRuntimeApi<Block> for Runtime {
 		fn get_neurons(netuid: u16) -> Vec<pallet_paratensor::neuron_info::NeuronInfo> {
 			Paratensor::get_neurons(netuid)
@@ -761,6 +771,16 @@ impl_runtime_apis! {
 
 		fn get_neuron(netuid: u16, uid: u16) -> Option<pallet_paratensor::neuron_info::NeuronInfo> {
 			Paratensor::get_neuron(netuid, uid)
+		}
+	}
+
+	impl paratensor_custom_rpc_runtime_api::SubnetInfoRuntimeApi<Block> for Runtime {
+		fn get_subnet_info(netuid: u16) -> Option<pallet_paratensor::subnet_info::SubnetInfo> {
+			Paratensor::get_subnet_info(netuid)
+		}
+
+		fn get_subnets_info() -> Vec<Option<pallet_paratensor::subnet_info::SubnetInfo>> {
+			Paratensor::get_subnets_info()
 		}
 	}
 }

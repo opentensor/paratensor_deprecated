@@ -48,6 +48,9 @@ impl<T: Config> Pallet<T> {
     ///
     /// 	* 'DuplicateUids':
     /// 		- Attempting to set weights with duplicate uids.
+    /// 
+    ///     * 'TooManyUids':
+    /// 		- Attempting to set weights above the max allowed uids.
     ///
     /// 	* 'InvalidUid':
     /// 		- Attempting to set weights with invalid uids.
@@ -64,59 +67,62 @@ impl<T: Config> Pallet<T> {
         let hotkey = ensure_signed( origin )?;
         log::info!("do_set_weights( origin:{:?} netuid:{:?}, uids:{:?}, values:{:?})", hotkey, netuid, uids, values );
 
-        // --- 2. Check to see if this is a valid network.
-        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
+        // --- 2. Check that the length of uid list and value list are equal for this network.
+        ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
 
-        // --- 3. Check to see if the hotkey is registered to the passed network.
+        // --- 3. Check to see if this is a valid network.
+        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist );
+        
+        // --- 4. Check to see if the number of uids is within the max allowed uids for this network.
+        ensure!( Self::check_len_uids_within_allowed( netuid, &uids ), Error::<T>::TooManyUids);
+
+        // --- 5. Check to see if the hotkey is registered to the passed network.
         ensure!( Self::is_hotkey_registered_on_network( netuid, &hotkey ), Error::<T>::NotRegistered );
 
-        // --- 4. Ensure version_key is up-to-date.
+        // --- 6. Ensure version_key is up-to-date.
         ensure!( Self::check_version_key( netuid, version_key ), Error::<T>::IncorrectNetworkVersionKey );
 
-        // --- 5. Get the neuron uid of associated hotkey on network netuid.
+        // --- 7. Get the neuron uid of associated hotkey on network netuid.
         let neuron_uid;
         match Self::get_uid_for_net_and_hotkey( netuid, &hotkey ) { Ok(k) => neuron_uid = k, Err(e) => panic!("Error: {:?}", e) } 
 
-        // --- 6. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
+        // --- 8. Ensure the uid is not setting weights faster than the weights_set_rate_limit.
         let current_block: u64 = Self::get_current_block_as_u64();
         ensure!( Self::check_rate_limit( netuid, neuron_uid, current_block ), Error::<T>::SettingWeightsTooFast );
 
-        // --- 7. Check that the neuron uid is an allowed validator permitted to set non-self weights.
+        // --- 9. Check that the neuron uid is an allowed validator permitted to set non-self weights.
         ensure!( Self::check_validator_permit( netuid, neuron_uid, &uids, &values ), Error::<T>::NoValidatorPermit );
 
-        // --- 8. Check that the length of uid list and value list are equal for this network.
-        ensure!( Self::uids_match_values( &uids, &values ), Error::<T>::WeightVecNotEqualSize );
-
-        // --- 9. Ensure the passed uids contain no duplicates.
+        // --- 10. Ensure the passed uids contain no duplicates.
         ensure!( !Self::has_duplicate_uids( &uids ), Error::<T>::DuplicateUids );
 
-        // --- 10. Ensure that the passed uids are valid for the network.
+        // --- 11. Ensure that the passed uids are valid for the network.
         ensure!( !Self::contains_invalid_uids( netuid, &uids ), Error::<T>::InvalidUid );
 
-        // --- 11. Ensure that the weights have the required length.
+        // --- 12. Ensure that the weights have the required length.
         ensure!( Self::check_length( netuid, neuron_uid, &uids, &values ), Error::<T>::NotSettingEnoughWeights );
 
-        // --- 12. Normalize the weights.
+        // --- 13. Normalize the weights.
         let normalized_values = Self::normalize_weights( values );
 
-        // --- 13. Ensure the weights are max weight limited 
+        // --- 14. Ensure the weights are max weight limited 
         ensure!( Self::max_weight_limited( netuid, neuron_uid, &uids, &normalized_values ), Error::<T>::MaxWeightExceeded );
 
-        // --- 14. Zip weights for sinking to storage map.
+        // --- 15. Zip weights for sinking to storage map.
         let mut zipped_weights: Vec<( u16, u16 )> = vec![];
         for ( uid, val ) in uids.iter().zip(normalized_values.iter()) { zipped_weights.push((*uid, *val)) }
 
-        // --- 15. Set weights under netuid, uid double map entry.
+        // --- 16. Set weights under netuid, uid double map entry.
         Weights::<T>::insert( netuid, neuron_uid, zipped_weights );
 
-        // --- 16. Set the activity for the weights on this network.
+        // --- 17. Set the activity for the weights on this network.
         LastUpdate::<T>::insert( netuid, neuron_uid, current_block );
 
-        // --- 17; Emit the tracking event.
+        // --- 18. Emit the tracking event.
         log::info!("WeightsSet( netuid:{:?}, neuron_uid:{:?} )", netuid, neuron_uid );
         Self::deposit_event( Event::WeightsSet( netuid, neuron_uid ) );
 
-        // --- 18. Return ok.
+        // --- 19. Return ok.
         Ok(())
     }
 
@@ -227,6 +233,13 @@ impl<T: Config> Pallet<T> {
         if weights.len() != 1 { return false; }
         if uid != uids[0] { return false; } 
         return true;
+    }
+
+    /// Returns False is the number of uids exceeds the allowed number of uids for this network.
+    pub fn check_len_uids_within_allowed( netuid: u16, uids: &Vec<u16> ) -> bool {
+        let subnetwork_n: u16 = Self::get_subnetwork_n( netuid );
+        // we should expect at most subnetwork_n uids.
+        return uids.len() <= subnetwork_n as usize;
     }
     
 }
