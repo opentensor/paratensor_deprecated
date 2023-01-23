@@ -289,12 +289,14 @@ impl<T: Config> Pallet<T> {
         Keys::<T>::remove_prefix( netuid, None );
         Rank::<T>::remove_prefix( netuid, None );
         Trust::<T>::remove_prefix( netuid, None );
+        ValidatorTrust::<T>::remove_prefix( netuid, None );
         Bonds::<T>::remove_prefix( netuid, None );
         Active::<T>::remove_prefix( netuid, None );
         Weights::<T>::remove_prefix( netuid, None );
         Emission::<T>::remove_prefix( netuid, None );
         Incentive::<T>::remove_prefix( netuid, None );
         Consensus::<T>::remove_prefix( netuid, None );
+        WeightConsensus::<T>::remove_prefix( netuid, None );
         Dividends::<T>::remove_prefix( netuid, None );
         PruningScores::<T>::remove_prefix( netuid, None );
 

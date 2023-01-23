@@ -22,6 +22,7 @@ mod benchmarking;
 /// =========================
 mod registration;
 mod epoch;
+mod math;
 mod utils;
 mod staking;
 mod weights;
@@ -84,6 +85,8 @@ pub mod pallet {
 		type InitialBondsMovingAverage: Get<u64>;
 		#[pallet::constant] /// Initial target registrations per interval.
 		type InitialTargetRegistrationsPerInterval: Get<u16>;
+		#[pallet::constant] /// Initial number of weight cuts in epoch.
+		type InitialWeightCuts: Get<u16>;
 		#[pallet::constant] /// Rho constant
 		type InitialRho: Get<u16>;
 		#[pallet::constant] /// Kappa constant
@@ -316,6 +319,8 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultBlockAtRegistration<T: Config>() -> u64 { 0 }
 	#[pallet::type_value]
+	pub fn DefaultWeightCuts<T: Config>() -> u16 { T::InitialWeightCuts::get() }
+	#[pallet::type_value]
 	pub fn DefaultRho<T: Config>() -> u16 { T::InitialRho::get() }
 	#[pallet::type_value]
 	pub fn DefaultKappa<T: Config>() -> u16 { T::InitialKappa::get() }
@@ -355,6 +360,8 @@ pub mod pallet {
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
 
+	#[pallet::storage] /// --- MAP ( netuid ) --> WeightCuts
+	pub type WeightCuts<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultWeightCuts<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> Rho
 	pub type Rho<T> =  StorageMap<_, Identity, u16, u16, ValueQuery, DefaultRho<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> Kappa
@@ -412,11 +419,15 @@ pub mod pallet {
 	#[pallet::type_value] 
 	pub fn DefaultTrust<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
+	pub fn DefaultValidatorTrust<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
 	pub fn DefaultEmission<T:Config>() -> u64 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultIncentive<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultConsensus<T:Config>() -> u16 { 0 }
+	#[pallet::type_value] 
+	pub fn DefaultWeightConsensus<T:Config>() -> u16 { 0 }
 	#[pallet::type_value] 
 	pub fn DefaultLastUpdate<T:Config>() -> u64 { 0 }
 	#[pallet::type_value] 
@@ -440,6 +451,8 @@ pub mod pallet {
 	pub(super) type Uids<T:Config> = StorageDoubleMap<_, Identity, u16, Blake2_128Concat, T::AccountId, u16, OptionQuery>;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> trust
 	pub(super) type Trust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultTrust<T> >;
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> validator_trust
+	pub(super) type ValidatorTrust<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultValidatorTrust<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> active
 	pub(super) type Active<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, bool, ValueQuery, DefaultActive<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> hotkey
@@ -450,6 +463,8 @@ pub mod pallet {
 	pub(super) type Incentive<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultIncentive<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> consensus
 	pub(super) type Consensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultConsensus<T> >;
+	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> weight_consensus
+	pub(super) type WeightConsensus<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultWeightConsensus<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> dividends
 	pub(super) type Dividends<T:Config> = StorageDoubleMap< _, Identity, u16, Identity, u16, u16, ValueQuery, DefaultDividends<T> >;
 	#[pallet::storage] /// --- DMAP ( netuid, uid ) --> last_update
@@ -482,6 +497,7 @@ pub mod pallet {
 		AdjustmentIntervalSet( u16, u16 ), // --- Event created when the adjustment interval is set for a subnet.
 		RegistrationPerIntervalSet( u16, u16 ), // --- Event created when registeration per interval is set for a subnet.
 		ActivityCutoffSet( u16, u16 ), // --- Event created when an activity cutoff is set for a subnet.
+		WeightCutsSet( u16, u16 ), // --- Event created when WeightCuts value is set.
 		RhoSet( u16, u16 ), // --- Event created when Rho value is set.
 		KappaSet( u16, u16 ), // --- Event created when kappa is set for a subnet.
 		MinAllowedWeightSet( u16, u16 ), // --- Event created when minimun allowed weight is set for a subnet.
@@ -1164,6 +1180,10 @@ pub mod pallet {
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_kappa( origin:OriginFor<T>, netuid: u16, kappa: u16 ) -> DispatchResult {
 			Self::do_sudo_set_kappa( origin, netuid, kappa )
+		}
+		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
+		pub fn sudo_set_weight_cuts( origin:OriginFor<T>, netuid: u16, weight_cuts: u16 ) -> DispatchResult {
+			Self::do_sudo_set_weight_cuts( origin, netuid, weight_cuts )
 		}
 		#[pallet::weight((0, DispatchClass::Operational, Pays::No))]
 		pub fn sudo_set_max_allowed_uids( origin:OriginFor<T>, netuid: u16, max_allowed_uids: u16 ) -> DispatchResult {
