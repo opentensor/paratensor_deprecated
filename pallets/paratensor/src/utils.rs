@@ -129,6 +129,28 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    pub fn get_validator_prune_len( netuid: u16 ) -> u64 { ValidatorPruneLen::<T>::get( netuid ) }
+    pub fn set_validator_prune_len( netuid: u16, validator_prune_len: u64 ) { ValidatorPruneLen::<T>::insert( netuid, validator_prune_len ); }
+    pub fn do_sudo_set_validator_prune_len( origin:T::Origin, netuid: u16, validator_prune_len: u64 ) -> DispatchResult {
+        ensure_root( origin )?;
+        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
+        Self::set_validator_prune_len(netuid, validator_prune_len);
+        log::info!("ValidatorPruneLenSet( netuid: {:?} validator_prune_len: {:?} ) ", netuid, validator_prune_len);
+		Self::deposit_event( Event::ValidatorPruneLenSet( netuid, validator_prune_len ));
+		Ok(())
+    }
+
+    pub fn get_validator_logits_divergence( netuid: u16 ) -> u64 { ValidatorLogitsDivergence::<T>::get( netuid ) }
+    pub fn set_validator_logits_divergence( netuid: u16, validator_logits_divergence: u64 ) { ValidatorLogitsDivergence::<T>::insert( netuid, validator_logits_divergence ); }
+    pub fn do_sudo_set_validator_logits_divergence( origin:T::Origin, netuid: u16, validator_logits_divergence: u64 ) -> DispatchResult {
+        ensure_root( origin )?;
+        ensure!( Self::if_subnet_exist(netuid), Error::<T>::NetworkDoesNotExist );
+        Self::set_validator_logits_divergence(netuid, validator_logits_divergence);
+        log::info!("ValidatorLogitsDivergenceSet( netuid: {:?} validator_logits_divergence: {:?} ) ", netuid, validator_logits_divergence);
+        Self::deposit_event( Event::ValidatorLogitsDivergenceSet( netuid, validator_logits_divergence ));
+        Ok(())
+    }
+
     pub fn get_scaling_law_power( netuid: u16 ) -> u16 { ScalingLawPower::<T>::get( netuid ) }
     pub fn set_scaling_law_power( netuid: u16, scaling_law_power: u16 ) { ScalingLawPower::<T>::insert( netuid, scaling_law_power ); }
     pub fn do_sudo_set_scaling_law_power( origin:T::Origin, netuid: u16, scaling_law_power: u16 ) -> DispatchResult {
