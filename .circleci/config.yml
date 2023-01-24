@@ -15,7 +15,3 @@ workflows:
   test:
     jobs:
       - test
-          filters:
-            branches:
-              only:
-                - /^(master|finney)/
