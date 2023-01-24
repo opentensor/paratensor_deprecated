@@ -568,6 +568,7 @@ pub mod pallet {
 		SettingWeightsTooFast, // --- Thrown if the hotkey attempts to set weights twice withing net_tempo/2 blocks.
 		IncorrectNetworkVersionKey, // --- Thrown of a validator attempts to set weights from a validator with incorrect code base key.
 		ServingRateLimitExceeded, // --- Thrown when an axon or prometheus serving exceeds the rate limit for a registered neuron.
+		BalanceSetError, // --- Thrown when an error occurs setting a balance
 	}
 
 	/// ================

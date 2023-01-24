@@ -321,6 +321,10 @@ impl<T: Config> Pallet<T> {
         T::Currency::deposit_creating(&coldkey, amount); // Infallibe
     }
 
+    pub fn set_balance_on_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) {
+        T::Currency::make_free_balance_be(&coldkey, amount); 
+    }
+
     pub fn can_remove_balance_from_coldkey_account(coldkey: &T::AccountId, amount: <<T as Config>::Currency as Currency<<T as system::Config>::AccountId>>::Balance) -> bool {
         let current_balance = Self::get_coldkey_balance(coldkey);
         if amount > current_balance {

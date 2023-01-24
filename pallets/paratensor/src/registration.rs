@@ -228,7 +228,7 @@ impl<T: Config> Pallet<T> {
 
     /// Returns true if the items contain duplicates hotkeys.
     ///
-    fn has_duplicate_hotkeys(items: &Vec<T::AccountId>) -> bool {
+    fn has_duplicate_keys(items: &Vec<T::AccountId>) -> bool {
         let mut parsed: Vec<T::AccountId> = Vec::new();
         for item in items {
             if parsed.contains(&item) { return true; }
@@ -454,7 +454,7 @@ impl<T: Config> Pallet<T> {
         ensure!( hotkeys.len() == coldkeys.len(), Error::<T>::WeightVecNotEqualSize ); 
 
         // --- 4. Ensure the passed hotkeys do not contain duplicates.
-        ensure!( !Self::has_duplicate_hotkeys( &hotkeys ), Error::<T>::DuplicateUids );
+        ensure!( !Self::has_duplicate_keys( &hotkeys ), Error::<T>::DuplicateUids );
 
         // --- 5. Check the network size to hotkey length.
         ensure!( hotkeys.len() as u16 == Self::get_max_allowed_uids( netuid ), Error::<T>::NotSettingEnoughWeights);
@@ -542,8 +542,7 @@ impl<T: Config> Pallet<T> {
         netuid: u16, 
         coldkey: T::AccountId,
         hotkeys: Vec<T::AccountId>, 
-        stakes: Vec<u64>,
-        _balance: u64
+        stakes: Vec<u64>
     ) -> DispatchResult {
 
         // --- 1. Ensure the caller is sudo.
@@ -556,7 +555,7 @@ impl<T: Config> Pallet<T> {
         ensure!( hotkeys.len() == stakes.len(), Error::<T>::WeightVecNotEqualSize ); 
 
         // --- 4. Ensure the passed hotkeys do not contain duplicates.
-        ensure!( !Self::has_duplicate_hotkeys( &hotkeys ), Error::<T>::DuplicateUids );
+        ensure!( !Self::has_duplicate_keys( &hotkeys ), Error::<T>::DuplicateUids );
 
         // --- 5. Check the network size to hotkey length.
         ensure!( hotkeys.len() as u16 <= Self::get_max_allowed_uids( netuid ), Error::<T>::MaxAllowedUidsExceeded);
@@ -630,19 +629,17 @@ impl<T: Config> Pallet<T> {
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
         // --- 4. Ensure the passed hotkeys do not contain duplicates.
-        ensure!( !Self::has_duplicate_hotkeys( &coldkeys ), Error::<T>::DuplicateUids );
+        ensure!( !Self::has_duplicate_keys( &coldkeys ), Error::<T>::DuplicateUids );
 
 
-        for (coldkey, balance) in coldkeys.iter().zip(balances.iter()) {
+        for (coldkey, balance) in coldkeys.iter().zip(balances.clone()) {
             // Add stakes to hotkeys
-            let coldkey_balance = Self::u64_to_balance( *balance );
+            let coldkey_balance = Self::u64_to_balance( balance );
             ensure!( coldkey_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
     
-            // --- 3. Ensure the callers coldkey has enough stake to perform the transaction.
-            ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, coldkey_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
-        
-            // --- 6. Ensure the remove operation from the coldkey is a success.
-            ensure!( Self::remove_balance_from_coldkey_account( &coldkey, coldkey_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
+            Self::set_balance_on_coldkey_account(&coldkey, coldkey_balance.unwrap());
+
+            ensure!( Self::get_coldkey_balance(coldkey) == coldkey_balance.unwrap(), Error::<T>::BalanceSetError);
 
             log::info!("BalanceAdded( coldkey:{:?}, balance:{:?} )", coldkey, balance );
             // --- 8. Increase subnetwork n to amount of hotkeys.
