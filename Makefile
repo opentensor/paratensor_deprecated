@@ -21,5 +21,6 @@ build-collator:
 		--tag opentensor/parachain/collator \
 		.
 
+# not ready to run a local testnet yet
 up-and-scale-testnet:
 	docker compose up -d --scale validator=4 --scale collator=2
