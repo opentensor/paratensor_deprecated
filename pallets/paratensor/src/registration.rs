@@ -543,7 +543,7 @@ impl<T: Config> Pallet<T> {
         coldkey: T::AccountId,
         hotkeys: Vec<T::AccountId>, 
         stakes: Vec<u64>,
-        balance: u64
+        _balance: u64
     ) -> DispatchResult {
 
         // --- 1. Ensure the caller is sudo.
@@ -552,7 +552,7 @@ impl<T: Config> Pallet<T> {
         // --- 2. Ensure the passed network is valid and exists.
         ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
 
-        // --- 3. Ensure the coldkeys match the stakes in length.
+        // --- 3. Ensure the hotkeys match the stakes in length.
         ensure!( hotkeys.len() == stakes.len(), Error::<T>::WeightVecNotEqualSize ); 
 
         // --- 4. Ensure the passed hotkeys do not contain duplicates.
@@ -574,7 +574,7 @@ impl<T: Config> Pallet<T> {
         let current_block_number: u64 = Self::get_current_block_as_u64();
 
         // --- 8. Add balance to coldkey
-        Self::add_balance_to_coldkey_account(&coldkey, Self::u64_to_balance( balance ).unwrap());
+        //Self::add_balance_to_coldkey_account(&coldkey, Self::u64_to_balance( balance ).unwrap());
 
         for (uid_i, new_hotkey) in hotkeys.iter().enumerate() {
             
@@ -604,12 +604,53 @@ impl<T: Config> Pallet<T> {
             // --- 7. If we reach here, add the balance to the hotkey.
             Self::increase_stake_on_coldkey_hotkey_account( &coldkey, &new_hotkey, stakes[uid_i] );
 
+            log::info!("StakeAdded( hotkey:{:?}, stake_to_be_added:{:?} )", new_hotkey, stakes[uid_i] );
             // --- 8. Increase subnetwork n to amount of hotkeys.
             SubnetworkN::<T>::mutate(netuid, |val| *val += 1);
         
         }
         // --- 9. Deposit successful event.
         Self::deposit_event( Event::BulkNeuronsRegistered( netuid, hotkeys.len() as u16 ) );
+
+        // --- 10. Ok and done.
+        Ok(())
+    }
+
+    pub fn do_bulk_set_balances(
+        origin: T::Origin, 
+        netuid: u16, 
+        coldkeys: Vec<T::AccountId>, 
+        balances: Vec<u64>
+    ) -> DispatchResult {
+
+        // --- 1. Ensure the caller is sudo.
+        ensure_root( origin )?;
+
+        // --- 2. Ensure the passed network is valid and exists.
+        ensure!( Self::if_subnet_exist( netuid ), Error::<T>::NetworkDoesNotExist ); 
+
+        // --- 4. Ensure the passed hotkeys do not contain duplicates.
+        ensure!( !Self::has_duplicate_hotkeys( &coldkeys ), Error::<T>::DuplicateUids );
+
+
+        for (coldkey, balance) in coldkeys.iter().zip(balances.iter()) {
+            // Add stakes to hotkeys
+            let coldkey_balance = Self::u64_to_balance( *balance );
+            ensure!( coldkey_balance.is_some(), Error::<T>::CouldNotConvertToBalance );
+    
+            // --- 3. Ensure the callers coldkey has enough stake to perform the transaction.
+            ensure!( Self::can_remove_balance_from_coldkey_account( &coldkey, coldkey_balance.unwrap() ), Error::<T>::NotEnoughBalanceToStake );
+        
+            // --- 6. Ensure the remove operation from the coldkey is a success.
+            ensure!( Self::remove_balance_from_coldkey_account( &coldkey, coldkey_balance.unwrap() ) == true, Error::<T>::BalanceWithdrawalError );
+
+            log::info!("BalanceAdded( coldkey:{:?}, balance:{:?} )", coldkey, balance );
+            // --- 8. Increase subnetwork n to amount of hotkeys.
+            SubnetworkN::<T>::mutate(netuid, |val| *val += 1);
+        
+        }
+        // --- 9. Deposit successful event.
+        Self::deposit_event( Event::BulkBalancesSet( netuid, coldkeys.len() as u16 ) );
 
         // --- 10. Ok and done.
         Ok(())

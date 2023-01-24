@@ -491,6 +491,7 @@ pub mod pallet {
 		WeightsSet( u16, u16 ), // ---- Event created when a caller successfully set's their weights on a subnetwork.
 		NeuronRegistered( u16, u16, T::AccountId ), // --- Event created when a new neuron account has been registered to the chain.
 		BulkNeuronsRegistered( u16, u16 ), // --- Event created when multiple uids have been concurrently registered.
+		BulkBalancesSet(u16, u16),
 		MaxAllowedUidsSet( u16, u16 ), // --- Event created when max allowed uids has been set for a subnetwor.
 		MaxWeightLimitSet( u16, u16 ), // --- Event created when the max weight limit has been set.
 		DifficultySet( u16, u64 ), // --- Event created when the difficulty has been set for a subnet.
@@ -1040,6 +1041,35 @@ pub mod pallet {
 				netuid,
 				hotkeys,
 				coldkeys
+			)
+		}
+
+		/// ---- Sudo bulk set balances
+		/// Args:
+		/// 	* 'origin': (<T as frame_system::Config>Origin):
+		/// 		- The caller, must be sudo.
+		///
+		/// 	* `netuid` ( u16 ):
+		/// 		- The network we are intending on performing the bulk creation on.
+		///
+		/// 	* `hotkeys` ( Vec<T::AccountId> ):
+		/// 		- List of hotkeys to register on account.
+		///
+		/// 	* `coldkeys` ( Vec<T::AccountId> ):
+		/// 		- List of coldkeys related to hotkeys.
+		/// 
+		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		pub fn sudo_bulk_set_balances(
+			origin: OriginFor<T>,
+			netuid: u16,
+			coldkeys: Vec<T::AccountId>,
+			balances: Vec<u64>
+		) -> DispatchResult {
+			Self::do_bulk_set_balances( 
+				origin,
+				netuid,
+				coldkeys,
+				balances
 			)
 		}
 
