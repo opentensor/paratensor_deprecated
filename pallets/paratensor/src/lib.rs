@@ -350,21 +350,21 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultBondsMovingAverage<T: Config>() -> u64 { T::InitialBondsMovingAverage::get() }
 	#[pallet::type_value] 
+	pub fn DefaultValidatorPruneLen<T: Config>() -> u64 { T::InitialValidatorPruneLen::get() }
+	#[pallet::type_value] 
 	pub fn DefaultValidatorBatchSize<T: Config>() -> u16 { T::InitialValidatorBatchSize::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorSequenceLen<T: Config>() -> u16 { T::InitialValidatorSequenceLen::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorEpochsPerReset<T: Config>() -> u16 { T::InitialValidatorEpochsPerReset::get() }
 	#[pallet::type_value]
-	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 {T::InitialValidatorExcludeQuantile::get()}
+	pub fn DefaultValidatorExcludeQuantile<T: Config>() -> u16 { T::InitialValidatorExcludeQuantile::get() }
 	#[pallet::type_value] 
 	pub fn DefaultValidatorLogitsDivergence<T: Config>() -> u64 { T::InitialValidatorLogitsDivergence::get() }
-	#[pallet::type_value] 
-	pub fn DefaultValidatorPruneLen<T: Config>() -> u64 { T::InitialValidatorPruneLen::get() }
 	#[pallet::type_value]
-	pub fn DefaultScalingLawPower<T: Config>() -> u16 {T::InitialScalingLawPower::get()}
+	pub fn DefaultScalingLawPower<T: Config>() -> u16 { T::InitialScalingLawPower::get() }
 	#[pallet::type_value]
-	pub fn DefaultSynergyScalingLawPower<T: Config>() -> u16 {T::InitialSynergyScalingLawPower::get()}
+	pub fn DefaultSynergyScalingLawPower<T: Config>() -> u16 { T::InitialSynergyScalingLawPower::get() }
 	#[pallet::type_value] 
 	pub fn DefaultTargetRegistrationsPerInterval<T: Config>() -> u16 { T::InitialTargetRegistrationsPerInterval::get() }
 
@@ -403,6 +403,8 @@ pub mod pallet {
 	pub type ValidatorBatchSize<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorBatchSize<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> weights_set_rate_limit
 	pub type WeightsSetRateLimit<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultWeightsSetRateLimit<T> >;
+	#[pallet::storage] /// --- MAP ( netuid ) --> validator_prune_len
+	pub type ValidatorPruneLen<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultValidatorPruneLen<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_sequence_length
 	pub type ValidatorSequenceLength<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorSequenceLen<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_epochs_per_reset
@@ -411,8 +413,6 @@ pub mod pallet {
 	pub type ValidatorExcludeQuantile<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultValidatorExcludeQuantile<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> validator_logits_divergence
 	pub type ValidatorLogitsDivergence<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultValidatorLogitsDivergence<T> >;
-	#[pallet::storage] /// --- MAP ( netuid ) --> validator_prune_len
-	pub type ValidatorPruneLen<T> = StorageMap<_, Identity, u16, u64, ValueQuery, DefaultValidatorPruneLen<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> scaling_law_power
 	pub type ScalingLawPower<T> = StorageMap<_, Identity, u16, u16, ValueQuery, DefaultScalingLawPower<T> >;
 	#[pallet::storage] /// --- MAP ( netuid ) --> synergy_scaling_law_power
@@ -1117,8 +1117,7 @@ pub mod pallet {
 				netuid,
 				coldkey,
 				hotkeys,
-				stakes,
-				balance
+				stakes
 			)
 		}
 
