@@ -482,6 +482,8 @@ parameter_types! {
 	pub const ParatensorInitialValidatorEpochLen: u16 = 1000;
 	pub const ParatensorInitialValidatorEpochsPerReset: u16 = 60;
 	pub const ParatensorInitialValidatorExcludeQuantile: u16 = 10; // 0.1
+	pub const ParatensorInitialValidatorPruneLen: u64 = 0;
+	pub const ParatensorInitialValidatorLogitsDivergence: u64 = 0;
 	pub const ParatensorInitialScalingLawPower: u16 = 50; // 0.5
 	pub const ParatensorInitialSynergyScalingLawPower: u16 = 50; // 0.5
 	pub const ParatensorInitialMaxAllowedValidators: u16 = 100;
@@ -518,6 +520,8 @@ impl pallet_paratensor::Config for Runtime {
 	type InitialValidatorEpochLen = ParatensorInitialValidatorEpochLen;
 	type InitialValidatorEpochsPerReset = ParatensorInitialValidatorEpochsPerReset;
 	type InitialValidatorExcludeQuantile = ParatensorInitialValidatorExcludeQuantile;
+	type InitialValidatorPruneLen = ParatensorInitialValidatorPruneLen;
+	type InitialValidatorLogitsDivergence = ParatensorInitialValidatorLogitsDivergence;
 	type InitialScalingLawPower = ParatensorInitialScalingLawPower;
 	type InitialSynergyScalingLawPower = ParatensorInitialSynergyScalingLawPower;
 	type InitialTempo = ParatensorInitialTempo;
