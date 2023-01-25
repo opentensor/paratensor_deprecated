@@ -920,6 +920,80 @@ fn test_zero_weights() {
 	});
 }
 
+/// Test that epoch assigns validator permits to highest stake uids, varies uid interleaving and stake values.
+#[test]
+fn test_validator_permits() {
+	let netuid: u16 = 0;
+	let tempo: u16 = u16::MAX - 1;  // high tempo to skip automatic epochs in on_initialize, use manual epochs instead
+	for interleave in 0..3 {
+		for (network_n, validators_n) in vec![(2, 1), (4, 2), (8, 4)] {
+			for assignment in 0..=1 {
+				let (validators, servers) = distribute_nodes(validators_n as usize, network_n as usize, interleave as usize);
+				let mut correct: bool = true;
+				let mut stake: Vec<u64> = vec![0; network_n];
+				correct = true;
+				for validator in &validators {
+					stake[*validator as usize] = match assignment {
+						1 => *validator as u64 + network_n as u64,
+						_ => 1
+					};
+				}
+				for server in &servers {
+					stake[*server as usize] = match assignment {
+						1 => *server as u64,
+						_ => 0
+					};
+				}
+				new_test_ext().execute_with(|| {
+					let block_number: u64 = 0;
+					add_network(netuid, tempo, 0);
+					ParatensorModule::set_max_allowed_uids( netuid, network_n as u16 );
+					assert_eq!(ParatensorModule::get_max_allowed_uids(netuid), network_n as u16 );
+					ParatensorModule::set_max_registrations_per_block( netuid, network_n as u16 );
+			
+					// === Register [validator1, validator2, server1, server2]
+					for key in 0..network_n as u64 {
+						ParatensorModule::add_balance_to_coldkey_account( &key, stake[key as usize] as u128 );
+						let (nonce, work): (u64, Vec<u8>) = ParatensorModule::create_work_for_block_number( netuid, block_number, key * 1_000_000);
+						assert_ok!(ParatensorModule::register(<<Test as Config>::Origin>::signed(key), netuid, block_number, nonce, work, key, key));
+						ParatensorModule::increase_stake_on_coldkey_hotkey_account( &key, &key, stake[key as usize] );
+					}
+					assert_eq!(ParatensorModule::get_subnetwork_n(netuid), network_n as u16);
+			
+					// === Issue validator permits
+					assert_ok!( ParatensorModule::sudo_set_max_allowed_validators(<<Test as Config>::Origin>::root(), netuid, validators_n as u16) );
+					assert_eq!( ParatensorModule::get_max_allowed_validators(netuid), validators_n as u16);
+					ParatensorModule::epoch( netuid, 1_000_000_000 ); // run first epoch to set allowed validators
+					for validator in &validators {
+						assert_eq!(correct, ParatensorModule::get_validator_permit(netuid, *validator));
+					}
+					for server in &servers {
+						assert_eq!(!correct, ParatensorModule::get_validator_permit(netuid, *server));
+					}
+
+					// === Increase server stake above validators
+					for server in &servers {
+						ParatensorModule::add_balance_to_coldkey_account( &(*server as u64), 2*network_n as u128 );
+						ParatensorModule::increase_stake_on_coldkey_hotkey_account( &(*server as u64), &(*server as u64), 2*network_n as u64 );
+					}
+
+					// === Update validator permits
+					run_to_block( 1 );
+					ParatensorModule::epoch( netuid, 1_000_000_000 );
+
+					// === Check that servers now own permits instead of the validator uids
+					for validator in &validators {
+						assert_eq!(!correct, ParatensorModule::get_validator_permit(netuid, *validator));
+					}
+					for server in &servers {
+						assert_eq!(correct, ParatensorModule::get_validator_permit(netuid, *server));
+					}
+				});
+			}
+		}
+	}
+}
+
 /// Map the retention graph for consensus guarantees with an epoch on a graph with 4096 nodes, of which the first 128 are validators, the graph is split into a major and minor set, each setting specific weight on itself and the complement on the other.
 /// 
 /// ```python
