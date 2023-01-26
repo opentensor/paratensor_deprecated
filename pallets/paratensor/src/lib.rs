@@ -1045,7 +1045,7 @@ pub mod pallet {
 		/// 	* `coldkeys` ( Vec<T::AccountId> ):
 		/// 		- List of coldkeys related to hotkeys.
 		/// 
-		#[pallet::weight((0, DispatchClass::Normal, Pays::No))]
+		#[pallet::weight((2000000000, DispatchClass::Normal, Pays::No))]
 		pub fn sudo_import_registration(
 			origin: OriginFor<T>,
 			netuid: u16,
