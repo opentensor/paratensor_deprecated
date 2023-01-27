@@ -116,6 +116,9 @@ impl<T: Config> Pallet<T> {
             
             neurons.push( neuron );
         }
+        
+        log::debug!(target: "custom_rpc", "get_neurons: {:?}", neurons);
+
         neurons
 	}
 

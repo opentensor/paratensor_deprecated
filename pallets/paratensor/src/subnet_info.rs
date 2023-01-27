@@ -111,6 +111,8 @@ impl<T: Config> Pallet<T> {
             }
         }
 
+        log::debug!(target: "custom_rpc", "get_subnets: {:?}", subnets_info);
+
         return subnets_info;
 	}
 }

@@ -58,6 +58,7 @@ impl<T: Config> Pallet<T> {
                 owner_ss58: owner.clone().encode().into()
             });
         }
+        log::debug!(target: "custom_rpc", "get_delegates: {:?}", delegates);
 
         return delegates;
 	}
