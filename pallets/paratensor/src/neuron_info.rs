@@ -20,9 +20,9 @@ pub struct NeuronInfo {
     emission: u64,
     incentive: u16,
     consensus: u16,
-    weight_consensus: u16,
+    //weight_consensus: u16,
     trust: u16,
-    validator_trust: u16,
+    //validator_trust: u16,
     dividends: u16,
     last_update: u64,
     validator_permit: bool,
@@ -74,9 +74,9 @@ impl<T: Config> Pallet<T> {
             let emission = Emission::<T>::get( netuid, uid as u16 );
             let incentive = Incentive::<T>::get( netuid, uid as u16 );
             let consensus = Consensus::<T>::get( netuid, uid as u16 );
-            let weight_consensus = WeightConsensus::<T>::get( netuid, uid as u16 );
+            //let weight_consensus = WeightConsensus::<T>::get( netuid, uid as u16 );
             let trust = Trust::<T>::get( netuid, uid as u16 );
-            let validator_trust = ValidatorTrust::<T>::get( netuid, uid as u16 );
+            //let validator_trust = ValidatorTrust::<T>::get( netuid, uid as u16 );
             let dividends = Dividends::<T>::get( netuid, uid as u16 );
             let pruning_score = PruningScores::<T>::get( netuid, uid as u16 );
             
@@ -103,9 +103,9 @@ impl<T: Config> Pallet<T> {
                 emission,
                 incentive,
                 consensus,
-                weight_consensus,
+                //weight_consensus,
                 trust,
-                validator_trust,
+                //validator_trust,
                 dividends,
                 last_update,
                 validator_permit,
@@ -155,9 +155,9 @@ impl<T: Config> Pallet<T> {
         let emission = Emission::<T>::get( netuid, uid as u16 );
         let incentive = Incentive::<T>::get( netuid, uid as u16 );
         let consensus = Consensus::<T>::get( netuid, uid as u16 );
-        let weight_consensus = WeightConsensus::<T>::get( netuid, uid as u16 );
+        //let weight_consensus = WeightConsensus::<T>::get( netuid, uid as u16 );
         let trust = Trust::<T>::get( netuid, uid as u16 );
-        let validator_trust = ValidatorTrust::<T>::get( netuid, uid as u16 );
+        //let validator_trust = ValidatorTrust::<T>::get( netuid, uid as u16 );
         let dividends = Dividends::<T>::get( netuid, uid as u16 );
         let pruning_score = PruningScores::<T>::get( netuid, uid as u16 );
         
@@ -184,9 +184,9 @@ impl<T: Config> Pallet<T> {
             emission,
             incentive,
             consensus,
-            weight_consensus,
+            //weight_consensus,
             trust,
-            validator_trust,
+            //validator_trust,
             dividends,
             last_update,
             validator_permit,
